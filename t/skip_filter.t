@@ -1,10 +1,11 @@
 #! perl -w
 use strict;
 
+# $Id: skip_filter.t 235 2003-07-15 14:24:23Z abeltje $
+
 use File::Spec;
 
 use Test::More tests => 15;
-
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 
 while ( <DATA> ) {

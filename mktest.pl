@@ -5,7 +5,7 @@
 #    and Nicholas Clark
 # 20020909: Abe Timmerman
 # REVISION: 1.18 
-# $Id: mktest.pl 177 2003-06-15 15:53:52Z abeltje $
+# $Id: mktest.pl 223 2003-07-11 19:36:27Z abeltje $
 use strict;
 
 sub usage ()
@@ -34,8 +34,8 @@ my $smoker         = $Config{cf_email};
 my $fdir           = undef;
 my $locale         = undef;
 my $is56x          = undef;
+my $defaultenv     = undef;
 my $force_c_locale = undef;
-my $continue       = 0;
 
 =head1 NAME
 
@@ -63,9 +63,9 @@ mktest.pl - Configure, build and test bleading edge perl
 
 =item * -l | --locale <somelocale>
 
-=item * --continue
-
 =item * --is56x
+
+=item * --defaultenv
 
 =item * --[no]force-c-locale
 
@@ -90,10 +90,12 @@ GetOptions (
     "s|smoker=s"       => \$smoker,
     "f|forest=s"       => \$fdir,
     "l|locale=s"       => \$locale,
-    "continue"         => \$continue,
     "is56x"            => \$is56x,
+    "defaultenv!"      => \$defaultenv,
     "force-c-locale!"  => \$force_c_locale,
 ) or usage;
+
+$defaultenv = 1 if $is56x;
 
 $verbose and print "$0 running at verbose level $verbose\n";
 
@@ -102,28 +104,10 @@ my $config_file = shift;
 # They are appended to the CFG_VARS macro
 # This is a way to cheat in Win32 and get the "right" stuff into Config.pm
 
-my %conf_done;
 open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
-if ( $continue ) {
-    if ( open OUT, "<  mktest.out" ) {
-        my $conf;	
-        # A Configuration is done when we detect a new Configuration:
-        # or the phrase "Finished smoking $patch"
-        while ( <OUT> ) {
-            s/^Configuration:\s*// || m/^Finished smoking/ or next;
-            chomp;
-            $conf and $conf_done{$conf}++;
-            $conf = $_;
-        }
-        close OUT;
-    }
-    open OUT, ">> mktest.out";
-} else {
-    open OUT, ">  mktest.out";
-}
-select ((select (OUT),    $| = 1)[0]);
-select ((select (STDOUT), $| = 1)[0]);
+open OUT,    "> mktest.out";	select ((select (OUT),    $| = 1)[0]);
+				select ((select (STDOUT), $| = 1)[0]);
 
 # Do we need this for smoking from 5.8.0 under locale?
 binmode( TTY ); binmode( STDERR ); binmode( OUT );
@@ -201,12 +185,10 @@ my $patch = get_patch();
 print OUT "Smoking patch $patch\n\n";
 
 
-unless ($continue) {
-    my $MANIFEST = check_MANIFEST( $testdir );
-    foreach my $f (sort keys %$MANIFEST) {
-        ttylog "MANIFEST ",
-            ($MANIFEST->{ $f } ? "still has" : "did not declare"), " $f\n";
-    }
+my $MANIFEST = check_MANIFEST( $testdir );
+foreach my $f (sort keys %$MANIFEST) {
+    ttylog "MANIFEST ",
+        ($MANIFEST->{ $f } ? "still has" : "did not declare"), " $f\n";
 }
 
 my $Policy = Test::Smoke::Policy->new( File::Spec->updir, $verbose );
@@ -214,8 +196,6 @@ my $Policy = Test::Smoke::Policy->new( File::Spec->updir, $verbose );
 my @p_conf = ("", "");
 
 run_tests( \@p_conf, "-Dusedevel", [], @config );
-
-print OUT "Finished smoking $patch\n";
 
 close OUT;
 
@@ -266,7 +246,6 @@ sub run_tests {
         $config_args =~ m/-Uuseperlio/ && $config_args =~ m/-Dusei?threads/
             and next; # patch 17000
 
-        $continue && exists $conf_done{$config_args} and next;
         ttylog $s_conf;
 
         # You can put some optimizations (skipping configurations) here
@@ -331,31 +310,31 @@ sub run_tests {
         print TTY "\nMake ...";
         make " ";
 
-        my $perl = "perl$Config{_exe}";
-        unless ($norun or (-s $perl && -x _)) {
-            ttylog " Unable to make perl in this configuration\n";
-            next;
-        }
+	my $perl = "perl$Config{_exe}";
+	unless ($norun or (-s $perl && -x _)) {
+	    ttylog " Unable to make perl in this configuration\n";
+	    next;
+	}
 
-        $norun or unlink "t/$perl";
-        make "test-prep";
-        unless ($norun or is_win32 ? -f "t/$perl" : -l "t/$perl") {
-            ttylog " Unable to test perl in this configuration\n";
-            next;
-        }
+	$norun or unlink "t/$perl";
+	make "test-prep";
+	unless ($norun or is_win32 ? -f "t/$perl" : -l "t/$perl") {
+	    ttylog " Unable to test perl in this configuration\n";
+	    next;
+	}
 
-        print TTY "\n Tests start here:\n";
+	print TTY "\n Tests start here:\n";
 
         # No use testing different io layers without PerlIO
         # just output 'stdio' for mkovz.pl
-        my @layers = ( ($config_args =~ /-Uuseperlio\b/) || $is56x )
+        my @layers = ( ($config_args =~ /-Uuseperlio\b/) || $defaultenv )
             ? qw( stdio ) : qw( stdio perlio );
 
-        if ( !($config_args =~ /-Uuseperlio\b/ || $is56x) && $locale ) {
+        if ( !($config_args =~ /-Uuseperlio\b/ || $defaultenv) && $locale ) {
             push @layers, 'locale';
         }
 
-        foreach my $perlio ( @layers ) {
+	foreach my $perlio ( @layers ) {
             my $had_LC_ALL = exists $ENV{LC_ALL};
             local( $ENV{PERLIO}, $ENV{LC_ALL}, $ENV{PERL_UNICODE} ) =
                  ( "", defined $ENV{LC_ALL} ? $ENV{LC_ALL} : "", "" );
@@ -366,74 +345,74 @@ sub run_tests {
                 $ENV{LC_ALL} = 'C' if $force_c_locale;
                 $ENV{LC_ALL} or delete $ENV{LC_ALL};
                 delete $ENV{PERL_UNICODE};
+                # make default 'make test' runs possible
+                delete $ENV{PERLIO} if $defaultenv; 
             } else {
                 $ENV{PERL_UNICODE} = ""; # See -C in perlrun
                 $ENV{LC_ALL} = $locale;
                 $perlio_logmsg .= ":$locale";
             }
-            ttylog "PERLIO = $perlio_logmsg\t";
+	    ttylog "PERLIO = $perlio_logmsg\t";
 
-            if ($norun) {
-                ttylog "\n";
-                next;
-            }
+	    if ($norun) {
+		ttylog "\n";
+		next;
+	    }
 
-            # MSWin32 builds from its own directory
-            if ( is_win32 ) {
-                chdir "win32" or die "unable to chdir () into 'win32'";
-                # Same as in make ()
-                open TST, "$win32_maker -f smoke.mk test |";
-                chdir ".." or die "unable to chdir () out of 'win32'";
-            } else {
-                local $ENV{PERL} = "./perl";
-                open TST, "make _test |";
-            }
+	    # MSWin32 builds from its own directory
+	    if ( is_win32 ) {
+		chdir "win32" or die "unable to chdir () into 'win32'";
+		# Same as in make ()
+		open TST, "$win32_maker -f smoke.mk test |";
+		chdir ".." or die "unable to chdir () out of 'win32'";
+	    } else {
+		local $ENV{PERL} = "./perl";
+		open TST, "make _test |";
+	    }
 
-            my @nok = ();
+	    my @nok = ();
 	    select ((select (TST), $| = 1)[0]);
-            while (<TST>) {
-                $verbose > 1 and print;
-                skip_filter( $_ ) and next;
+	    while (<TST>) {
+		skip_filter( $_ ) and next;
 
-                # make mkovz.pl's life easier
-                s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
+		# make mkovz.pl's life easier
+		s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
 
-                if (m/^u=.*tests=/) {
-                    s/(\d\.\d*) /sprintf "%.2f ", $1/ge;
-                    print OUT;
-                } else {
-                    push @nok, $_;
-                }
-                print unless $verbose > 1;
-            }
-            print OUT map { "    $_" } @nok;
-            if (grep m/^All tests successful/, @nok) {
-                print TTY "\nOK, archive results ...";
-                $patch and $nok[0] =~ s/\./ for .patch = $patch./;
-            } else {
-                my @harness;
-                for (@nok) {
-                    m|^(?:\.\.[\\/])?(\w+/[-\w/]+).*| or next;
-                    # Remeber, we chdir into t, so -f is false for op/*.t etc
-                    push @harness, (-f "$1.t") ? "../$1.t" : "$1.t";
-                }
-                if (@harness) {
-                    local $ENV{PERL_SKIP_TTY_TEST} = 1;
-                    print TTY "\nExtending failures with Harness\n";
-                    my $harness = is_win32 ?
-                	join " ", map { 
-                            s{^\.\.[/\\]}{};
-                            m/^(?:lib|ext)/ and $_ = "../$_";
-                            $_ 
-                        } @harness : "@harness";
-                    ttylog "\n",
-                           grep !m:\bFAILED tests\b: &&
-                                !m:% okay$: => run "./perl t/harness $harness";
-                }
-            }
-            print TTY "\n";
+		if (m/^u=.*tests=/) {
+		    s/(\d\.\d*) /sprintf "%.2f ", $1/ge;
+		    print OUT;
+		} else {
+		    push @nok, $_;
+		}
+		print;
+	    }
+	    print OUT map { "    $_" } @nok;
+	    if (grep m/^All tests successful/, @nok) {
+		print TTY "\nOK, archive results ...";
+		$patch and $nok[0] =~ s/\./ for .patch = $patch./;
+	    } else {
+		my @harness;
+		for (@nok) {
+		    m|^(?:\.\.[\\/])?(\w+/[-\w/]+).*| or next;
+		    # Remeber, we chdir into t, so -f is false for op/*.t etc
+		    push @harness, (-f "$1.t") ? "../$1.t" : "$1.t";
+		}
+		if (@harness) {
+		    local $ENV{PERL_SKIP_TTY_TEST} = 1;
+		    print TTY "\nExtending failures with Harness\n";
+		    my $harness = is_win32 ?
+			join " ", map { s{^\.\.[/\\]}{};
+					m/^(?:lib|ext)/ and $_ = "../$_";
+					$_ } @harness :
+			"@harness";
+		    ttylog "\n",
+			grep !m:\bFAILED tests\b: &&
+			    !m:% okay$: => run "./perl t/harness $harness";
+		}
+	    }
+	    print TTY "\n";
             $had_LC_ALL and exists $ENV{LC_ALL} and delete $ENV{LC_ALL};
-        }
+	}
     }
 } # run_tests
 
@@ -458,9 +437,9 @@ See:
 
 =over 4
 
-=item * http://www.perl.com/perl/misc/Artistic.html
+=item * L<http://www.perl.com/perl/misc/Artistic.html>
 
-=item * http://www.gnu.org/copyleft/gpl.html
+=item * L<http://www.gnu.org/copyleft/gpl.html>
 
 =back
 

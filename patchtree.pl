@@ -1,17 +1,20 @@
 #! /usr/bin/perl -w
 use strict;
+$| = 1;
 
-use Getopt::Long;
-use File::Spec;
+# $Id: patchtree.pl 255 2003-07-21 10:52:24Z abeltje $
+use vars qw( $VERSION );
+$VERSION = '0.006';
+
 use Cwd;
+use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
+use lib $FindBin::Bin;
+use Test::Smoke;
 use Test::Smoke::Patcher;
 
-use Test::Smoke;
-use vars qw( $VERSION );
-$VERSION = '0.005'; # $Id: patchtree.pl 151 2003-06-06 14:34:06Z abeltje $
-
+use Getopt::Long;
 my %opt = (
     type    => 'multi',
     ddir    => undef,
@@ -37,7 +40,7 @@ patchtree.pl - Patch the sourcetree
 
 or
 
-    $ ./mailrpt.pl -c [smokecurrent_config]
+    $ ./patchtree.pl -c [smokecurrent_config]
 
 =head1 OPTIONS
 
@@ -54,18 +57,25 @@ Other options can override the settings from the configuration file.
 
     -d | --ddir <directory>  Set the directory for the source-tree (cwd)
     -f | --pfile <patchfile> Set the resource containg patch info
-    -v | --verbose           Be verbose
+
+    -v | --verbose <0..2>    Set verbose level
+    -h | --help              Show help message (needs Pod::Usage)
+    --man                    Show the perldoc  (needs Pod::Usage)
 
 =back
+
+=head1 DESCRIPTION
+
+This is a small front-end for L<Test::Smoke::Patcher>.
 
 =cut
 
 GetOptions( \%opt,
-    'pfile|f=s', 'ddir|d=s', 'v|verbose:i',
+    'pfile|f=s', 'ddir|d=s', 'v|verbose=i',
 
     'popts=s',
 
-    'help|h', 'man|m',
+    'help|h', 'man',
 
     'config|c:s',
 ) or do_pod2usage( verbose => 1 );

@@ -1,6 +1,8 @@
 #! /usr/bin/perl -w
 use strict;
 
+# $Id: parse_report.t 235 2003-07-15 14:24:23Z abeltje $
+
 use Test::More tests => 6;
 
 my @eg = (

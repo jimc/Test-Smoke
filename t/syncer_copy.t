@@ -1,6 +1,8 @@
 #! /usr/bin/perl -w
 use strict;
 
+# $Id: syncer_copy.t 235 2003-07-15 14:24:23Z abeltje $
+
 use FindBin;
 use lib $FindBin::Bin;
 use TestLib;

@@ -1,6 +1,8 @@
 #! /usr/bin/perl -w
 use strict;
 
+# $Id: mailer.t 235 2003-07-15 14:24:23Z abeltje $
+
 use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin );

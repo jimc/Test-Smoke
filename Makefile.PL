@@ -1,3 +1,5 @@
+#! /usr/bin/perl
+# $Id: Makefile.PL 249 2003-07-20 12:56:59Z abeltje $
 use strict;
 use 5.004;
 use ExtUtils::MakeMaker;
@@ -6,11 +8,6 @@ use Config;
 use File::Spec;
 use Cwd;
 use File::Path;
-
-
-warn "\n'Makefile.PL' no longer configures your perl core smoke suite!!!\n" .
-     "Please use:\n\tperl configsmoke.pl\n\n";
-
 
 my %install = ( );
 unless ( @ARGV ) {
@@ -23,7 +20,8 @@ unless ( @ARGV ) {
     );
 
     %install = ( PREFIX => $install_dir, INSTALLSCRIPT => $install_dir,
-                 LIB   => File::Spec->catdir( $install_dir, 'lib' ) );
+#                 LIB   => File::Spec->catdir( $install_dir, 'lib' ) );
+                 LIB   => $install_dir );
 }
 
 WriteMakefile(
@@ -41,20 +39,22 @@ WriteMakefile(
                        SUFFIX   => ".gz",
 		     },
     PREREQ_PM     => { 'File::Spec' => 0.82, 'Test::More' => 0},
+    PMLIBDIRS     => [ File::Spec->curdir ],
     EXE_FILES     => [qw( synctree.pl patchtree.pl mailrpt.pl W32Configure.pl
                           mktest.pl mkovz.pl smoke.sh smokew32.bat
-                          configsmoke.pl smokeperl.pl
-                          smoke.cfg perl56x.cfg perlcurrent.cfg w32current.cfg
-                          smoke56x_dfconfig smoke58x_dfconfig
-                     )],
-#    SKIP          => [qw( install )],
+                          configsmoke.pl smokeperl.pl runsmoke.pl )],
     %install
 );
+
+sub MY::libscan {
+    my( $self, $path ) = @_;
+    return m:\.svn|\bt\b: ? "" : $path;
+}
 
 sub dir_prompt {
 
     GETDIR: {
-        my $dir = &prompt;
+        my $dir = &prompt; # & -> pass @_
 
         # thanks to perlfaq5
         $dir =~ s{^ ~ ([^/]*)}

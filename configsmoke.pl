@@ -8,6 +8,7 @@ use File::Path;
 use Data::Dumper;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
+use lib $FindBin::Bin;
 
 use Getopt::Long;
 my %options = ( 
@@ -30,8 +31,9 @@ foreach my $opt (qw( config jcl log )) {
     $options{$opt} = "$options{ $key }$suffix{ $opt }";
 }
 
+# $Id: configsmoke.pl 255 2003-07-21 10:52:24Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.018'; # $Id: configsmoke.pl 200 2003-06-27 21:28:09Z abeltje $
+$VERSION = '0.023';
 
 eval { require $options{config} };
 $options{oldcfg} = 1, print "Using '$options{config}' for defaults.\n" 
@@ -41,7 +43,7 @@ if ( $@ || $options{default} ) {
     my $df_config = "$options{ $df_key }_dfconfig";
     local $@;
     eval { require $df_config };
-    $options{oldcfg} = 1, print "Using '$df_config' for more defaults.\n"
+    $options{oldcfg} = 0, print "Using '$df_config' for more defaults.\n"
         unless $@;
 } 
 
@@ -71,12 +73,12 @@ my %config = ( perl_version => $conf->{perl_version} || '5.9.x' );
 my %mailers = get_avail_mailers();
 my @mailers = sort keys %mailers;
 my @syncers = get_avail_sync();
-my $syncmsg = join "\n", @{ 
-    { rsync    => "\trsync - Use the rsync(1) program [preferred]",
-      copy     => "\tcopy - Use File::Copy to copy from a local directory",
-      hardlink => "\thardlink - Copy from a local directory using link()",
-      snapshot => "\tsnapshot - Get a snapshot using Net::FTP", }
-}{ @syncers };
+my $syncmsg = join "\n", @{ { 
+    rsync    => "\trsync - Use the rsync(1) program [preferred]",
+    copy     => "\tcopy - Use File::Copy to copy from a local directory",
+    hardlink => "\thardlink - Copy from a local directory using link()",
+    snapshot => "\tsnapshot - Get a snapshot using Net::FTP (or LWP::Simple)",
+} }{ @syncers };
 my @untars = get_avail_tar();
 my $untarmsg = join "", map "\n\t$_" => @untars;
 
@@ -89,9 +91,9 @@ my %versions = (
                  text   => 'Perl 5.6.2-to-be',
                  is56x  => 1 },
     '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
-                 server => 'ftp.perl.org',
-                 sdir   => '/CPAN/src/',
-                 sfile  => 'perl-5.8.0.tar.gz',
+                 server => 'http://www.iki.fi',
+                 sdir   => '/jhi',
+                 sfile  => 'perl@19856.tgz',
                  pdir   => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
                  ddir   => File::Spec->rel2abs( 
                                File::Spec->catdir( File::Spec->updir,
@@ -152,6 +154,11 @@ my %opt = (
         alt => [ ],
         dft => File::Spec->rel2abs( is_win32
                                     ? 'w32current.cfg' : 'perlcurrent.cfg' ),
+    },
+    change_cfg => {
+        msg => undef, # Set later...
+        alt => [qw( Y n )],
+        dft => 'y',
     },
     umask => {
         msg => 'What umask can be used (0 preferred)?',
@@ -215,7 +222,9 @@ my %opt = (
     },
 
     server => {
-        msg => 'Where would you like to FTP the snapshots from?',
+        msg => "Where would you like to FTP the snapshots from?
+\tsnapshots on a webserver can be downloaded with the use
+\tof LWP::Simple. Just have the server-name start with http://",
         alt => [ ],
         dft => 'ftp.funet.fi',
     },
@@ -226,7 +235,8 @@ my %opt = (
     },
     sfile => {
         msg => "Which file should be FTPed?
-\tLeave empty to automatically find newest.",
+\tLeave empty to automatically find newest.
+\tMandatory for HTTP! (see also --snapshot switch in perlsmoke.pl)",
         alt => [ ],
         dft => '',
     },
@@ -350,6 +360,11 @@ Examples:$untarmsg",
         alt => [qw( N y )],
         dft => 'n',
     },
+    defaultenv => {
+        msg => 'Run the test-suite without \$ENV{PERLIO}?',
+        alt => [qw( N y )],
+        dft => 'n',
+    },
     locale => {
         msg => 'What locale should be used for extra testing ' .
                '(leave empty for none)?',
@@ -393,6 +408,10 @@ You will be asked some questions in order to configure this test suite.
 Please make sure to read the documentation "perldoc configsmoke.pl"
 in case you do not understand a question.
 
+* Values in angled-brackets (<>) are alternatives (none other allowed)
+* Values in square-brackets ([]) are default values (<Enter> confirms)
+* Use single space to clear a value
+
 EOMSG
 
 my $arg;
@@ -429,19 +448,37 @@ There are two additional configuration default files
 F<smoke56x_dfconfig> and F<smoke58x_dfconfig> to help you configure 
 B<Test::Smoke> for these two maintenance branches of the source-tree.
 
-To create a configuration for the perl 5.6.x brach:
+To create a configuration for the perl 5.8.x brach:
 
-    $ perl configsmoke.pl -p smoke56x
+    $ perl configsmoke.pl -p smoke58x
 
-This will read additional defaults from F<smoke56x_dfconfig> and create
-F<smoke56x_config> and F<smoke56x.sh>/F<smoke56x.cmd> and logfile will be
-F<smoke56x.log>.
+This will read additional defaults from F<smoke58x_dfconfig> and create
+F<smoke58x_config> and F<smoke58x.sh>/F<smoke58x.cmd> and logfile will be
+F<smoke58x.log>.
 
-The same goes for the perl 5.8.x branch:
+The same goes for the perl 5.6.x branch:
 
-    $perl configsmoke.pl -p smoke58x
+    $perl configsmoke.pl -p smoke56x
 
 =head1 CONFIGURATION
+
+Use of the program:
+
+=over 4
+
+=item *
+
+Values in angled-brackets (<>) are alternatives (none other allowed)
+
+=item *
+
+Values in square-brackets ([]) are default values (<Enter> confirms)
+
+=item *
+
+Use single space to clear a value
+
+=back
 
 Here is a description of the configuration sections.
 
@@ -499,10 +536,10 @@ BUILDDIR: {
     my $dot_patch = File::Spec->catfile( $config{ $arg }, '.patch' );
     if ( -e $manifest && -e $dot_patch ) {
         $opt{use_old}->{dft} = $options{oldcfg} && 
-                               $conf->{ddir} eq $config{ddir}
+                               ($conf->{ddir}||"") eq $config{ddir}
             ? 'y' : $opt{use_old}->{dft};
-        my $use_old = lc prompt( 'use_old' );
-        redo BUILDDIR unless $use_old eq 'y';
+        my $use_old = prompt_yn( 'use_old' );
+        redo BUILDDIR unless $use_old;
     }
 }
 
@@ -528,6 +565,7 @@ B<-Duselargefiles> section from F<w32current.cfg> should be enough.
 
 $arg = 'cfg';
 $config{ $arg } = prompt_file( $arg );
+check_buildcfg( $config{ $arg } );
 
 =item Nick Clark hardlink forest
 
@@ -553,12 +591,8 @@ as a clean master source directory for this smoke session
 run the regen headers script (which 5.9.0 now has as a distinct script)
 rather than just a Makefile target
 
-=back
-
 I now have a clean, up-to-date source tree with accurate headers. For each
 smoking configuration
-
-=over 4
 
 =item 4
 
@@ -612,6 +646,17 @@ The default switches passed to B<rsync> are: S<< B<-az --delete> >>
 This will use B<Net::FTP> to try to find the latest snapshot on
 <ftp://ftp.funet.fi/languages/perl/snap/>. 
 
+You can also get the perl-5.8.x snapshots (and others) via HTTP
+if you have B<LWP> installed. There are two things you should remember:
+
+=over 8
+
+=item 1. start the server-name B<http://> 
+
+=item 2. the snapshot-file must be specified.
+
+=back
+
 Snapshots are not in sync with the repository, so if you have a working
 B<patch> program, you can choose to "upgrade" your snapshot by fetching 
 all the seperate patches from the repository and applying them.
@@ -652,6 +697,10 @@ SYNCER: {
 
     /^snapshot$/ && do {
         for $arg ( qw( server sdir sfile ) ) {
+            if ( $arg ne 'server' && $config{server} =~ m|^https?://|i ) {
+                $opt{ $arg }->{msg} =~ s/\bFTPed/HTTPed/;
+                $opt{ $arg }->{msg} =~ s/^\tLeave.+\n//m;
+            }
             $config{ $arg } = prompt( $arg );
         }
         unless ( $config{sfile} ) {
@@ -701,10 +750,15 @@ SYNCER: {
 C<pfile> is the path to a textfile that holds the names of patches to
 be applied before smoking. This can be used to run a smoke test on proposed
 patches that have not been applied (yet) or to see the effect of
-revesing an already applied patch. The file format is simple:
+reversing an already applied patch. The file format is simple:
 
-  * one patchfile per line
-  * optionally followed by ';' and options to pass to patch
+=over 8
+
+=item * one patchfile per line
+
+=item * optionally followed by ';' and options to pass to patch
+
+=back
 
 If the file does not exist yet, a skeleton version will be created
 for you.
@@ -754,6 +808,16 @@ unless ( $config{is56x} ) {
     $config{ $arg } = prompt_yn( $arg );
 }
 
+=item defaultenv
+
+C<defaultenv>, when set will make Test::Smoke remove $ENV{PERLIO} and
+only do a single pass C<< S<make test> >>.
+
+=cut
+
+$arg = 'defaultenv';
+$config{ $arg } = prompt_yn( $arg );
+
 =item locale
 
 C<locale> and its value are passed to F<mktest.pl> and its value is passed
@@ -768,6 +832,7 @@ not coverd here, please let me know!>
 =cut
 
 UTF8_LOCALE: {
+    last if $config{defaultenv};
     my @locale_utf8 = $config{is56x} ? () : check_locale();
     last UTF8_LOCALE unless @locale_utf8;
 
@@ -827,7 +892,8 @@ MAIL: {
 =item w32args
 
 For MSWin32 we need some extra information that is passed to
-F<mktest.pl> in order to compensate for the lack of B<Configure>.
+L<Test::Smoke::Smoker> in order to compensate for the lack of
+B<Configure>.
 
 See L<Test::Smoke::Util/"Configure_win32( )"> and L<W32Configure.pl>
 
@@ -839,9 +905,9 @@ WIN32: {
     my $osvers = get_Win_version();
     my %compilers = get_avail_w32compilers();
 
-    my $dft_compiler = exists $conf->{w32args} ? $conf->{w32args}[1] : '';
+    my $dft_compiler = $conf->{w32cc} ? $conf->{w32cc} : "";
     $dft_compiler ||= ( sort keys %compilers )[-1];
-    $opt{w32compiler} = {
+    $opt{w32cc} = {
         msg => 'What compiler should be used?',
         alt => [ keys %compilers ],
         dft => $dft_compiler,
@@ -853,22 +919,22 @@ I see you are on $^O ($osvers).
 No problem, but we need extra information.
 EO_MSG
 
-    my $w32compiler = uc prompt( 'w32compiler' );
+    $config{w32cc} = uc prompt( 'w32cc' );
 
-    $opt{w32maker} = {
-        alt => $compilers{ $w32compiler }->{maker},
-        dft => ( sort @{ $compilers{ $w32compiler }->{maker} } )[-1],
+    $opt{w32make} = {
+        alt => $compilers{ $config{w32cc} }->{maker},
+        dft => ( sort @{ $compilers{ $config{w32cc} }->{maker} } )[-1],
     };
-    $opt{w32maker}->{msg} = @{ $compilers{ $w32compiler }->{maker} } > 1 
+    $opt{w32make}->{msg} = @{ $compilers{ $config{w32cc} }->{maker} } > 1 
         ? "Which make should be used" : undef;
 
-    my $w32maker = prompt( 'w32maker' );
+    $config{w32make} = prompt( 'w32make' );
 
     $config{w32args} = [ 
-        "--win32-cctype", $w32compiler,
-        "--win32-maker",  $w32maker,
+        "--win32-cctype" => $config{w32cc},
+        "--win32-maker"  => $config{w32make},
         "osvers=$osvers", 
-        $compilers{ $w32compiler }->{ccversarg},
+        $compilers{ $config{w32cc} }->{ccversarg},
     ];
 }
 
@@ -892,7 +958,20 @@ unless ( is_win32 ) {
 
 =item v
 
-The verbosity level: 0, 1 or 2
+The verbosity level: 
+
+=over 8
+
+=item 0: Be as quiet as possible
+
+=item 1: Give moderate information
+
+=item 2: Be as loud as possible
+
+=back
+
+Every module has its own verbosity control and these are not verry
+consistent at the moment.
 
 =cut
 
@@ -1039,21 +1118,86 @@ Have the appropriate amount of fun!
                                     The Test::Smoke team.
 EOMSG
 
+=back
+
+=head1 Supporting subs
+
+=over 4
+
+=item save_config()
+
+C<save_config()> writes the configuration data to disk.
+If C<< Data::Dumper->can('Sortkeys') >> it will order the keys.
+
+=cut
+
 sub save_config {
+    my $dumper = Data::Dumper->new([ \%config ], [ 'conf' ]);
+    Data::Dumper->can( 'Sortkeys' ) and 
+        $dumper->Sortkeys( \&sort_configkeys );
     local *CONFIG;
     open CONFIG, "> $options{config}" or
         die "Cannot write '$options{config}': $!";
-    print CONFIG Data::Dumper->Dump( [\%config], ['conf'] );
+    print CONFIG $dumper->Dump;
     close CONFIG or warn "Error writing '$options{config}': $!" and return;
 
     print "Finished writing '$options{config}'\n";
 }
+
+=item sort_configkeys()
+
+C<sort_configkeys()> is the hook for B<Data::Dumper>
+
+=cut
+
+sub sort_configkeys {
+    my @order = qw( 
+        perl_version is56x defaultenv
+        cfg ddir sync_type fsync 
+        rsync opts source 
+        tar server sdir sfile patchup pserver pdir unzip patch cleanup
+        cdir hdir
+        patch pfile
+        force_c_locale locale
+        mail mail_type mserver to from cc
+        w32args w32cc w32make
+        umask renice
+        smartsmoke v
+        killtime );
+
+    my $i = 0;
+    my %keyorder = map { $_ => $i++ } @order;
+
+    my @keyord = sort { 
+        $a <=> $b 
+    } @keyorder{ grep exists $keyorder{ $_}, keys %{ $_[0] } };
+
+    return [ @order[ @keyord ], 
+             sort grep !exists $keyorder{ $_ }, keys %{ $_[0] } ];
+}
+
+=item write_sh()
+
+C<write_sh()> creates the shell-script.
+
+=cut
 
 sub write_sh {
     my $cwd = cwd();
     my $jcl = "$options{jcl}.sh";
     my $cronline = schedule_entry( File::Spec->catfile( $cwd, $jcl ), 
                                    $cron, $crontime );
+    my $handle_lock = $config{killtime} ? <<EO_CONT : <<EO_DIE;
+    # Not sure about this, so I will keep the old behaviour 
+    # smokeperl.pl will exit(42) on timeout
+    # continue='--continue'
+    echo "We seem to be running (or remove \$LOCKFILE)" >& 2
+    exit 200
+EO_CONT
+    echo "We seem to be running (or remove \$LOCKFILE)" >& 2
+    exit 200
+EO_DIE
+
     local *MYSMOKESH;
     open MYSMOKESH, "> $jcl" or
         die "Cannot write '$jcl': $!";
@@ -1068,16 +1212,16 @@ sub write_sh {
 cd $cwd
 CFGNAME=$options{config}
 LOCKFILE=$options{prefix}.lck
+continue=''
 if test -f "\$LOCKFILE" && test -s "\$LOCKFILE" ; then
-    echo "We seem to be running (or remove \$LOCKFILE)" >& 2
-    exit 200
+$handle_lock
 fi
 echo "\$LOCKFILE" > "\$LOCKFILE"
 
 PATH=$cwd:$ENV{PATH}
 export PATH
 umask $config{umask}
-$^X smokeperl.pl -c "\$CFGNAME" \$\* > $options{log} 2>&1
+$^X smokeperl.pl -c "\$CFGNAME" \$continue \$\* > $options{log} 2>&1
 
 rm "\$LOCKFILE"
 EO_SH
@@ -1088,6 +1232,13 @@ EO_SH
 
     return File::Spec->canonpath( File::Spec->rel2abs( $jcl ) );
 }
+
+=item write_bat()
+
+C<write_bat()> writes the batch-file. It uses the C<.cmd> extension
+because it uses commands that are not supported by B<COMMAND.COM>
+
+=cut
 
 sub write_bat {
     my $cwd = File::Spec->canonpath( cwd() );
@@ -1115,13 +1266,16 @@ $copycmd
 REM $atline
 
 set WD=$cwd\
-for \%\%D in ( \%WD\% ) do \%\%~dD
+rem Change drive-Letter
+for \%\%L in ( "\%WD\%" ) do \%\%~dL
 cd "\%WD\%"
 set CFGNAME=$options{config}
 set LOCKFILE=$options{prefix}.lck
 if NOT EXIST \%LOCKFILE\% goto START_SMOKE
     FIND "\%LOCKFILE\%" \%LOCKFILE\% > NUL:
-    if NOT ERRORLEVEL 1 (echo We seem to be running [or remove \%LOCKFILE\%]>&2) && exit /B 200
+    if ERRORLEVEL 1 goto START_SMOKE
+    echo We seem to be running [or remove \%LOCKFILE\%]>&2
+    goto :EOF
 
 :START_SMOKE
     echo \%LOCKFILE\% > \%LOCKFILE\%
@@ -1295,8 +1449,17 @@ sub get_avail_sync {
 
     my @synctype = qw( copy hardlink );
     eval { local $^W; require Net::FTP };
+    my $has_ftp = !$@;
+
+    eval { local $^W; require LWP::Simple };
+    my $has_lwp = !$@;
+
     my $pversion = $config{perl_version} || '5.9.x';
-    unshift @synctype, 'snapshot' unless $@ || ( $pversion ne '5.9.x' );
+
+    # (has_ftp && 5.9.x) || (has_lwp && !5.6.x)
+    unshift @synctype, 'snapshot' 
+        if ( $has_ftp && $pversion eq '5.9.x' ) ||
+           ( $has_lwp && $pversion ne '5.6.x' );
     unshift @synctype, 'rsync' if whereis( 'rsync' );
     return @synctype;
 }
@@ -1306,7 +1469,11 @@ sub get_avail_tar {
     my $use_modules = 0;
     eval { require Archive::Tar };
     unless ( $@ ) {
-        eval { require Compress::Zlib };
+        if ( $Archive::Tar::VERSION >= 0.99 ) {
+            eval { require IO::Zlib };
+        } else {
+            eval { require Compress::Zlib };
+        }
         $use_modules = !$@;
     }
 
@@ -1436,11 +1603,105 @@ sub get_Win_version {
     return $win_version;
 }
 
+=item check_buildcfg
+
+We will try to check the build configurations file to see if we should
+comment some options out.
+
+=cut
+
+sub check_buildcfg {
+    my( $file_name ) = @_;
+
+    local *BCFG;
+    open BCFG, "< $file_name" or do {
+        warn "Cannot read '$file_name': $!\n" .
+             "Will not check the build configuration file!";
+        return;
+    };
+    my @bcfg = <BCFG>;
+    close BCFG;
+    my $oldcfg = join "", grep !/^#/ => @bcfg;
+
+    my @no_option = ( );
+    OSCHECK: {
+        local $_ = $^O;
+        /darwin|bsd/i && do { 
+            # No -Duselongdouble, -Dusemorebits, -Duse64bitall
+            @no_option = qw( -Duselongdouble -Dusemorebits -Duse64bitall );
+        };
+
+	/linux/i && do {
+            # No -Duse64bitall
+            @no_option = qw( -Duse64bitall );
+        };
+        foreach my $option ( @no_option ) {
+            !/^#/ && /\Q$option\E/ && s/^/#/ for @bcfg;
+        }
+    }
+    my $newcfg = join "", grep !/^#/ => @bcfg;
+    return if $oldcfg eq $newcfg;
+
+    my $options = join "|", map "\Q$_\E" => sort {
+        length( $b||"" ) <=> length( $a||"" )
+    } @no_option;
+
+    my $display = join "", map "\t$_" 
+        => grep !/^#/ || ( /^#/ && /$options/ ) => @bcfg;
+    $opt{change_cfg}->{msg} = <<EOMSG;
+Some options that do not apply to your platform were found.
+(Comment-lines left out below, but will be written to disk.)
+$display
+Write the changed config to disk?
+EOMSG
+
+    my $write_it = prompt_yn( 'change_cfg' );
+    finish_cfgcheck( $write_it, $file_name, \@bcfg);
+}
+
+=item finish_cfgcheck
+
+C<finish_cfgcheck()> will create a backup of the original file and
+write the new one in its place.
+
+=cut
+
+sub finish_cfgcheck {
+    my( $overwrite, $fname, $bcfg ) = @_;
+
+    if ( $overwrite ) {
+        my $backup = "$fname.bak";
+        -f $backup and chmod( 0775, $backup ) and unlink $backup;
+        rename $fname, $backup or 
+            warn "Cannot rename '$fname' to '$backup': $!";
+    } else {
+        $fname = "$options{prefix}.cfg";
+    }
+    # change the filemode (make install used to make perlcurrent.cfg readonly)
+    -f $fname and chmod 0775, $fname;
+    open BCFG, "> $fname" or do {
+        warn "Cannot write '$fname': $!";
+        return;
+    };
+    print BCFG @$bcfg;
+    close BCFG or do {
+        warn "Error on close '$fname': $!";
+        return;
+    };
+    print "Wrote '$fname'\n";
+}
+
 =back
 
 =head1 TODO
 
 Schedule, logfile optional
+
+=head1 REVISION
+
+In case I forget to update the C<$VERSION>:
+
+    $Id: configsmoke.pl 255 2003-07-21 10:52:24Z abeltje $
 
 =head1 COPYRIGHT
 

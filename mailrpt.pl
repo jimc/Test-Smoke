@@ -1,37 +1,41 @@
 #! /usr/bin/perl -w
 use strict;
+$| = 1;
 
-use Getopt::Long;
-use File::Spec;
+# $Id: mailrpt.pl 255 2003-07-21 10:52:24Z abeltje $
+use vars qw( $VERSION );
+$VERSION = '0.011';
+
 use Cwd;
+use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
+use lib $FindBin::Bin;
 use Test::Smoke::Mailer;
-
 use Test::Smoke;
-use vars qw( $VERSION );
-$VERSION = '0.009'; # $Id: mailrpt.pl 189 2003-06-22 13:04:26Z abeltje $
 
+use Getopt::Long;
 my %opt = (
-    type    => undef,
-    ddir    => undef,
-    to      => undef, #'smokers-reports@perl.org',
-    cc      => undef,
-    from    => undef,
-    mserver => undef,
-    v       => undef,
+    type       => undef,
+    ddir       => undef,
+    to         => undef, #'smokers-reports@perl.org',
+    cc         => undef,
+    from       => undef,
+    mserver    => undef,
+    v          => undef,
 
-    mail    => 1,
-    report  => undef,
-    config  => undef,
-    help    => 0,
-    man     => 0,
+    mail       => 1,
+    report     => undef,
+    defaultenv => undef,
+    config     => undef,
+    help       => 0,
+    man        => 0,
 );
 
 my $defaults = Test::Smoke::Mailer->config( 'all_defaults' );
 
 my %valid_type = map { $_ => 1 } qw( mail mailx sendmail 
-                                     Mail::Sendmail MIME::Lite);
+                                     Mail::Sendmail MIME::Lite );
 
 =head1 NAME
 
@@ -63,12 +67,17 @@ Other options can override the settings from the configuration file.
     -d | --ddir <directory>  Set the directory for the source-tree (cwd)
     --to <emailaddresses>    Comma separated list (smokers-reports@perl.org)
     --cc <emailaddresses>    Comma separated list
-    -v | --verbose           Be verbose
 
     -t | --type <type>       mail mailx sendmail Mail::Sendmail [mandatory]
 
     --nomail                 Don't send the message
     --report                 Create a report anyway
+    --defaultenv             It was a PERLIO-less smoke
+
+    -v | --verbose <0..2>    Set verbose level
+    -h | --help              Show help message (needs Pod::Usage)
+    --man                    Show the perldoc  (needs Pod::Usage)
+
 
 =item * B<options for> -t mail/mailx
 
@@ -78,25 +87,29 @@ no extra options
 
     --from <address>
 
-=item * B<options for> -t Mail::Sendmail
+=item * B<options for> -t Mail::Sendmail | MIME::Lite
 
     --from <address>
     --mserver <smtpserver>  (localhost)
 
 =back
 
+=head1 DESCRIPTION
+
+This is a small front-end for L<Test::Smoke::Mailer>.
+
 =cut
 
 GetOptions( \%opt,
-    'type|t=s', 'ddir|d=s', 'to=s', 'cc=s', 'v|verbose:i',
+    'type|t=s', 'ddir|d=s', 'to=s', 'cc=s', 'v|verbose=i',
 
     'from=s', 'mserver=s',
 
-    'help|h', 'man|m',
+    'help|h', 'man',
 
     'config|c:s',
 
-    'mail|email!', 'report!',
+    'mail|email!', 'report!', 'defaultenv!',
 ) or do_pod2usage( verbose => 1 );
 
 $opt{man}  and do_pod2usage( verbose => 2, exitval => 0 );
@@ -153,7 +166,8 @@ sub check_for_report {
     }
 
     local @ARGV = ( 'nomail', $conf->{ddir} );
-    push  @ARGV, $conf->{locale} if $conf->{locale};
+    push  @ARGV, $conf->{locale} ? $conf->{locale} : "";
+    push  @ARGV, $opt{defaultenv} if $opt{defaultenv};
     my $mkovz = File::Spec->catfile( $FindBin::Bin, 'mkovz.pl' );
     $opt{v} and print "Will now start [$mkovz]\n";
     {
@@ -200,9 +214,9 @@ See:
 
 =over 4
 
-=item * http://www.perl.com/perl/misc/Artistic.html
+=item * L<http://www.perl.com/perl/misc/Artistic.html>
 
-=item * http://www.gnu.org/copyleft/gpl.html
+=item * L<http://www.gnu.org/copyleft/gpl.html>
 
 =back
 

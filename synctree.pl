@@ -1,16 +1,19 @@
 #! /usr/bin/perl -w
 use strict;
+$| = 1;
 
-use Getopt::Long;
+# $Id: synctree.pl 255 2003-07-21 10:52:24Z abeltje $
+use vars qw( $VERSION );
+$VERSION = '0.009';
+
 use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
+use lib $FindBin::Bin;
+use Test::Smoke;
 use Test::Smoke::Syncer;
 
-use Test::Smoke;
-use vars qw( $VERSION );
-$VERSION = '0.008'; # $Id: synctree.pl 151 2003-06-06 14:34:06Z abeltje $
-
+use Getopt::Long;
 my %opt = (
     type   => undef,
     ddir   => undef,
@@ -53,9 +56,11 @@ Other options can override the settings from the configuration file.
 =item * B<General options>
 
     -d | --ddir <directory>  Set the directory for the source-tree
-    -v | --verbose           Be verbose
-
     -t | --type <type>       'rsync', 'snapshot', 'copy' [mandatory]
+
+    -v | --verbose <0..2>    Set verbose level
+    -h | --help              Show help message (needs Pod::Usage)
+    --man                    Show the perldoc  (needs Pod::Usage)
 
 =item * B<options for> -t rsync
 
@@ -95,10 +100,14 @@ Other options can override the settings from the configuration file.
 
 =back
 
+=head1 DESCRIPTION
+
+This is a small front-end for L<Test::Smoke::Syncer>.
+
 =cut
 
 GetOptions( \%opt,
-    'type|t=s', 'ddir|d=s', 'v|verbose:i',
+    'type|t=s', 'ddir|d=s', 'v|verbose=i',
 
     'source=s', 'rsync=s', 'opts',
 
@@ -114,7 +123,7 @@ GetOptions( \%opt,
     'config|c:s',
 ) or do_pod2usage( verbose => 1 );
 
-$opt{man}  and do_pod2usage( verbose => 2, exitval => 0 );
+$opt{ man} and do_pod2usage( verbose => 2, exitval => 0 );
 $opt{help} and do_pod2usage( verbose => 1, exitval => 0 );
 
 if ( defined $opt{config} ) {

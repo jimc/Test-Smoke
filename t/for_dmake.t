@@ -1,10 +1,11 @@
 #! perl -w
 use strict;
 
+# $Id: for_dmake.t 235 2003-07-15 14:24:23Z abeltje $
+
 use File::Spec;
 
 use Test::More tests => 82;
-
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 END { 
 #    1 while unlink 'win32/smoke.mk'; 

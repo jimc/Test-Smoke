@@ -1,11 +1,12 @@
 #! /usr/perl/perl -w
 use strict;
 
+# $Id: ts_config.t 235 2003-07-15 14:24:23Z abeltje $
+
 use FindBin;
 use Data::Dumper;
 
 use Test::More tests => 6;
-
 BEGIN { use_ok( 'Test::Smoke' ) }
 
 is( Test::Smoke->VERSION, $Test::Smoke::VERSION, 

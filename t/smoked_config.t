@@ -1,6 +1,8 @@
 #! /usr/bin/perl -w
 use strict;
 
+# $Id: smoked_config.t 235 2003-07-15 14:24:23Z abeltje $
+
 use File::Spec;
 use FindBin;
 use lib $FindBin::Bin;
@@ -8,7 +10,6 @@ use lib $FindBin::Bin;
 use TestLib;
 
 use Test::More tests => 15;
-
 BEGIN { use_ok( 'Test::Smoke::Util', 'get_smoked_Config' ) }
 
 # make it work for all

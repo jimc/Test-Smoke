@@ -1,10 +1,11 @@
 #! perl -w
 use strict;
 
+# $Id: get_patch.t 235 2003-07-15 14:24:23Z abeltje $
+
 use File::Spec;
 
 use Test::More tests => 4;
-
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 
 chdir 't' or die "chdir: $!" if -d 't';

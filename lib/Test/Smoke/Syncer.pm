@@ -1,11 +1,12 @@
 package Test::Smoke::Syncer;
 use strict;
 
+# $Id: Syncer.pm 231 2003-07-15 03:10:56Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.007'; # $Id: Syncer.pm 151 2003-06-06 14:34:06Z abeltje $
+$VERSION = '0.008';
 
-use File::Spec;
 use Cwd;
+use File::Spec;
 require File::Path;
 
 my %CONFIG = (
@@ -90,9 +91,12 @@ to get your perl source-tree up to date.
 
 =item snapshot
 
-This method uses the B<Net::FTP> module to get the latest snapshot. 
+This method uses the B<Net::FTP> or the B<LWP> module to get the 
+latest snapshot. When the B<server> attribute starts with I<http://>
+the fetching is done by C<LWP::Simple::mirror()>.
 To emulate the C<< rsync --delete >> effect, the current source-tree
 is removed.
+
 The snapshot tarball is handled by either B<tar>/B<gzip> or 
 B<Archive::Tar>/B<Compress::Zlib>.
 
@@ -296,7 +300,7 @@ sub check_dot_patch {
     my $patchlevel_h = File::Spec->catfile( $self->{ddir}, 'patchlevel.h' );
     if ( open PATCHLEVEL_H, "< $patchlevel_h" ) {
         while ( <PATCHLEVEL_H> ) {
-            /"DEVEL(\d+)"/ or next;
+            /"(?:DEVEL|MAINT)(\d+)"/ or next;
             $patch_level = $1;
         }
         # save 'patchlevel.h' mtime, so you can set it on '.patch'
@@ -493,12 +497,16 @@ sub sync {
 
 =item $syncer->_fetch_snapshot( )
 
-This does the actual ftpsession.
+C<_fetch_snapshot()> checks to see if 
+C<< S<< $self->{server} =~ m|^https?://| >> && $self->{sfile} >>.
+If so let B<LWP::Simple> do the fetching else do the FTP thing.
 
 =cut
 
 sub _fetch_snapshot {
     my $self = shift;
+
+    return $self->_fetch_snapshot_HTTP if $self->{server} =~ m|^https?://|i;
 
     require Net::FTP;
     my $ftp = Net::FTP->new( $self->{server}, Debug => 0 ) or do {
@@ -550,6 +558,44 @@ sub _fetch_snapshot {
     $ftp->quit;
 
     return $local_snap;
+}
+
+=item $syncer->_fetch_snapshot_HTTP( )
+
+C<_fetch_snapshot_HTTP()> simply invokes C<< LWP::Simple::mirror() >>.
+
+=cut
+
+sub _fetch_snapshot_HTTP {
+    my $self = shift;
+
+    require LWP::Simple;
+    my $snap_name = $self->{sfile};
+
+    unless ( $snap_name ) {
+        require Carp;
+        Carp::carp "No snapshot specified for $self->{server}$self->{sdir}";
+        return undef;
+    }
+
+    my $local_snap = File::Spec->catfile( $self->{ddir},
+                                          File::Spec->updir, $snap_name );
+    $local_snap = File::Spec->canonpath( $local_snap );
+
+    my $remote_snap = "$self->{server}$self->{sdir}/$self->{sfile}";
+
+    $self->{v} and print "LWP::Simple::mirror($remote_snap)";
+    my $result = LWP::Simple::mirror( $remote_snap, $local_snap );
+    if ( LWP::Simple::is_success( $result ) ) {
+        $self->{v} and print " OK\n";
+        return $local_snap;
+    } elsif ( LWP::Simple::is_error( $result ) ) {
+        $self->{v} and print " not OK\n";
+        return undef;
+    } else {
+        $self->{v} and print " skipped\n";
+        return $local_snap;
+    }
 }
 
 =item __find_snap_name( $ftp, $snapext )

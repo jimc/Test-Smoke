@@ -1,16 +1,17 @@
-MANIFEST
+MANIFEST	$Id: MANIFEST 245 2003-07-20 12:24:22Z abeltje $
 README
 ReleaseNotes
 Changes
 ChangeLog
 Configure.pl
-FAQ.pod
+FAQ
 Makefile.PL
 configsmoke.pl
 mailrpt.pl
 mktest.pl
 mkovz.pl
 patchtree.pl
+runsmoke.pl
 smoke.sh
 smokew32.bat
 perl56x.cfg
@@ -24,13 +25,16 @@ synctree.pl
 W32Configure.pl
 lib/Mail/Sendmail.pm
 lib/Test/Smoke.pm
+lib/Test/Smoke/BuildCFG.pm
 lib/Test/Smoke/Mailer.pm
 lib/Test/Smoke/Patcher.pm
 lib/Test/Smoke/Policy.pm
+lib/Test/Smoke/Smoker.pm
 lib/Test/Smoke/Syncer.pm
 lib/Test/Smoke/SourceTree.pm
 lib/Test/Smoke/Util.pm
 t/TestLib.pm
+t/buildcfg.t
 t/cfgstuff.t
 t/for_dmake.t
 t/for_nmake.t
@@ -44,6 +48,7 @@ t/policy.t
 t/regenstuff.t
 t/skip_filter.t
 t/smoked_config.t
+t/smoker.t
 t/syncer_copy.t
 t/syncer_ftp.t
 t/syncer_link.t

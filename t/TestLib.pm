@@ -1,10 +1,11 @@
 package TestLib;
 use strict;
 
+# $Id: TestLib.pm 253 2003-07-20 23:19:05Z abeltje $
 use vars qw( $VERSION @EXPORT );
-use base 'Exporter';
-$VERSION = '0.01';
+$VERSION = '0.02';
 
+use base 'Exporter';
 @EXPORT = qw( 
     &whereis 
     &find_unzip &do_unzip
@@ -194,7 +195,11 @@ sub find_untargz {
     unless ( $uncompress ) {
         eval { require Archive::Tar; };
         unless ( $@ ) {
-            eval { require Compress::Zlib; };
+            if ( $Archive::Tar::VERSION >= 0.99 ) {
+                eval { require IO::Zlib };
+            } else {
+                eval { require Compress::Zlib };
+            }
             $uncompress = 'Archive::Tar' unless $@;
         }
     }

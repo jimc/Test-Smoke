@@ -1,8 +1,9 @@
 package Test::Smoke::Patcher;
 use strict;
 
+# $Id: Patcher.pm 231 2003-07-15 03:10:56Z abeltje $
 use vars qw( $VERSION @EXPORT );
-$VERSION = '0.004'; # $Id: Patcher.pm 151 2003-06-06 14:34:06Z abeltje $
+$VERSION = '0.004';
 
 use base 'Exporter';
 use File::Spec;
@@ -15,7 +16,6 @@ use Test::Smoke::Util qw( get_regen_headers );
 sub TRY_REGEN_HEADERS() { 1 }
 
 my %CONFIG = (
-
     df_ddir     => File::Spec->rel2abs( cwd ),
     df_pfile    => undef,
     df_patch    => 'patch',
