@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 316 2003-08-02 12:28:49Z abeltje $
+# $Id: Smoker.pm 347 2003-08-08 18:15:39Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.004';
+$VERSION = '0.005';
 
 use Cwd;
 use File::Spec;
@@ -25,6 +25,8 @@ my %CONFIG = (
     df_w32cc          => 'MSVC60',
     df_w32make        => 'nmake',
     df_w32args        => [ ],
+
+    df_makeopt        => "",
 );
 
 # Define some constants that we can use for
@@ -420,7 +422,7 @@ sub make_test {
         };
 #        $self->log( map { "    $_" } @nok );
         if (grep m/^All tests successful/, @nok) {
-            $self->log( "All tests successful\n" );
+            $self->log( "All tests successful.\n" );
             $self->tty( "\nOK, archive results ..." );
             $self->{patch} and $nok[0] =~ s/\./ for .patch = $self->{patch}./;
         } else {
@@ -477,8 +479,13 @@ sub extend_with_harness {
             $_;
         } $self->_run( "./perl harness $harness" );
         $harness_out =~ s/^\s*$//;
-        $harness_out ||= join "", map "    $_" => @nok
-            unless $harness_all_ok;
+        if ( $harness_all_ok ) {
+            $harness_out ||= @nok
+                ? "Inconsistent testresults:\n" . join "", map "    $_" => @nok
+                : "All tests successful.";
+        } else {
+            $harness_out ||= join "", map "    $_" => @nok;
+        }
         $self->ttylog("\n", $harness_out, "\n" );
         $changed_dir and chdir File::Spec->updir;
     }
@@ -565,6 +572,7 @@ stuff to help MSWin32 (the right maker, the directory).
 sub _make {
     my $self = shift;
     my $cmd = shift;
+    $self->{makeopt} and $cmd = "$self->{makeopt} $cmd";
 
     $self->{is_win32} or return $self->_run( "make $cmd" );
 

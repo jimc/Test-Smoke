@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 297 2003-07-31 21:00:30Z abeltje $
+MANIFEST	$Id: MANIFEST 349 2003-08-08 22:21:16Z abeltje $
 SIGNATURE
 README
 ReleaseNotes
@@ -7,6 +7,7 @@ ChangeLog
 Configure.pl
 FAQ
 Makefile.PL
+archiverpt.pl
 configsmoke.pl
 mailrpt.pl
 mktest.pl
@@ -19,9 +20,11 @@ perl562.cfg
 perlcurrent.cfg
 smoke.cfg
 w32current.cfg
+smoke562_dfconfig
 smoke56x_dfconfig
 smoke58x_dfconfig
 smokeperl.pl
+smokestatus.pl
 synctree.pl
 W32Configure.pl
 lib/Mail/Sendmail.pm

@@ -1,5 +1,5 @@
 #! /usr/bin/perl
-# $Id: Makefile.PL 295 2003-07-31 20:51:41Z abeltje $
+# $Id: Makefile.PL 352 2003-08-09 01:26:34Z abeltje $
 use strict;
 use 5.004;
 use ExtUtils::MakeMaker;
@@ -43,7 +43,8 @@ WriteMakefile(
     PMLIBDIRS     => [ File::Spec->curdir ],
     EXE_FILES     => [qw( synctree.pl patchtree.pl mailrpt.pl W32Configure.pl
                           mktest.pl mkovz.pl smoke.sh smokew32.bat
-                          configsmoke.pl smokeperl.pl runsmoke.pl )],
+                          configsmoke.pl smokeperl.pl runsmoke.pl
+                          archiverpt.pl smokestatus.pl )],
     %install
 );
 

@@ -11,7 +11,7 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use lib $FindBin::Bin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 319 2003-08-03 11:24:26Z abeltje $
+# $Id: configsmoke.pl 345 2003-08-08 00:29:11Z abeltje $
 use vars qw( $VERSION $conf );
 $VERSION = '0.025';
 
@@ -389,13 +389,24 @@ Examples:$untarmsg",
         dft => 'y',
     },
     killtime => {
-        msg => "Should this smoke be aborted on/after a specific time?
+        msg => <<EOT,
+Should this smoke be aborted on/after a specific time?
 \tuse HH:MM to specify a point in time (24 hour notation)
 \tuse +HH:MM to specify a duration
-\tleave empty to finish the smoke without aborting",
+\tleave empty to finish the smoke without aborting
+EOT
         dft => "",
         alt => [ ],
         chk => '^(?:(?:\+\d+)|(?:(?:[0-1]?[0-9])|(?:2[0-3])):[0-5]?[0-9])|$',
+    },
+    # Archive?
+    adir => {
+        msg => <<EOT,
+Which directory should be used for the archives?
+\tLeave empty for no archiving.
+EOT
+        alt => [ ],
+        dft => "",
     },
     # Schedule stuff
     docron => {
@@ -1025,6 +1036,20 @@ if ( $Config{d_alarm} ) {
     $config{ $arg } = prompt( $arg );
 }
 
+=item adir
+
+The smokereports are lost after a new SYNCTREE step, it might be handy
+to archive them along with the logfile.
+
+If you want this then set the directory where you want the stored
+(empty value means no archiving).
+
+=cut
+
+$arg = 'adir';
+$config{ $arg } = prompt_dir( $arg );
+$config{lfile} = $options{log} unless $config{ $arg } eq "";
+
 =item schedule stuff
 
 =over 4
@@ -1192,6 +1217,9 @@ sub sort_configkeys {
 
         # Report related
         qw( mail mail_type mserver from to cc ),
+
+        # Archive report and logfile
+        qw( adir lfile ),
     );
 
     my $i = 0;
@@ -1298,7 +1326,7 @@ REM       after rerunning $0
 $copycmd
 REM $atline
 
-set WD=$cwd\
+set WD=$cwd\\
 rem Change drive-Letter
 for \%\%L in ( "\%WD\%" ) do \%\%~dL
 cd "\%WD\%"
@@ -1315,6 +1343,7 @@ if NOT EXIST \%LOCKFILE\% goto START_SMOKE
     set OLD_PATH=\%PATH\%
     set PATH=$cwd;\%PATH\%
     $^X smokeperl.pl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
+
     set PATH=\%OLD_PATH\%
 
 del \%LOCKFILE\%
@@ -1741,7 +1770,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 319 2003-08-03 11:24:26Z abeltje $
+    $Id: configsmoke.pl 345 2003-08-08 00:29:11Z abeltje $
 
 =head1 COPYRIGHT
 

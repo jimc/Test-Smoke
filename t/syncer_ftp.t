@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: syncer_ftp.t 330 2003-08-04 23:13:18Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot
@@ -118,7 +118,7 @@ SKIP: { # Here we try for gzip/tar
     my $gzip = whereis( 'gzip' );
     # lets try something...
 
-    my $unpack = $gzip ? "$gzip -dc %s | $tar -xf -" : "$tar -xzf %s";
+    my $unpack = $gzip ? qq[$gzip -dc "%s" | $tar -xf -] : qq[$tar -xzf "%s"];
 
     $gzip .= " -dc" if $gzip;
     $gzip = whereis( 'gunzip' ) unless $gzip;

@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 320 2003-08-03 13:41:09Z abeltje $
+# $Id: Smoke.pm 350 2003-08-08 22:26:08Z abeltje $
 use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.18';
+$VERSION = '1.18.02';
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -123,6 +123,7 @@ sub run_smoke {
         $smoker->tty( "Running smoke tests without \$ENV{PERLIO}\n" );
 
     unless ( $continue ) {
+        $smoker->_make( "-i distclean 2>/dev/null" );
         $smoker->ttylog( "Smoking patch $patch\n" ); 
         do_manifest_check( $conf->{ddir}, $smoker );
     }
@@ -169,7 +170,7 @@ sub skip_config {
 
 =head1 REVISION
 
-$Id: Smoke.pm 320 2003-08-03 13:41:09Z abeltje $
+$Id: Smoke.pm 350 2003-08-08 22:26:08Z abeltje $
 
 =head1 COPYRIGHT
 

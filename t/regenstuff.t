@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: regenstuff.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: regenstuff.t 330 2003-08-04 23:13:18Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;
@@ -35,7 +35,7 @@ EO_REGEN
 
     my $regen = get_regen_headers( $ddir );
 
-    is( $regen, "$^X $regen_headers_pl", "Found '$regen'" )
+    is( $regen, qq[$^X "$regen_headers_pl"], "Found '$regen'" )
         or skip "Not found [$regen_headers_pl]", --$to_skip;
 
     local *REGENRUN;
@@ -65,7 +65,7 @@ EO_REGEN
 
     my $regen = get_regen_headers( $ddir );
 
-    is( $regen, "$^X $regen_headers_pl", "Found '$regen'" )
+    is( $regen, qq[$^X "$regen_headers_pl"], "Found '$regen'" )
         or skip "Not found [$regen_headers_pl]", $to_skip--;
 
     local *REGENRUN;
@@ -89,7 +89,7 @@ SKIP: { # as of 18852: 'regen_headers.pl' is now 'regen.pl'
 
     my $regen = get_regen_headers( $ddir );
 
-    is( $regen, "$^X $regen_pl", "Found '$regen'" )
+    is( $regen, qq[$^X "$regen_pl"], "Found '$regen'" )
         or skip "Not found [$regen_pl]", $to_skip--;
 
     local *REGENRUN;
