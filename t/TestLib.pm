@@ -13,10 +13,34 @@ $VERSION = '0.01';
     &rmtree &mkpath
 );
 
+=head1 NAME
+
+TestLib - Stuff to help the test-suite
+
+=head1 SYNOPSIS
+
+    use TestLib;
+
+=head1 DESCRIPTION
+
+What is in here?
+
+=over 4
+
+=cut
+
 use File::Find;
 use File::Spec;
 require File::Path;
 use Cwd;
+
+=item whereis( $prog )
+
+Try to find an executable instance of C<$prog> in $ENV{PATH}.
+
+Rreturns a full file-path (with extension) to it.
+
+=cut
 
 sub whereis {
     my $prog = shift;
@@ -36,6 +60,12 @@ sub whereis {
     return '';
 }
 
+=item get_dir( $path )
+
+Returns a list of filenames (no directory-names) in C<$path>.
+
+=cut
+
 sub get_dir($) {
     my( $path ) = @_;
     my @files;
@@ -47,6 +77,14 @@ sub get_dir($) {
 
     return @files;
 }
+
+=item get_file( @path )
+
+The contents of C<@path> are passed to B<< File::Spec->catfile() >>
+
+Returns the contents of a file, takes note of context (scalar/list).
+
+=cut
 
 sub get_file {
     my $filename = File::Spec->catfile( @_ );
@@ -63,8 +101,27 @@ sub get_file {
     return wantarray ? @content : join "", @content;
 }
 
+=item rmtree( @_ )
+
+This is B<< File::Path::rmtree() >>.
+
+=cut
+
 sub rmtree { File::Path::rmtree( @_ ) }
+
+=item mkpath( @_ )
+
+This is B<< File::Path::mkpath() >>.
+
+=cut
+
 sub mkpath { File::Path::mkpath( @_ ) }
+
+=item find_unzip()
+
+Check C<< wheris( 'gzip' ) >> or C<< eval{ require Compress::Zlib } >>.
+
+=cut
 
 sub find_unzip {
     my $unzip = whereis( 'gzip' );
@@ -78,6 +135,12 @@ sub find_unzip {
 
     return $dounzip;
 }
+
+=item do_unzip( $unzip, $uzfile )
+
+Returns the gunzipped contents of C<$uzfile>.
+
+=cut
         
 sub do_unzip {
     my( $unzip, $uzfile ) = @_;
@@ -113,6 +176,12 @@ sub do_unzip {
 
 }
 
+=item find_untargz()
+
+Find either B<gzip>/B<tar> or B<Compress::Zlib>/B<Archive::Tar>
+
+=cut
+
 sub find_untargz {
     my $tar = whereis( 'tar' );
 
@@ -136,6 +205,12 @@ sub find_untargz {
 
     return $uncompress;
 }
+
+=item do_untargz( $untargz, $tgzfile )
+
+Gunzip and extract the archive in C<$tgzfile>.
+
+=cut
 
 sub do_untargz {
     my( $untgz, $tgzfile ) = @_;
@@ -170,3 +245,30 @@ sub do_untargz {
 }
 
 1;
+
+=back
+
+=head1 COPYRIGHT
+
+(c) 2001-2003, All rights reserved.
+
+  * Abe Timmerman <abeltje@cpan.org>
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+See:
+
+=over 4
+
+=item  * L<http://www.perl.com/perl/misc/Artistic.html>
+
+=item  * L<http://www.gnu.org/copyleft/gpl.html>
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=cut
