@@ -2,14 +2,14 @@
 
 # Create matrix for smoke test results
 # (c)'02 H.Merijn Brand [11 Apr 2002]
-# REVISION: #1.03
+# REVISION: #1.04
 
 # mkovz.pl [ e-mail [ folder ]]
 
 use strict;
 
 use vars qw($VERSION);
-$VERSION = 1.15;
+$VERSION = 1.16;
 
 use File::Spec;
 use Cwd;
@@ -21,14 +21,15 @@ my $mail_from = ($^O eq "MSWin32" ? win32_username () : getpwuid $<);
 my $mailer = "/usr/bin/mailx";
 
 my %Config;
-get_smoke_Config (qw( version osname osvers cc ccversion gccversion ));
+get_smoke_Config (qw(version osname osvers cc ccversion gccversion archname));
 
 # You can overrule the auto-detected settings here, to be more verbose
 # like including the distribution: "Redhat Linux" instead of plain "linux"
-#$Config{osname} = "MSWin32";			# hpux, AIX, cygwin, ...
-#$Config{osvers} = "5.0 W2000Pro";		# 11.00, 4.3.3.0, ...
-#$Config{cc}     = "gcc";			# cc, xlc, cl, ...
-#$Config{ccvers} = "2.95.3-6";
+#$Config{osname}   = "MSWin32";			# hpux, AIX, cygwin, ...
+#$Config{osvers}   = "5.0 W2000Pro";		# 11.00, 4.3.3.0, ...
+#$Config{cc}       = "gcc";			# cc, xlc, cl, ...
+#$Config{ccvers}   = "2.95.3-6";
+#$Config{archname} = 'i386';
 
 =head1 NAME
 
@@ -185,7 +186,7 @@ for (<OUT>) {
 $Config{ccvers}	||= $Config{ccversion} || $Config{gccversion};
 
 print <<EOH;
-Automated smoke report for patch $rpt{patch} on $Config{osname} - $Config{osvers}
+Automated smoke report for patch $rpt{patch} on $Config{osname} - $Config{osvers} ($Config{archname})
           v$VERSION      using $Config{cc} version $Config{ccvers}
 O = OK
 F = Failure(s), extended report at the bottom
@@ -283,7 +284,7 @@ sub send_mail
         open  MAIL, "| $mailer -i -t";
         print MAIL join "\n",
 	    "To: $email",
-	    "From: $email_from",
+	    "From: $mail_from",
 	    "Subject: $subject",
 	    "",
 	    <BODY>;

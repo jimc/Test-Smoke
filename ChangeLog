@@ -1,3 +1,93 @@
+2002-09-29  Abe Timmerman  <abeltje@local>
+
+	* mktest.pl: 1.05 (abeltje):
+	  * Started POD
+	  * Started refactoring [get_cfg_filename(), skip_filter()]
+	  + Added support for -Dggc_v3_2 (--CCTYPE=GCC implied)
+
+	* mkovz.pl: 1.16: (abeltje)
+	  * Version
+	  * Fix the syntaxerror ($mail_from/$email_from)
+	  + Added $Config{archname} to the reports
+
+	* smoke.sh: (abeltje):
+	  + Added 'renice 20 $$' (at Jarkko's request)
+
+	* README: (abeltje):
+	  * Update the version
+
+	* mkdist.sh: (abeltje):
+	  + Added 'make test' for the tiny testsuite
+
+	* smokew32.cfg: (abeltje):
+	  * Change the wording
+	  - Remove -Duseperlio
+	  + Add a hint to the new -Dgcc_v3_2 for MinGW-2
+
+	* test.pl: At least check for syntaxerrors.
+
+2002-09-19  Abe Timmerman  <abeltje@local>
+
+	* smoke.cfg: NO MORE -Uuseperlio (Merijn)
+
+	* smokew32.bat: 1.02: (abeltje)
+	  * get the address right
+
+	* mktest.pl: 1.04: (abeltje)
+	  * A bit more fiddling with the Win32 config args
+	  * bug-fix: Don't change config-params beyond a certain
+
+	* mkovz.pl: 1.03: (abeltje)
+	  * fixed a bug in the mail-to mail-from logic
+	  * changed the RPT_TOP format (common config options moved to the
+	  top)
+
+2002-09-11  Abe Timmerman  <abeltje@local>
+
+	* mktest.pl: (abeltje):
+	  * Minor tweak of Configure_win32()
+
+	* ChangeLog: This is REV-1_15
+
+	* MANIFEST: (abeltje):
+	  * rename smoke.bat to smokew32.bat
+	  * rename smokewin32.cfg to smokew32.cfg
+
+	* mkdist.PL: (abeltje):
+	  * Help to build the distribution
+
+	* smokewin32.cfg: Renamed to 'smokew32.cfg'
+
+	* smokew32.cfg: (abeltje):
+	  * An attempt to make life easier for MSWin32 smokers
+
+	* smokew32.bat: 1.01 (abeltje):
+	  * An attempt to make life easier for MSWin32 smokers
+
+	* smoke.sh: (abeltje):
+	  * Changed the "URI" type call to rsync
+	  * All other output (not caught by mktest.pl) now goes to 'mktest.log'
+
+	* smoke.bat: renamed to smokew32.bat
+
+	* mktest.pl: 1.15 (abeltje):
+	    * Configure() renamed to Configure_win32()
+	    * Extended Configure_win32() to take more makefile vars
+	    + More filtering of 'make test' output
+
+	* mkovz.pl: 1.15 (abeltje):
+	  * Merge 1.13 with my own developments
+	  * Changed the reports to use formats
+	  * Config.pm has changed, so get_smoke_Config() had to change
+
+	* README: (abeltje):
+	  + Added more information for MSWin32 users
+	  * Please don't bug Merijn about Test::Smoke
+
+	* Makefile.PL: (abeltje):
+	  + Add 'Abe Timmerman' to authors
+	  * Change VERSION to VERSION_FROM
+
 2002-09-11  Abe Timmerman  <abeltje@local>
 
 	* MANIFEST: (abeltje):

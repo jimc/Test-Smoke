@@ -5,7 +5,7 @@ Perl Core Smoke Test Suite
 =head1 SYNOPSIS
 
   # at 22:25
-  sh smoke.sh [/usr/CPAN/perl-current [smoke.cfg]]
+  sh smoke.sh [~/perlsmoke/perl-current [smoke.cfg]]
   #
 
   or for the brave and trustworthy
@@ -38,7 +38,7 @@ now ready to go, just follow the SYNOPSIS to give it a first shot for
 tonight.
 
 Optionally delete lines from config.sh (or a local copy with a different
-name) for which you are certail your system doesn't support it (like
+name) for which you are certain your system doesn't support it (like
 threading or 64bit configurations)
 
 If something useful happens, do it every night using cron instead of at.
@@ -84,7 +84,7 @@ over the results captured untill then.
 
 =head2 Distribution
 
-  $CPAN/authors/id/A/AB/ABELTJE/Test-Smoke-1.15.tgz
+  $CPAN/ABELTJE/Test-Smoke-1.16.tar.gz
   SourceForge project "perl-qa" (depricated)
 
 =head2 Mailing lists

@@ -2,6 +2,9 @@
 
 # This should be run with cron
 
+# Uncomment this to be as nice as possible. (Jarkko)
+# renice -n 20 $$ 2>/dev/null || renice 20 $$ 2>/dev/null
+
 # Change your base dir here
 export PC
 PC=${1:-/usr/CPAN/perl-current}

@@ -13,9 +13,14 @@ SET PS_BD=c:\usr\local\src\bleadperl\perl
 SET PS_CF=smokew32.cfg
 SET CCTYPE=GCC
 
+REM Set GCC_VERSION here if your shell can't deal with
+REM with this stuff. Only applies for for GCC
+set GCC_VERSION=
+set OS_VERSION=5.0 W2000Pro
+
 REM If you don't want all this fancy checking
-REM Just uncomment the SET MK= line (and set your maker)
-REM SET MK=nmake
+REM Just set MK to [dmake | nmake] here
+SET MK=
 
 REM Is this hack for WD=`pwd`, CMD.EXE specific?
 REM You could also uncomment the SET WD= line (must end with '\'!)
@@ -23,6 +28,7 @@ REM and comment this one out
 FOR %%I IN ( %0 ) DO SET WD=%%~dpI
 REM SET WD=c:\path\to\
 
+REM ############### CHANGES FROM THIS POINT, OLY IF YOU MUST ###############
 REM The complete logfile
 SET PS_LF=%WD%mktest.log
 
@@ -32,6 +38,17 @@ IF DEFINED MK GOTO NoSet
 :_GCC
     IF NOT "%CCTYPE%"=="GCC" GOTO _BCC
     SET MK=dmake
+    IF NOT "%GCC_VERSION%"=="" GOTO Smoke
+REM A Windows way to set GCC_VERSION
+:GCC_V2_95
+    gcc --version | find "2.95" > NUL: 2>&1
+    IF ERRORLEVEL 1 GOTO GCC_V3
+    FOR /F "usebackq" %%V IN (`gcc --version`) DO SET GCC_VERSION=%%V
+goto Smoke
+:GCC_V3
+    FOR /F "usebackq delims=" %%V IN (`gcc --version`) DO ((ECHO %%V | find "gcc">NUL: 2>&1) && (IF NOT ERRORLEVEL 1 SET GCC_VERSION=%%V))
+
+    IF "%GCC_VERSION%"=="" SET GCC_VERSION=unknown
 GOTO Smoke
 
 :_BCC
@@ -71,8 +88,11 @@ GOTO Smoke
     IF EXIST %WD%patchperl.bat CALL %WD%patchperl
     IF /I "%1"=="nosmoke" shift && GOTO _MKOVZ
 
+    IF NOT "%GCC_VERSION%"=="" SET GCC_VERSION=gccversion=%GCC_VERSION%
+    IF NOT "%OS_VERSION%"==""  SET OS_VERSION=osvers=%OS_VERSION%
+
     REM Configure, build and test
-    perl %WD%mktest.pl -m %MK% -c %CCTYPE% -v 1 %WD%%PS_CF% >>%PS_LF% 2>&1
+    perl %WD%mktest.pl -m %MK% -c %CCTYPE% -v 1 %WD%%PS_CF% "%GCC_VERSION%" "%OS_VERSION%" >>%PS_LF% 2>&1
     IF ERRORLEVEL 1 ECHO mktest.pl exited with code %ERRORLEVEL%
 
 :_MKOVZ
@@ -94,11 +114,13 @@ GOTO Exit
 GOTO Exit
 
 :Error
-    ECHO Unknown C Compiler (%CCTYPE%), use [GCC,BORLAND,MSVC,MSVC20,MSVC60]
+    ECHO Unknown C Compiler (%CCTYPE%), use [BORLAND,GCC,MSVC,MSVC20,MSVC60]
 
 :Exit
     SET MK=
     SET CCTYPE=
+    SET GCC_VERSION=
+    SET OS_VERSION=
     SET PS_BD=
     SET PS_CF=
     SET PS_LF=

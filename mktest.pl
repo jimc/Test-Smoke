@@ -4,12 +4,12 @@
 # (c)'01 H.Merijn Brand [27 August 2001]
 #    and Nicholas Clark
 # 09092002: Abe Timmerman
-# REVISION: 1.04
+# REVISION: 1.05
 use strict;
 
 sub usage ()
 {
-    print STDERR "usage: mktest.pl [<smoke.cfg>]\n";
+    print STDERR "usage: mktest.pl [options] [<smoke.cfg>]\n";
     exit 1;
     } # usage
 
@@ -29,6 +29,39 @@ my $win32_cctype = "MSVC60"; # 2.0 => MSVC20; 5.0 => MSVC; 6.0 => MSVC60
 my $win32_maker  = $Config{make};
 my $smoker       = $Config{cf_email};
 
+=head1 NAME
+
+mktest.pl - Configure, build and test bleading edge perl
+
+=head1 SYNOPSIS
+
+    $ ./mktest.pl [options] smoke.cfg
+
+=head1 OPTIONS
+
+=over
+
+=item * -n | --norun | --dry-run
+
+=item * -v | --verbose [ level ]
+
+=item * -m | --win32-maker <dmake | nmake>
+
+=item * -c | --win32-cctype <BORLAND | GCC | MSVC20 | MSVC | MSVC60>
+
+=item * -s | --smoker <your-email-address>
+
+=back
+
+All remaining arguments in C<@ARGV> are used for B<MSWin32> to
+tweak values in Config.pm and should be C<< key=value >> pairs.
+
+=head1 METHODS
+
+=over
+
+=cut
+
 my $norun   = 0;
 my $verbose = 0;
 GetOptions (
@@ -39,19 +72,33 @@ GetOptions (
     "s|smoker=s"       => \$smoker,
     ) or usage;
 my $config_file = shift;
-# All remaining stuff in @ARGV is passed to Configure_win32()
+# All remaining stuff in @ARGV is used by Configure_win32()
 # They are appended to the CFG_VARS macro
-# This is a way to cheat in Win32 and get the right stuff into Config.pm
+# This is a way to cheat in Win32 and get the "right" stuff into Config.pm
 
 open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
 open OUT,    "> mktest.out";	select ((select (OUT),    $| = 1)[0]);
 				select ((select (STDOUT), $| = 1)[0]);
 
+=item is_win32( )
+
+C<is_win32()> returns true if  C<< $^O eq "MSWin32" >>.
+
+=cut
+
 sub is_win32 ()
 {
     $^O eq "MSWin32";
     } # is_win32
+
+=item run( $command[, $sub] )
+
+C<run()> returns C<< qx( $command ) >> unless C<$sub> is specified.
+If C<$sub> is defined (and a coderef) C<< $sub->( $command ) >> will 
+be called.
+
+=cut
 
 # Run a system command or a perl subroutine, unless -n was flagged.
 sub run ($;$)
@@ -65,6 +112,13 @@ sub run ($;$)
 
     return qx($command);
     } # run
+
+=item make( $command )
+
+C<make()> calls C<< run( "make $command" ) >>, and does some extra
+stuff to help MSWin32 (the right maker, the directory).
+
+=cut
 
 sub make ($)
 {
@@ -83,6 +137,12 @@ sub make ($)
     chdir ".." or die "unable to chdir() out of 'win32'";
     } #make
 
+=item ttylog( @message )
+
+C<ttylog()> prints C<@message> to both STDOUT and the logfile.
+
+=cut
+
 sub ttylog (@)
 {
     print TTY @_;
@@ -90,9 +150,7 @@ sub ttylog (@)
     } # ttylog
 
 my @config;
-unless (defined $config_file) {
-    -s "smoke.cfg" and $config_file = "smoke.cfg";
-    }
+$config_file = get_cfg_filename( $config_file );
 if (defined $config_file) {
     open CONF, "< $config_file" or die "Can't open '$config_file': $!";
     my @conf;
@@ -371,58 +429,7 @@ sub run_tests
 	    my @nok = ();
 	    select ((select (TST), $| = 1)[0]);
 	    while (<TST>) {
-		# Still to be extended
-		m,^ *$, ||
-		m,^	AutoSplitting, ||
-		m,^\./miniperl , ||
-		m,^\s*autosplit_lib, ||
-		m,^\s*PATH=\S+\s+./miniperl, ||
-		m,^	Making , ||
-		m,^make\[[12], ||
-		m,make( TEST_ARGS=)? (_test|TESTFILE=|lib/\w+.pm), ||
-		m,^make:.*Error\s+\d, ||
-		m,^\s+make\s+lib/, ||
-		m,^ *cd t &&, ||
-		m,^if \(true, ||
-		m,^else \\, ||
-		m,^fi$, ||
-		m,^lib/ftmp-security....File::Temp::_gettemp: Parent directory \((\.|/tmp/)\) is not safe, ||
-		m,^File::Temp::_gettemp: Parent directory \((\.|/tmp/)\) is not safe, ||
-		m,^ok$, ||
-		m,^[-a-zA-Z0-9_/]+\.*(ok|skipping test on this platform)$, ||
-		m,^(xlc|cc_r) -c , ||
-		m,^\s+$testdir/, ||
-		m,^sh mv-if-diff\b, ||
-		m,File \S+ not changed, ||
-		# cygwin
-		m,^dllwrap: no export definition file provided, ||
-		m,^dllwrap: creating one. but that may not be what you want, ||
-		m,^(GNUm|M)akefile:\d+: warning: overriding commands for target `perlmain.o', ||
-		m,^(GNUm|M)akefile:\d+: warning: ignoring old commands for target `perlmain.o', ||
-		m,^\s+CCCMD\s+=\s+, ||
-		# Don't know why BSD's make does this
-		m,^Extracting .*with variable substitutions, ||
-		# Or these
-		m,cc\s+-o\s+perl.*perlmain.o\s+lib/auto/DynaLoader/DynaLoader\.a\s+libperl\.a, ||
-		m,^\S+ is up to date, ||
-		m,^(   )?### , ||
-		# Clean up Win32's output
-		m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok$, ||
-		m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok\,\s+\d+/\d+\s+skipped:, ||
-		m,^(?:\.\.[/\\])?[\w/\\-]+\.*skipped[: ], ||
-		m,^\t?x?copy , ||
-		m,\d+\s+[Ff]ile\(s\) copied, ||
-		m,\.\.[/\\](?:mini)?perl\.exe ,||
-		m,^\t?cd , ||
-		m,^\b[nd]make\b, ||
-		m,dmake\.exe:?\s+-S, ||
-		m,^\s+\d+/\d+ skipped: , ||
-		m,^\s+all skipped: , ||
-		m,\.+skipped$, ||
-		m,^\s*pl2bat\.bat [\w\\]+, ||
-		m,^Making , ||
-		m,^Skip ,
-		    and next;
+		skip_filter( $_ ) and next;
 
 		# make mkovz.pl's life easier
 		s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
@@ -466,8 +473,50 @@ sub run_tests
 	}
     } # run_tests
 
-sub Configure_win32
-{
+=item Configure_win32( $command )
+
+C<Configure_win32()> alters the settings of the makefile for MSWin32.
+It supports these options:
+
+=over
+
+=item * B<-Duseperlio>
+
+set USE_PERLIO = define (default)
+
+=item * B<-Dusethreads>
+
+set USE_ITHREADS = define (also sets USE_MULTI and USE_IMP_SYS)
+
+=item * B<-Duseithreads>: set USE_ITHREADS = define
+
+set USE_ITHREADS = define (also sets USE_MULTI and USE_IMP_SYS)
+
+=item * B<-Dusemultiplicity>
+
+sets USE_MULTI = define (also sets USE_ITHREADS and USE_IMP_SYS)
+
+=item * B<-Duseimpsys>
+
+sets USE_IMP_SYS = define (also sets USE_ITHREADS and USE_MULTI)
+
+=item * B<-DDEBUGGING>
+
+sets CFG = Debug
+
+=item * B<-DINST_DRV=...>
+
+sets INST_DRV to a new value (default is "c:")
+
+=item * B<-DINST_TOP=...>
+
+sets INST_DRV to a new value (default is "$(INST_DRV)\perl")
+
+=back
+
+=cut
+
+sub Configure_win32 {
     my $command = shift;
 
     local $_;
@@ -484,6 +533,7 @@ sub Configure_win32
         "-DINST_ARCH"           => "INST_ARCH",
         "-Dcf_email"            => "EMAIL",
         "-DCCTYPE"              => "CCTYPE",
+        "-Dgcc_v3_2"            => "USE_GCC_V3_2",
         "-DCCHOME"              => "CCHOME",
         "-DCRYPT_SRC"           => "CRYPT_SRC",
         "-DCRYPT_LIB"           => "CRYPT_LIB",
@@ -492,7 +542,7 @@ sub Configure_win32
 	USE_MULTI	=> 0,
 	USE_ITHREADS	=> 0,
 	USE_IMP_SYS	=> 0,
-	USE_PERLIO	=> 0,
+	USE_PERLIO	=> 1, # useperlio should be the default!
 	USE_DEBUGGING	=> 0,
         INST_DRV        => 'C:',
         INST_TOP        => '$(INST_DRV)\perl',
@@ -500,9 +550,10 @@ sub Configure_win32
         INST_ARCH       => '',
         EMAIL           => $smoker,
         CCTYPE          => $win32_cctype,
+        USE_GCC_V3_2    => 0,
         CCHOME          => '',
         CRYPT_SRC       => '',
-        CRYPR_LIB       => '',
+        CRYPT_LIB       => '',
     );
     my @w32_opts = grep ! /^USE_/, keys %opts;
     my $config_args = join " ", 
@@ -523,6 +574,9 @@ sub Configure_win32
     if ( $opts{USE_MULTI} || $opts{USE_ITHREADS} || $opts{USE_IMP_SYS} ) {
         $opts{USE_MULTI} = $opts{USE_ITHREADS} = $opts{USE_IMP_SYS} = 1;
     }
+
+    # If you -Dgcc_v3_2 you 'll *want* CCTYPE = GCC
+    $opts{CCTYPE} = "GCC" if $opts{USE_GCC_V3_2};
 
     local (*ORG, *NEW);
     my $in =  "win32/$win32_makefile_map{ $win32_maker }";
@@ -567,6 +621,102 @@ sub Configure_win32
     close ORG;
     close NEW;
 } # Configure_win32
+
+=item get_cfg_filename( )
+
+C<get_cfg_filename()> tries to find a B<cfg file> and returns it.
+
+=cut
+
+sub get_cfg_filename {
+    my( $cfg_name ) = @_;
+    return $cfg_name if defined $cfg_name && -f $cfg_name;
+
+    my( $base_dir ) = ( $0 =~ m|^(.*)/| ) || File::Spec->curdir;
+    $cfg_name = File::Spec->catfile( $base_dir, 'smoke.cfg' );
+    return $cfg_name  if -f $cfg_name && -s _;
+
+    $base_dir = File::Spec->curdir;
+    $cfg_name = File::Spec->catfile( $base_dir, 'smoke.cfg' );
+    return $cfg_name if -f $cfg_name && -s _;
+
+    return undef;
+}
+
+=item skip_filter( $line )
+
+C<skip_filter()> returns true if the filter rules apply to C<$line>.
+
+=cut
+
+sub skip_filter {
+    local( $_ ) = @_;
+    # Still to be extended
+    return m,^ *$, ||
+    m,^	AutoSplitting, ||
+    m,^\./miniperl , ||
+    m,^\s*autosplit_lib, ||
+    m,^\s*PATH=\S+\s+./miniperl, ||
+    m,^	Making , ||
+    m,^make\[[12], ||
+    m,make( TEST_ARGS=)? (_test|TESTFILE=|lib/\w+.pm), ||
+    m,^make:.*Error\s+\d, ||
+    m,^\s+make\s+lib/, ||
+    m,^ *cd t &&, ||
+    m,^if \(true, ||
+    m,^else \\, ||
+    m,^fi$, ||
+    m,^lib/ftmp-security....File::Temp::_gettemp: Parent directory \((\.|/tmp/)\) is not safe, ||
+    m,^File::Temp::_gettemp: Parent directory \((\.|/tmp/)\) is not safe, ||
+    m,^ok$, ||
+    m,^[-a-zA-Z0-9_/]+\.*(ok|skipping test on this platform)$, ||
+    m,^(xlc|cc_r) -c , ||
+    m,^\s+$testdir/, ||
+    m,^sh mv-if-diff\b, ||
+    m,File \S+ not changed, ||
+    # cygwin
+    m,^dllwrap: no export definition file provided, ||
+    m,^dllwrap: creating one. but that may not be what you want, ||
+    m,^(GNUm|M)akefile:\d+: warning: overriding commands for target `perlmain.o', ||
+    m,^(GNUm|M)akefile:\d+: warning: ignoring old commands for target `perlmain.o', ||
+    m,^\s+CCCMD\s+=\s+, ||
+    # Don't know why BSD's make does this
+    m,^Extracting .*with variable substitutions, ||
+    # Or these
+    m,cc\s+-o\s+perl.*perlmain.o\s+lib/auto/DynaLoader/DynaLoader\.a\s+libperl\.a, ||
+    m,^\S+ is up to date, ||
+    m,^(   )?### , ||
+    # Clean up Win32's output
+    m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok$, ||
+    m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok\,\s+\d+/\d+\s+skipped:, ||
+    m,^(?:\.\.[/\\])?[\w/\\-]+\.*skipped[: ], ||
+    m,^\t?x?copy , ||
+    m,\d+\s+[Ff]ile\(s\) copied, ||
+    m,\.\.[/\\](?:mini)?perl\.exe ,||
+    m,^\t?cd , ||
+    m,^\b[nd]make\b, ||
+    m,dmake\.exe:?\s+-S, ||
+    m,^\s+\d+/\d+ skipped: , ||
+    m,^\s+all skipped: , ||
+    m,\.+skipped$, ||
+    m,^\s*pl2bat\.bat [\w\\]+, ||
+    m,^Making , ||
+    m,^Skip ,
+}
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright (C) 2002 H.Merijn Brand, Nicholas Clark, Abe Timmmerman
+
+This suite is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself, without consulting the author.
+
+(Future) Co-Authors and or contributors should agree to this before
+submitting patches.
+
+=cut
 
 __DATA__
 #!/bin/sh
