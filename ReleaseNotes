@@ -1,6 +1,6 @@
 =head1 NAME
 
-ReleaseNotes - These are the Release Notes for 1.18.06
+ReleaseNotes - These are the Release Notes for 1.18.09
 
 =head1 SYNOPSIS
 
@@ -66,6 +66,14 @@ proposal. Thanks Abigail!
 [Bug Fix] Nick Clark found a thinko in the F<configsmoke.pl> code that
 writes the jcl after configuration in a different directory from the
 install directory. Thanks Nick!
+
+=item 10
+
+Some perl5-porters have expressed that they do not want PASS reports
+on p5p. Nick Clark suggested we try and manage that from Test::Smoke,
+so we now have a new config-variable C<ccp5p_onfail> that defaults to
+'No'. B<Please> do not try to include p5p in your default C<To:> or
+C<Cc:>, F<configsmoke.pl> will not accept it anymore.
 
 =back
 
@@ -151,7 +159,7 @@ some extra defaults to help configuring Test::Smoke for this release.
 
 =head1 REVISION
 
-$Id: ReleaseNotes 427 2003-09-21 12:40:19Z abeltje $
+$Id: ReleaseNotes 470 2003-10-10 13:22:57Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -10,6 +10,173 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[   470] By: abeltje                          on 2003-10-10 15:22:57 +0200
+        Log: * keep up with the VERSION
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/ReleaseNotes
+___________________________________________________________________________
+[   468] By: abeltje                          on 2003-10-10 14:33:59 +0200
+        Log: * [FIX] (thanks to Merijn)
+	       * more different names for "patch" and check if it knows
+		 about '--version'
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl,
+	     /Test-Smoke-1.18.xx/t/TestLib.pm,
+	     /Test-Smoke-1.18.xx/t/patcher.t
+___________________________________________________________________________
+[   467] By: abeltje                          on 2003-10-10 12:22:00 +0200
+        Log: * [CHANGE]
+	       * Merijn wanted to pass Configure arguments to
+		 smokeperl.pl, I believe this is a reasonable way to do
+		 that.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke.pm,
+	     /Test-Smoke-1.18.xx/smokeperl.pl
+___________________________________________________________________________
+[   466] By: abeltje                          on 2003-10-10 00:40:56 +0200
+        Log: * [CHANGE]
+	       + I changed my mind, no p5p allowed in To: or Cc: from
+		 smokeperl.pl
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/ReleaseNotes
+___________________________________________________________________________
+[   465] By: abeltje                          on 2003-10-10 00:37:13 +0200
+        Log: * [FIX]
+	       * revision 398 changed the log message too much, so we lost
+		 the X result :(
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/mkovz.pl
+___________________________________________________________________________
+[   464] By: abeltje                          on 2003-10-10 00:21:04 +0200
+        Log: * [FIX]
+	       * detypo in the jcl generating code
+	       ++$VERSION (forgot about that last time)
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl
+___________________________________________________________________________
+[   462] By: abeltje                          on 2003-10-05 13:31:25 +0200
+        Log: * [CHANGE]
+	       + On top of revision 454, we now do not accept p5p in To:
+		 or Cc: (lets see how that works out)
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl
+___________________________________________________________________________
+[   461] By: abeltje                          on 2003-10-05 12:33:54 +0200
+        Log: * [FIX]
+	       * The Test::Smoke::Syncer::Copy->sync() destination
+		 directory cleanup revealed a bug in the testsuite.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/t/TestLib.pm,
+	     /Test-Smoke-1.18.xx/t/syncer_copy.t
+___________________________________________________________________________
+[   460] By: abeltje                          on 2003-10-05 12:30:23 +0200
+        Log: * [FIX]
+	       * Test::Smoke::Syncer::Copy->sync() didn't clean up the
+		 destination directory
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/SourceTree.pm,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke/Syncer.pm
+___________________________________________________________________________
+[   458] By: abeltje                          on 2003-09-28 12:57:04 +0200
+        Log: * [FIX] pod error (good thing we have test_pod.pl :)
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/Mailer.pm
+___________________________________________________________________________
+[   457] By: abeltje                          on 2003-09-28 12:53:58 +0200
+        Log: * regen Changes for 1.18.07
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/Changes
+___________________________________________________________________________
+[   456] By: abeltje                          on 2003-09-28 12:53:24 +0200
+        Log: * Document the new "ccp5p_onfail" config variable (revision
+	       454)
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/ReleaseNotes
+___________________________________________________________________________
+[   455] By: abeltje                          on 2003-09-28 12:43:53 +0200
+        Log: * Prepare for 1.18.07
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[   454] By: abeltje                          on 2003-09-28 12:42:46 +0200
+        Log: * [ADD]
+	       + Nick Clark suggested we try to manage the sending of
+		 reports to perl5-porters.
+	     There is a new config variable "ccp5p_onfail" that is
+	     implented in Test::Smoke::Mailer and depends on the Summary
+	     (PASS/FAIL) in the subject. It will do a basic check on the
+	     To: and Cc: header fields to try and avoid having p5p in
+	     there twice.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke/Mailer.pm,
+	     /Test-Smoke-1.18.xx/mailrpt.pl,
+	     /Test-Smoke-1.18.xx/smokeperl.pl,
+	     /Test-Smoke-1.18.xx/t/mailer.t
+___________________________________________________________________________
+[   438] By: abeltje                          on 2003-09-25 07:34:23 +0200
+        Log: * SIGNATURE for 1.18.06 final (before regen Changes
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/SIGNATURE
+___________________________________________________________________________
+[   437] By: abeltje                          on 2003-09-25 07:32:45 +0200
+        Log: * (Forgot to) regen Changes for 1.18.06 final
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/Changes
+___________________________________________________________________________
+[   435] By: abeltje                          on 2003-09-23 23:03:59 +0200
+        Log: * [ADD]
+	       + Paul Hughes suggested I added a note about failing tests
+		 in t/patcher.t for older patch programs from cygwin (for
+		 true MSWin32).
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/README
+___________________________________________________________________________
+[   434] By: abeltje                          on 2003-09-23 22:52:03 +0200
+        Log: * [FIX]
+	       + Thanks to Nick Clark we now support keeping _config and
+		 .sh (from configsmoke.pl) in a different directory from
+		 the install directory.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl
+___________________________________________________________________________
+[   433] By: abeltje                          on 2003-09-23 20:26:59 +0200
+        Log: * [FIX]
+	       + added the explicit propagation of the Test::Smoke::Smoker
+		 defaults
+	       * changed the log-message from
+		 Test::Smoke::Smoker::make_test() for --norun
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/Smoker.pm,
+	     /Test-Smoke-1.18.xx/runsmoke.pl
+___________________________________________________________________________
+[   432] By: abeltje                          on 2003-09-22 22:11:23 +0200
+        Log: * [FIX]
+	       * This test was too unforgiving wrt the existance of the
+		 fake-tree directory. Thanks to Paul Hughes for pointing
+		 that out!
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/t/regenstuff.t
+___________________________________________________________________________
+[   431] By: abeltje                          on 2003-09-22 21:33:52 +0200
+        Log: * [FIX]
+	       * Nick Clark found that an empty line as the last in a
+		 section was ignored (bad programmer; no cookie!) Thanks
+		 Nick for finding it!
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/BuildCFG.pm,
+	     /Test-Smoke-1.18.xx/t/buildcfg.t
+___________________________________________________________________________
+[   430] By: abeltje                          on 2003-09-21 14:45:43 +0200
+        Log: * regen SIGNATURE for 1.18.06
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/SIGNATURE
+___________________________________________________________________________
+[   429] By: abeltje                          on 2003-09-21 14:41:55 +0200
+        Log: * Prepare for 1.18.06
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/Changes
+___________________________________________________________________________
 [   428] By: abeltje                          on 2003-09-21 14:41:17 +0200
         Log: * Keep up with changing versions (1.18.06)
         Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx

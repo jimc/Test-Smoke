@@ -1,9 +1,9 @@
 package Test::Smoke::SourceTree;
 use strict;
 
-# $Id: SourceTree.pm 417 2003-09-03 09:34:05Z abeltje $
+# $Id: SourceTree.pm 460 2003-10-05 10:30:23Z abeltje $
 use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS );
-$VERSION = '0.004';
+$VERSION = '0.005';
 
 use File::Spec;
 use File::Find;
@@ -44,7 +44,7 @@ Test::Smoke::SourceTree - Manipulate the perl source-tree
 =cut
 
 # Define some constants
-sub ST_MISSING() { return 1 }
+sub ST_MISSING()    { return 1 }
 sub ST_UNDECLARED() { return 0 }
 
 =item Test::Smoke::SourceTree->new( $tree_dir )
@@ -208,8 +208,9 @@ sub clean_from_MANIFEST {
     my $self = shift;
 
     my $mani_check = $self->check_MANIFEST( @_ );
-    my @to_remove = grep $mani_check->{ $_ } == ST_UNDECLARED 
-        => keys %$mani_check;
+    my @to_remove = grep {
+        $mani_check->{ $_ } == ST_UNDECLARED 
+    } keys %$mani_check;
 
     foreach my $entry ( @to_remove ) {
         my $file = $self->mani2abs( $entry );

@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: patcher.t 468 2003-10-10 12:33:59Z abeltje $
 
 use File::Spec;
 use FindBin;
@@ -28,7 +28,7 @@ BEGIN { use_ok( 'Test::Smoke::Patcher' ) };
     is( $patcher->_make_opts, '-bp1', "Patch option '-bp1'" );
 }
 
-my $patch = whereis( 'patch' );
+my $patch = find_a_patch();
 my $testpatch = File::Spec->catfile( 't', 'test.patch' );
 
 SKIP: { # test Test::Smoke::Patcher->patch_single()

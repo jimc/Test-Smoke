@@ -1,9 +1,9 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 362 2003-08-10 21:19:22Z abeltje $
+# $Id: Syncer.pm 460 2003-10-05 10:30:23Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.009';
+$VERSION = '0.010';
 
 use Cwd;
 use File::Spec;
@@ -1046,7 +1046,9 @@ sub new {
 
 =item $syncer->sync( )
 
-This uses B<Test::Smoke::SourceTree> to do the actual copying.
+This uses B<Test::Smoke::SourceTree> to do the actual copying.  After
+that it will clean up the source-tree (from F<MANIFEST>, but ignoring
+F<MANIFEST.SKIP>!).
 
 =cut
 
@@ -1054,9 +1056,12 @@ sub sync {
     my $self = shift;
 
     require Test::Smoke::SourceTree;
-    my $tree = Test::Smoke::SourceTree->new( $self->{cdir} );
 
+    my $tree = Test::Smoke::SourceTree->new( $self->{cdir} );
     $tree->copy_from_MANIFEST( $self->{ddir}, $self->{v} );
+
+    $tree = Test::Smoke::SourceTree->new( $self->{ddir} );
+    $tree->clean_from_MANIFEST( 'MANIFEST.SKIP' );
 
     return $self->check_dot_patch;
 }

@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 396 2003-08-22 00:31:59Z abeltje $
+# $Id: smokeperl.pl 467 2003-10-10 10:22:00Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -21,16 +21,18 @@ use Test::Smoke::Mailer;
 use Test::Smoke::Util qw( get_patch calc_timeout do_pod2usage );
 
 use Getopt::Long;
+Getopt::Long::Configure( 'pass_through' );
 my %options = ( config => 'smokecurrent_config', run => 1,
                 fetch => 1, patch => 1, mail => undef, archive => undef,
-                continue => 0,
+                continue => 0, ccp5p_onfail => undef,
                 is56x => undef, defaultenv => undef, smartsmoke => undef );
 
 my $myusage = "Usage: $0 [-c configname]";
 GetOptions( \%options, 
     'config|c=s', 
     'fetch!', 
-    'patch!', 
+    'patch!',
+    'ccp5p_onfail!',
     'mail!',
     'run!',
     'archive!',
@@ -69,12 +71,15 @@ It can take these options
   --nopatch                Skip the patch step
   --nomail                 Skip the mail step
   --noarchive              Skip the archive step (if applicable)
+  --[no]ccp5p_onfail       Do (not) send failure reports to perl5-porters
 
   --continue               Try to continue an interrupted smoke
   --is56x                  This is a perl-5.6.x smoke
   --defaultenv             Run a smoke in the default environment
   --[no]smartsmoke         Don't smoke unless patchlevel changed
   --snapshot <patchlevel>  Set a new patchlevel for snapshot smokes
+
+All other arguments are passed to F<Configure>!
 
 =head1 DESCRIPTION
 
@@ -97,8 +102,8 @@ defined Test::Smoke->config_error and
     for qw( run fetch patch mail archive );
 # Make command-line options override configfile
 defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
-    for qw( is56x defaultenv continue 
-            smartsmoke run fetch patch mail archive );
+    for qw( is56x defaultenv continue
+            smartsmoke run fetch patch mail ccp5p_onfail archive );
 
 if ( $options{continue} ) {
     $options{v} and print "Will try to continue current smoke\n";
@@ -182,7 +187,7 @@ sub call_mktest {
     };
     $Config{d_alarm} and alarm $timeout;
 
-    run_smoke( $conf->{continue} );
+    run_smoke( $conf->{continue}, @ARGV );
 }
 
 sub call_mkovz {
@@ -253,7 +258,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 396 2003-08-22 00:31:59Z abeltje $
+$Id: smokeperl.pl 467 2003-10-10 10:22:00Z abeltje $
 
 =head1 COPYRIGHT
 

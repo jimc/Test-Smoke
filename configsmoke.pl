@@ -11,9 +11,9 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use lib $FindBin::Bin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 434 2003-09-23 20:52:03Z abeltje $
+# $Id: configsmoke.pl 468 2003-10-10 12:33:59Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.029';
+$VERSION = '0.032';
 
 use Getopt::Long;
 my %options = ( 
@@ -370,17 +370,29 @@ EOT
     },
 
     to => {
-       msg => "To which address(es) should the report be send " .
-              "(comma separated list)?",
+       msg => <<EOMSG,
+To which address(es) should the report be send?
+\t(comma separated list, *please* do not include perl5-porters!)
+EOMSG
        alt => [ ],
        dft => 'smokers-reports@perl.org',
     },
 
     cc => {
-       msg => "To which address(es) should the report be CC'ed " .
-              "(comma separated list)?",
+       msg => <<EOMSG,
+To which address(es) should the report be CCed?
+\t(comma separated list, *please* do not include perl5-porters!)
+EOMSG
        alt => [ ],
        dft => '',
+    },
+
+    ccp5p_onfail => {
+        msg => <<EOMSG,
+Would you like your failed smoke reports CCed to perl5-porters?
+EOMSG
+        alt => [qw( y N )],
+        dft => 'n',
     },
 
     from => {
@@ -821,7 +833,7 @@ There is an issue when using the "forest" sync, but I will look into that.
 =cut
 
 # Is it just my NetBSD-1.5 box with an old patch?
-my $patchbin = whereis( 'gpatch' ) || whereis( 'patch' );
+my $patchbin = find_a_patch();
 PATCHER: {
     last PATCHER unless $patchbin;
     $config{patch} = $patchbin;
@@ -918,8 +930,11 @@ MAIL: {
     $arg = 'mail_type';
     $config{ $arg } = prompt( $arg );
 
+    my $p5p = 'perl5-porters@perl.org';
     $arg = 'to';
-    while ( !$config{ $arg } ) { $config{ $arg } = prompt( $arg ) }
+    while ( !$config{ $arg } || $config{ $arg} =~ /\Q$p5p\E/i ) {
+        $config{ $arg } = prompt( $arg ) 
+    }
 
     MAILER: {
         local $_ = $config{ 'mail_type' };
@@ -939,8 +954,11 @@ MAIL: {
             $config{ $arg } = prompt( $arg );
         };
     }
+    $arg = 'ccp5p_onfail';
+    $config{ $arg } = prompt_yn( $arg );
+
     $arg = 'cc';
-    $config{ $arg } = prompt( $arg );
+    do {$config{ $arg } = prompt( $arg )} until $config{ $arg } !~ /\Q$p5p\E/i;
 }
 
 =item w32args
@@ -1258,7 +1276,7 @@ sub sort_configkeys {
         qw( force_c_locale locale defaultenv ),
 
         # Report related
-        qw( mail mail_type mserver from to cc ),
+        qw( mail mail_type mserver from to ccp5p_onfail cc ),
 
         # Archive report and logfile
         qw( adir lfile ),
@@ -1309,7 +1327,7 @@ EO_DIE
 #
 # Written by $0 v$VERSION
 # @{[ scalar localtime ]}
-# NOTE: Changes made in this file wil be \*lost\*
+# NOTE: Changes made in this file will be \*lost\*
 #       after rerunning $0
 #
 # $cronline
@@ -1368,7 +1386,7 @@ setlocal
 
 REM Written by $0 v$VERSION
 REM @{[ scalar localtime ]}
-REM NOTE: Changes made in this file wil be \*lost\*
+REM NOTE: Changes made in this file will be \*lost\*
 REM       after rerunning $0
 $copycmd
 REM $atline
@@ -1544,6 +1562,16 @@ sub whereis {
         }
     }
     return @fnames ? wantarray ? @fnames : \@fnames : '';
+}
+
+sub find_a_patch {
+
+    my $patch_bin;
+    foreach my $patch (qw( gpatch npatch patch )) {
+        $patch_bin = whereis( $patch ) or next;
+        my $version = `$patch_bin --version`;
+        $? or return $patch_bin;
+    }
 }
 
 sub renice {
@@ -1822,7 +1850,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 434 2003-09-23 20:52:03Z abeltje $
+    $Id: configsmoke.pl 468 2003-10-10 12:33:59Z abeltje $
 
 =head1 COPYRIGHT
 

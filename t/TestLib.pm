@@ -1,13 +1,14 @@
 package TestLib;
 use strict;
 
-# $Id: TestLib.pm 279 2003-07-28 19:48:46Z abeltje $
+# $Id: TestLib.pm 468 2003-10-10 12:33:59Z abeltje $
 use vars qw( $VERSION @EXPORT );
 $VERSION = '0.02';
 
 use base 'Exporter';
 @EXPORT = qw( 
-    &whereis 
+    &whereis
+    &find_a_patch
     &find_unzip &do_unzip
     &find_untargz &do_untargz
     &get_dir &get_file &put_file
@@ -72,7 +73,7 @@ sub get_dir($) {
     my @files;
     find sub {
         -f or return;
-        (my $name = $File::Find::name ) =~ s/^\Q$path\E//;
+        my $name = File::Spec->abs2rel( $File::Find::name, $path );
         push @files, $name;
     }, $path;
 
@@ -144,6 +145,22 @@ This is B<< File::Path::mkpath() >>.
 =cut
 
 sub mkpath { File::Path::mkpath( @_ ) }
+
+=item find_a_patch()
+
+Loop over some known names for gnu-patch and see if they know about --version.
+
+=cut
+
+sub find_a_patch {
+
+    my $patch_bin;
+    foreach my $patch (qw( gpatch npatch patch )) {
+        $patch_bin = whereis( $patch ) or next;
+        my $version = `$patch_bin --version`;
+        $? or return $patch_bin;
+    }
+}
 
 =item find_unzip()
 

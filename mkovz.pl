@@ -11,7 +11,7 @@ use strict;
 use Test::Smoke;
 use vars qw($VERSION);
 $VERSION = Test::Smoke->VERSION; 
-# $Id: mkovz.pl 423 2003-09-20 23:10:52Z abeltje $
+# $Id: mkovz.pl 465 2003-10-09 22:37:13Z abeltje $
 
 use File::Spec;
 use Cwd;
@@ -190,8 +190,9 @@ for (<OUT>) {
         $rpt{$conf}{$debug}{$perlio} = $rpt{$conf}{$debug}{minitest} || "O";
         next;
     }
-    if ( m/Inconsistent testresults/ ) {
+    if ( m/Inconsistent test\s*results/ ) {
         push @{ $rpt{$conf}{$debug}{$perlio} }, $_;
+        next;
     }
     if (m/^\s*Skipped this configuration/) {
 	if ($^O =~ m/^(?: hpux | freebsd )$/x) {
@@ -296,7 +297,7 @@ for my $conf (@confs) {
 
 	    my $res = $rpt{$conf}{$debug}{$perlio};
 	    if (ref $res) {
-                my $stat_x = grep /Inconsistent testresults/ => $res->[0];
+                my $stat_x = grep /Inconsistent test\s*results/ => $res->[0];
                 $rpt_stat .= $bldenv eq 'minitest' 
                     ? "M " : $stat_x ? "X " : "F ";
 		my $s_conf = $conf;
