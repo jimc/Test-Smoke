@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: reporter.t 665 2004-03-27 09:34:12Z abeltje $
+# $Id: reporter.t 713 2004-07-23 13:08:49Z abeltje $
 
 use File::Spec::Functions;
 use FindBin;
@@ -336,7 +336,7 @@ __EOM__
 __EOCFG__
     ), "new()" );
     isa_ok $reporter, 'Test::Smoke::Reporter';
-    is $reporter->ccinfo, "? unknow cc version ", "ccinfo(bugstst01)";
+    is $reporter->ccinfo, "? unknown cc version ", "ccinfo(bugstst01)";
 
     my @r_lines = split /\n/, $reporter->smoke_matrix;
     my $r = is_deeply \@r_lines, [split /\n/, <<__EOM__], "Matrix";

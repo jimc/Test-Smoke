@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: sysinfo.t 628 2004-02-29 13:27:44Z abeltje $
+# $Id: sysinfo.t 688 2004-04-30 13:17:43Z abeltje $
 
 use Test::More tests => 15;
 my $verbose = 0;
@@ -36,6 +36,7 @@ ok defined &sysinfo, "sysinfo() imported";
     ok $si->os, $si->os;
     ok $si->host, $si->host;
 
-    is join( " ", map $si->$_ => qw( host os cpu_type ) ), sysinfo(),
+    is join( " ", @{ $si }{map "_$_" => qw( host os cpu_type )} ),
+       sysinfo(),
        "test sysinfo() " . sysinfo();
 }

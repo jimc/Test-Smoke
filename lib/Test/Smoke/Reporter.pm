@@ -1,9 +1,9 @@
 package Test::Smoke::Reporter;
 use strict;
 
-# $Id: Reporter.pm 665 2004-03-27 09:34:12Z abeltje $
+# $Id: Reporter.pm 713 2004-07-23 13:08:49Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.013';
+$VERSION = '0.016';
 
 use Cwd;
 use File::Spec::Functions;
@@ -258,7 +258,6 @@ sub _parse {
 
         if ( m/^\s*All tests successful/ ) {
             $rpt{$cfgarg}->{$debug}{$tstenv} = "O";
-            $fcnt = 0;
             next;
         }
 
@@ -282,6 +281,7 @@ sub _parse {
             # $tstenv is only set *after* this
             $tstenv = $mini ? 'minitest' : 'stdio' unless $tstenv;
             $rpt{$cfgarg}->{$debug}{$tstenv} = $status;
+            $fcnt++;
             next;
         }
 
@@ -301,6 +301,7 @@ sub _parse {
     }
 
     $rpt{last_cfg} = $statarg;
+    exists $rpt{statcfg}{ $statarg } or $rpt{running} = $fcnt;
     $rpt{avg} = $rpt{secs} / $rpt{count};
     $self->{_rpt} = \%rpt;
     $self->_post_process;
@@ -490,7 +491,7 @@ sub ccinfo {
         ));
         $cinfo = "? ";
         my $ccvers = $Config{gccversion} || $Config{ccversion} || '';
-        $cinfo .= ( $Config{cc} || 'unknow cc' ) . " version $ccvers";
+        $cinfo .= ( $Config{cc} || 'unknown cc' ) . " version $ccvers";
     }
     return $cinfo;
 }

@@ -10,6 +10,245 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[   716] By: abeltje                          on 2004-07-24 19:51:09 +0200
+        Log: * This is the second shot at 1.19 release
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[   715] By: abeltje                          on 2004-07-24 18:10:00 +0200
+        Log: * [FIX]
+	       * Typo *and* thinko in the SysInfo regarding Linux on sparc
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   714] By: abeltje                          on 2004-07-23 15:22:35 +0200
+        Log: * [CHANGE]
+	       Prepare to release 1.19
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[   713] By: abeltje                          on 2004-07-23 15:08:49 +0200
+        Log: * [CHANGE] by Steve Hay
+	       * de-typo 'unknown CC' version
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Reporter.pm,
+	     /Test-Smoke-1.19.xx/t/reporter.t
+___________________________________________________________________________
+[   712] By: abeltje                          on 2004-07-23 12:49:04 +0200
+        Log: * [CHANGE] to match perl-change #23147
+	       + Add parsing for the new lib/Config.pm
+	       + Add fallback to config.sh for values not found in
+		 Config.pm
+	       + Add another fallback to some (lame) defaults
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Util.pm,
+	     /Test-Smoke-1.19.xx/t/smoked_config.t
+___________________________________________________________________________
+[   711] By: abeltje                          on 2004-07-16 15:41:53 +0200
+        Log: * [CHANGE]
+	       * I seem to have a weird HPUX 11.11 box, ioscan is in /etc
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   710] By: abeltje                          on 2004-06-12 13:18:35 +0200
+        Log: * [FIX]
+	       * minor thinko in the failures counting for
+		 "smokestatus.pl"
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Reporter.pm
+___________________________________________________________________________
+[   709] By: abeltje                          on 2004-06-11 17:52:27 +0200
+        Log: * [FIX]
+	       * not all Windows-systems seem to have
+		 "LMachine\HARDWARE\DESCRIPTION\System\Central\Processor\0
+		 \ProcessorNameString" so we use "Identifier" as fallback
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   708] By: abeltje                          on 2004-06-08 16:06:07 +0200
+        Log: * [CHANGE] by Merijn
+	       + Merijn added a remark about single-line sections in the
+		 buildconfigurations file
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/FAQ
+___________________________________________________________________________
+[   707] By: abeltje                          on 2004-05-15 19:59:16 +0200
+        Log: * [CHANGE]
+	       * Try to also detect Debian (don't know what this will
+		 bring)
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   706] By: abeltje                          on 2004-05-14 09:52:28 +0200
+        Log: * [FIX]
+	       * de-typo in the split off in Linux()
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   705] By: abeltje                          on 2004-05-04 22:08:07 +0200
+        Log: * [FIX]
+	       * a Windows issue with default_buildcfg()
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/configsmoke.pl
+___________________________________________________________________________
+[   704] By: abeltje                          on 2004-05-04 21:21:40 +0200
+        Log: * [CHANGE] (Inspired by Campo)
+	       + added an implementation for the '-des' option (like with
+		 perl's Configure)
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/configsmoke.pl
+___________________________________________________________________________
+[   703] By: abeltje                          on 2004-05-03 01:47:18 +0200
+        Log: * [ADD]
+	       + META.yml is now generated by newer MakeMakers
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           + /Test-Smoke-1.19.xx/META.yml
+           ! /Test-Smoke-1.19.xx/MANIFEST
+___________________________________________________________________________
+[   702] By: abeltje                          on 2004-05-03 00:47:59 +0200
+        Log: * [FIX]
+	       * a /, \ issue in _transform_testnames() that could trip up
+		 Win32
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Smoker.pm
+___________________________________________________________________________
+[   698] By: abeltje                          on 2004-05-02 22:56:56 +0200
+        Log: * [FIX]
+	       * stupid error in -Accflags= handling of unquoted options
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Util.pm
+___________________________________________________________________________
+[   692] By: abeltje                          on 2004-05-01 01:03:54 +0200
+        Log: * [CHANGE]
+	       + Added support UTF8 locales on Darwin (and BSD if they are
+		 there?)
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/configsmoke.pl
+___________________________________________________________________________
+[   691] By: abeltje                          on 2004-04-30 18:24:02 +0200
+        Log: * [CHANGE] Provided by Gerard Gerritsen
+	       + Support Bcc for sending smoke reports
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/configsmoke.pl,
+	     /Test-Smoke-1.19.xx/lib/Test/Smoke/Mailer.pm,
+	     /Test-Smoke-1.19.xx/mailrpt.pl
+___________________________________________________________________________
+[   689] By: abeltje                          on 2004-04-30 15:55:36 +0200
+        Log: * [FIX]
+	       * skip count for perl < 5.005 one too low
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/t/util_times.t
+___________________________________________________________________________
+[   688] By: abeltje                          on 2004-04-30 15:17:43 +0200
+        Log: * [CHANGE]
+	       * Make the work for older perls
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/t/sysinfo.t, /Test-Smoke-1.19.xx/t/tree.t
+___________________________________________________________________________
+[   686] By: abeltje                          on 2004-04-30 15:15:25 +0200
+        Log: * [CHANGE]
+	       * The test is now skipped by default and can be run with
+		 SMOKE_DO_SIGTEST=1
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/t/00signature.t
+___________________________________________________________________________
+[   685] By: abeltje                          on 2004-04-30 15:11:58 +0200
+        Log: * [CHANGE]
+	       * make the tests work with perl5.004_05
+	       * calc_timeout( 'hh:mm' ) now returns 24 hours if it *is*
+		 hh:mm
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Util.pm,
+	     /Test-Smoke-1.19.xx/t/util_times.t
+___________________________________________________________________________
+[   684] By: abeltje                          on 2004-04-30 15:08:15 +0200
+        Log: * [CHANGE]
+	       + put some effort in calling 'sysctl' on BSD
+	       + split Linux() for sparc and ppc achitecture
+		 + add cpuspeed for Linux_sparc()
+		 + add Linux_ppc() [Thanks to Alain Barbet!!!]
+	       * Some fiddleling to make it work for perl5.004_05
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   681] By: abeltje                          on 2004-04-26 22:06:59 +0200
+        Log: * [FIX] sloppy job :(
+	       + forgot to import calc_timeout()
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/smokestatus.pl
+___________________________________________________________________________
+[   680] By: abeltje                          on 2004-04-26 21:49:09 +0200
+        Log: * [CHANGE]
+	       + still more info on terminated/hanging smokes
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/smokestatus.pl
+___________________________________________________________________________
+[   679] By: abeltje                          on 2004-04-26 21:47:44 +0200
+        Log: * [CHANGE]
+	       * tiny addition to calc_timeout() so it can also be used in
+		 retrospect
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Util.pm
+___________________________________________________________________________
+[   678] By: abeltje                          on 2004-04-26 02:31:25 +0200
+        Log: * [CHANGE]
+	       + Added a check VERSION >= 5.9 and -Uuseperlio for the
+		 build_cfg
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/configsmoke.pl
+___________________________________________________________________________
+[   677] By: abeltje                          on 2004-04-22 11:31:07 +0200
+        Log: * [CHANGE]
+	       + added cpufrequency for MacOS-X (and any other BSD that
+		 cares to implement hw.cpufrequency)
+	       + added more information to sysinfo() output when passed a
+		 true argument
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   676] By: abeltje                          on 2004-04-20 23:39:23 +0200
+        Log: * [CHANGE] (Thank you Merijn for reporting this)
+	       - Remove the VERSION test that now looks silly and is
+		 failing under blead anyway
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/t/ts_config.t
+___________________________________________________________________________
+[   675] By: abeltje                          on 2004-04-19 09:09:28 +0200
+        Log: * [FIX]
+	       changes #672 and #674 were not enough (see if this works)
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Reporter.pm,
+	     /Test-Smoke-1.19.xx/smokestatus.pl
+___________________________________________________________________________
+[   674] By: abeltje                          on 2004-04-19 01:37:22 +0200
+        Log: * [FIX]
+	       + Yup, I managed a typo in 20 keystrokes :(
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Reporter.pm
+___________________________________________________________________________
+[   672] By: abeltje                          on 2004-04-19 00:50:48 +0200
+        Log: * [FIX]
+	       * Minor thingy with failure count in unfinished smokes to
+		 help smokestatus.pl
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/Reporter.pm
+___________________________________________________________________________
+[   671] By: abeltje                          on 2004-04-05 07:07:49 +0200
+        Log: * [ADD]
+	       + added the cpu speed for IRIX
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[   669] By: abeltje                          on 2004-03-27 11:03:09 +0100
+        Log: * regen SIGNATURE for 1.19-RC1
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/SIGNATURE
+___________________________________________________________________________
+[   668] By: abeltje                          on 2004-03-27 10:56:17 +0100
+        Log: * regen Changes for 1.19-RC1
+        Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx
+           ! /Test-Smoke-1.19.xx/Changes
+___________________________________________________________________________
 [   667] By: abeltje                          on 2004-03-27 10:55:15 +0100
         Log: * Second shot at 1.19-RC1
         Url: http://www.Test-Smoke.org/svn/Test-Smoke-1.19.xx

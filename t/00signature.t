@@ -2,12 +2,12 @@
 use strict;
 
 # Stolen from the Module::Signature distribution, thanks Autrijus
-# $Id$
+# $Id: 00signature.t 687 2004-04-30 13:16:00Z abeltje $
 
 use Test::More;
-plan exists $ENV{SMOKE_SKIP_SIGTEST} && $ENV{SMOKE_SKIP_SIGTEST}
-    ? ( skip_all => "Cannot test signature before it's created" )
-    : ( tests => 1 ); 
+plan exists $ENV{SMOKE_DO_SIGTEST} && $ENV{SMOKE_DO_SIGTEST}
+    ? ( tests => 1 )
+    :( skip_all => "Set SMOKE_DO_SIGTEST=1 to run this test." );
 
 my $key_server = 'pgp.mit.edu';
 

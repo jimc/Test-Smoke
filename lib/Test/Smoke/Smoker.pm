@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 663 2004-03-26 08:38:04Z abeltje $
+# $Id: Smoker.pm 702 2004-05-02 22:47:59Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.014';
+$VERSION = '0.015';
 
 use Cwd;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
@@ -609,7 +609,7 @@ sub _transform_testnames {
     my( $self, @notok ) = @_;
     my %inconsistent;
     for my $nok ( @notok ) {
-        $nok =~ m!^(?:\.\.[\\/])?(\w+/[-\w/\\]+)\.*(.*)! or next;
+        $nok =~ m!^(?:\.\.[\\/])?(\w+[\\/][-\w/\\]+)\.*(.*)! or next;
         my( $test_name, $status ) = ( $1, $2 );
         $test_name .= '.t';
 

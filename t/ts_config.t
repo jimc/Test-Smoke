@@ -1,17 +1,18 @@
 #! /usr/perl/perl -w
 use strict;
 
-# $Id: ts_config.t 310 2003-08-01 18:29:10Z abeltje $
+# $Id: ts_config.t 676 2004-04-20 21:39:23Z abeltje $
 
 use FindBin;
 use Data::Dumper;
 use vars qw( $conf );
 
-use Test::More tests => 9;
+use Test::More tests => 9 - 1;
 BEGIN { use_ok( 'Test::Smoke' ) }
 
-is( Test::Smoke->VERSION, $Test::Smoke::VERSION, 
-    "Check version $Test::Smoke::VERSION" );
+#is( Test::Smoke->VERSION, $Test::Smoke::VERSION, 
+#    "Check version $Test::Smoke::VERSION" );
+
 ok( defined &read_config, "read_config() is exported" );
 
 my $test = { ddir => '../' };

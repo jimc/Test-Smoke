@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 667 2004-03-27 09:55:15Z abeltje $
+# $Id: Smoke.pm 716 2004-07-24 17:51:09Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.19-RC1';
+$VERSION  = '1.19';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -29,8 +29,9 @@ Test::Smoke - The Perl core test smoke suite
     use vars qw( $VERSION );
     $VERSION = Test::Smoke->VERSION;
 
-    read_config( $config_name ) or warn Test::Smoke->config_error; 
-    
+    read_config( $config_name ) or die Test::Smoke->config_error; 
+
+    run_smoke;
 
 =head1 DESCRIPTION
 
@@ -175,7 +176,7 @@ sub run_smoke {
 =item __get_ts_patchlevel( )
 
 Read the contents of F<.patch> or use the subversion placeholder
-C<Rev>.
+C<$Rev: 716 $>.
 
 =cut
 
@@ -183,7 +184,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 667 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 716 $ =~ /(\d+)/;
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
@@ -198,13 +199,11 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 667 2004-03-27 09:55:15Z abeltje $
+$Id: Smoke.pm 716 2004-07-24 17:51:09Z abeltje $
 
 =head1 COPYRIGHT
 
-(c) 2003, All rights reserved.
-
-  * Abe Timmerman <abeltje@cpan.org>
+(c) 2003-2004, Abe Timmerman <abeltje@cpan.org> All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
