@@ -5,8 +5,10 @@
 
 # mkovz.pl [ e-mail [ folder ]]
 
+use strict;
+
 use vars qw($VERSION);
-$VERSION = "1.06";
+$VERSION = "1.07";
 
 use Config;
 my $email = shift || getpwuid $<;
@@ -81,6 +83,8 @@ for (<OUT>) {
 	next;
 	}
     if (m/FAILED/) {
+	ref $rpt{$conf}{$debug}{$perlio} or
+	    $rpt{$conf}{$debug}{$perlio} = [];	# Clean up sparse garbage
 	push @{$rpt{$conf}{$debug}{$perlio}}, $_;
 	next;
 	}

@@ -1,3 +1,11 @@
+*** Release 1.07
+
+    Mon 10 Sep 2001, Merijn
+
+	- Matrix entries could be initialized with scalars ?-( (Nick)
+	- References to the webresources in README
+	- fail on non cd-able $PC in smoke.sh (Will)
+
 *** Release 1.06
 
     Mon 03 Sep 2001, Merijn

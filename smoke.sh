@@ -15,7 +15,7 @@ PATH=`pwd`:$PATH
 echo "Smoke $PC"
 umask 0
 
-cd $PC
+cd $PC || exit 1
 make -i distclean > /dev/null 2>&1
 rsync -avz --delete rsync://ftp.linux.activestate.com/perl-current/ .
 

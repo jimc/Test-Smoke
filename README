@@ -59,6 +59,26 @@ If the test captures too many cycles of your CPU to continue production
 work, just kill the "mktest.pl" process and the report will be generated
 over the results captured untill then.
 
+=head1 Availability and references
+
+=head2 Distribution
+
+  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.07.tgz
+  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.07.tgz
+  SourceForge project "perl-qa"
+
+=head2 Mailing lists
+
+  CORE smokers:    smokers@perl.org
+  Perl general QA: perl-qa@perl.org
+  Smoke reports:   smokers-reports@perl.org
+
+=head2 Archives and web
+
+  http://qa.perl.org
+  http://archives.develooper.com/daily-build@perl.org/ and/or
+  news://nntp.perl.org/perl.daily-build
+
 =head1 COPYRIGHT and LICENCE
 
 Copyright (C) 2001 H.Merijn Brand
