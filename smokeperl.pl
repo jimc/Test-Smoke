@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 348 2003-08-08 18:17:53Z abeltje $
+# $Id: smokeperl.pl 396 2003-08-22 00:31:59Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -97,19 +97,11 @@ defined Test::Smoke->config_error and
     for qw( run fetch patch mail archive );
 # Make command-line options override configfile
 defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
-    for qw( is56x defaultenv smartsmoke run fetch patch mail archive );
+    for qw( is56x defaultenv continue 
+            smartsmoke run fetch patch mail archive );
 
 if ( $options{continue} ) {
     $options{v} and print "Will try to continue current smoke\n";
-    my $cfg = Test::Smoke::BuildCFG->new( $conf->{cfg}, v => $conf->{v} );
-    my @found = configs_from_log( $conf->{ddir} );
-    my %found = map { ( $_ => 1 ) } @found;
-    my @pass;
-    foreach my $config ( $cfg->configurations ) {
-        push @pass, $config unless exists $found{ "$config" } ||
-                                   Test::Smoke::skip_config( $config );
-    }
-    $conf->{cfg} = { _list => \@pass };
 } else {
     synctree();
     patchtree();
@@ -190,7 +182,7 @@ sub call_mktest {
     };
     $Config{d_alarm} and alarm $timeout;
 
-    run_smoke();
+    run_smoke( $conf->{continue} );
 }
 
 sub call_mkovz {
@@ -244,25 +236,6 @@ sub archiverpt {
     }
 }
 
-sub configs_from_log {
-    my( $dir ) = @_;
-
-    my $log_name = File::Spec->catfile( $dir, "mktest.out" );
-    my @configs;
-    local *LOG;
-    open LOG, "< $log_name" or die "Cannot continue: $!";
-    my( $smoke, $finish ) = ( 0, undef );
-    while ( <LOG> ) {
-        /^Smoking patch (\d+)/ and $smoke = $1;
-        /^Finished smoking patch $smoke/ and $finish = 1;
-        /^Configuration:\s+(.*)/ or next;
-        push @configs, $1;
-    }
-    close LOG;
-    pop @configs unless $finish;
-    return @configs;
-}
-
 sub snapshot_name {
     my( $plevel ) = $options{snapshot} =~ /(\d+)/;
     my $sfile = $conf->{sfile};
@@ -280,7 +253,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 348 2003-08-08 18:17:53Z abeltje $
+$Id: smokeperl.pl 396 2003-08-22 00:31:59Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -11,7 +11,7 @@ use strict;
 use Test::Smoke;
 use vars qw($VERSION);
 $VERSION = Test::Smoke->VERSION; 
-# $Id: mkovz.pl 334 2003-08-07 01:01:23Z abeltje $
+# $Id: mkovz.pl 423 2003-09-20 23:10:52Z abeltje $
 
 use File::Spec;
 use Cwd;
@@ -105,6 +105,9 @@ $locale and push @layers, "locale";
 my (%rpt, @confs, %confs, @manifest, $common_cfg);
 
 local $: = " \n";
+local $= = 99999;
+format STDOUT_TOP = 
+.
 format RPT_TOP =
 @||||||||||| Configuration (common) ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 $rpt{patch},                        $common_cfg
@@ -324,7 +327,7 @@ for my $conf (@confs) {
     # special casing the '-' should change PASS-so-far
     # to PASS if the report only has 'O' and '-'
     $count{ $_ }++ for map { 
-        /[OFMmct]/ ? $_ : /-/ ? 'O' : 'o'
+        /[OFXMmct]/ ? $_ : /-/ ? 'O' : 'o'
     } split ' ', $rpt_stat;
 }
 

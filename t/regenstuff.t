@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: regenstuff.t 330 2003-08-04 23:13:18Z abeltje $
+# $Id: regenstuff.t 432 2003-09-22 20:11:23Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;
@@ -13,7 +13,8 @@ BEGIN {
 }
 
 my $ddir = File::Spec->catdir( $FindBin::Bin, 'perl-current' );
-mkpath( $ddir, 0, 0755 ) or die "Cannot mkpath($ddir): $!";
+-d $ddir or mkpath( $ddir, 0, 0755 ) or die "Cannot mkpath($ddir): $!";
+END { -d $ddir and rmtree( $ddir ); }
 
 {
     my $regen = get_regen_headers( $ddir );
@@ -102,5 +103,3 @@ SKIP: { # as of 18852: 'regen_headers.pl' is now 'regen.pl'
         skip "Could not run regen_headers", $to_skip--;
     }
 }
-    
-END { -d $ddir and rmtree( $ddir ); }

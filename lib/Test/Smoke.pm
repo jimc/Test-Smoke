@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 350 2003-08-08 22:26:08Z abeltje $
+# $Id: Smoke.pm 428 2003-09-21 12:41:17Z abeltje $
 use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.18.02';
+$VERSION = '1.18.06';
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -14,7 +14,7 @@ use Test::Smoke::Policy;
 use Test::Smoke::BuildCFG;
 use Test::Smoke::Smoker;
 use Test::Smoke::SourceTree qw( :mani_const );
-use Test::Smoke::Util qw( get_patch );
+use Test::Smoke::Util qw( get_patch skip_config );
 use Config;
 
 =head1 NAME
@@ -86,7 +86,7 @@ sub do_manifest_check {
     my( $ddir, $smoker ) = @_;
 
     my $tree = Test::Smoke::SourceTree->new( $ddir );
-    my $mani_check = $tree->check_MANIFEST( 'mktest.out' );
+    my $mani_check = $tree->check_MANIFEST( 'mktest.out', 'mktest.rpt' );
     foreach my $file ( sort keys %$mani_check ) {
         if ( $mani_check->{ $file } == ST_MISSING ) {
             $smoker->log( "MANIFEST declared '$file' but it is missing\n" );
@@ -106,15 +106,25 @@ configurations.
 
 sub run_smoke {
     my $continue = shift;
+    defined $continue or $continue = $conf->{continue};
     my $patch = shift || Test::Smoke::Util::get_patch( $conf->{ddir} );
+
+    exists $Config{ldlibpthname} && $Config{ldlibpthname} and
+        $ENV{ $Config{ldlibpthname} } ||= '',
+        substr( $ENV{ $Config{ldlibpthname} }, 0, 0)  = 
+            "$conf->{ddir}$Config{path_sep}";
+
+    my $logfile = File::Spec->catfile( $conf->{ddir}, 'mktest.out' );
+    my $BuildCFG = $continue 
+        ? Test::Smoke::BuildCFG->continue( $logfile, $conf->{cfg}, 
+                                           v => $conf->{v} )
+        : Test::Smoke::BuildCFG->new( $conf->{cfg}, v => $conf->{v} );
 
     local *LOG;
     my $mode = $continue ? ">>" : ">";
-    open LOG, "$mode " . File::Spec->catfile( $conf->{ddir}, 'mktest.out' )  or
-        die "Cannot create 'mktest.out': $!";
+    open LOG, "$mode $logfile" or die "Cannot create 'mktest.out': $!";
 
     my $Policy   = Test::Smoke::Policy->new( File::Spec->updir, $conf->{v} );
-    my $BuildCFG = Test::Smoke::BuildCFG->new( $conf->{cfg}, v => $conf->{v} );
 
     my $smoker   = Test::Smoke::Smoker->new( \*LOG, $conf );
     $smoker->mark_in;
@@ -150,27 +160,13 @@ sub run_smoke {
    };
 }
 
-=item skip_config( $config ) 
-
-Returns true if this config should be skipped.
-
-=cut
-
-sub skip_config {
-    my( $config ) = @_;
-
-    my $skip = $config->has_arg(qw( -Uuseperlio -Dusethreads )) ||
-               $config->has_arg(qw( -Uuseperlio -Duseithreads ));
-    return $skip;
-}
-
 1;
 
 =back
 
 =head1 REVISION
 
-$Id: Smoke.pm 350 2003-08-08 22:26:08Z abeltje $
+$Id: Smoke.pm 428 2003-09-21 12:41:17Z abeltje $
 
 =head1 COPYRIGHT
 

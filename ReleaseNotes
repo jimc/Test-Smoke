@@ -1,6 +1,6 @@
 =head1 NAME
 
-ReleaseNotes - These are the Release Notes for 1.18.02
+ReleaseNotes - These are the Release Notes for 1.18.06
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,39 @@ Alan Burlison asked for something to give a status report on running
 smokes. So I put something together in F<smokestatus.pl>, thank you
 Alan for this good idea.
 
-=cut
+As of 1.18.03 there are two new options: C<--all> which tries to check
+the status for all B<*_config> files, and C<--running> which tries to
+check the status for all configs associated with B<*.lck> files.
+
+=item 5
+
+The make processes (I<make> and I<make test-prep>) will now take extra
+options and I<make _test> can be configured to use a diffent
+make-binary.
+
+=item 6
+
+[Bug Fix] Alan Burlison pointed me at an ommission in the refactoring
+process. I forgot about C<$ENV{LD_LIBRARY_PATH}>, now back in.
+
+=item 7
+
+[Bug Fix] Merijn found that "--continue" did not work. It was broken
+in multiple places. Thanks Merijn for helping me to get it to work.
+
+=item 8
+
+[Bug Fix] Abigail found that F<runsmoke.pl> was not as backward
+compatible with F<mktest.pl> as documented. He provided a fix
+proposal. Thanks Abigail!
+
+=item 9
+
+[Bug Fix] Nick Clark found a thinko in the F<configsmoke.pl> code that
+writes the jcl after configuration in a different directory from the
+install directory. Thanks Nick!
+
+=back
 
 Major changes since 1.17
 
@@ -119,13 +151,11 @@ some extra defaults to help configuring Test::Smoke for this release.
 
 =head1 REVISION
 
-$Id: ReleaseNotes 349 2003-08-08 22:21:16Z abeltje $
+$Id: ReleaseNotes 427 2003-09-21 12:40:19Z abeltje $
 
 =head1 COPYRIGHT
 
-(c) 2002-2003, All rights reserved.
-
-  * Abe Timmerman <abeltje@cpan.org>
+Copyright 2002-2003, Abe Timmerman <abeltje@cpan.org> All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

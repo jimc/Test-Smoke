@@ -11,9 +11,9 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use lib $FindBin::Bin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 345 2003-08-08 00:29:11Z abeltje $
+# $Id: configsmoke.pl 434 2003-09-23 20:52:03Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.025';
+$VERSION = '0.029';
 
 use Getopt::Long;
 my %options = ( 
@@ -104,7 +104,7 @@ my %versions = (
     '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
                  server => 'http://www.iki.fi',
                  sdir   => '/jhi',
-                 sfile  => 'perl@19856.tgz',
+                 sfile  => 'perl@20617.tgz',
                  pdir   => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
                  ddir   => File::Spec->rel2abs( 
                                File::Spec->catdir( File::Spec->updir,
@@ -152,6 +152,7 @@ my %opt = (
         alt => [ ],
         dft => File::Spec->rel2abs( File::Spec->catdir( File::Spec->updir,
                                                         'perl-current' ) ),
+        chk => '.+',
     },
     use_old => {
         msg => "It looks like there is already a source-tree there.\n" .
@@ -199,12 +200,14 @@ my %opt = (
         alt => [ ],
         dft => File::Spec->rel2abs( File::Spec->catdir( File::Spec->updir,
                                                         'perl-master' ) ),
+        chk => '.+',
     },
     forest_hdir => {
         msg => 'Where would you like the intermediate source-tree?',
         alt => [ ],
         dft => File::Spec->rel2abs( File::Spec->catdir( File::Spec->updir,
                                                         'perl-inter' ) ),
+        chk => '.+',
     },
     fsync => { 
         msg => "How would you like to sync your master source-tree?\n$syncmsg",
@@ -300,12 +303,14 @@ Examples:$untarmsg",
         msg => 'From which directory should the source-tree be copied?',
         alt => [ ],
         dft => undef,
+        chk => '.+',
     },
 
     hdir => {
         msg => 'From which directory should the source-tree be hardlinked?',
         alt => [ ],
         dft => undef,
+        chk => '.+',
     },
 
     patch => {
@@ -326,6 +331,23 @@ Examples:$untarmsg",
 \tPlease read the documentation.",
         alt => [ ],
         dft => ''
+    },
+
+    # make fine-tuning
+    makeopt => {
+        msg => <<EOT,
+Specify extra arguments for "make".
+\t(for the build step and test-prep step)
+EOT
+        alt => [ ],
+        dft => '',
+    },
+    testmake => {
+        msg => <<EOT,
+Specify a different make program for "make _test".
+EOT
+        alt => [ ],
+        dft => 'make',
     },
 
     # mail stuff
@@ -732,7 +754,7 @@ SYNCER: {
             $config{ $arg } = prompt( $arg );
         }
         unless ( $config{sfile} ) {
-            $arg = ' snapext';
+            $arg = 'snapext';
             $config{ $arg } = prompt( $arg );
         }
         $arg = 'tar';
@@ -910,6 +932,7 @@ MAIL: {
 
         /^(?:Mail::Sendmail|MIME::Lite)$/ && do {
             $arg = 'from';
+            $opt{ $arg }{chk} = '\S+';
             $config{ $arg } = prompt( $arg );
 
             $arg = 'mserver';
@@ -967,6 +990,25 @@ EO_MSG
         "osvers=$osvers", 
         $compilers{ $config{w32cc} }->{ccversarg},
     ];
+}
+
+=item make finetuning
+
+Two different config options to accomodate the same thing: 
+I<parallel build> and I<serial testing>
+
+  * makeopt  => used by Test::Smoke::Smoker::_make()
+  * testmake => use a different binary for "make _test"
+
+=cut
+
+$arg = 'makeopt';
+$opt{ $arg }->{dft} = '-nologo' if is_win32 && $config{w32make} =~ /nmake/i;
+$config{ $arg } = prompt( $arg );
+
+unless ( is_win32 ) {
+    $arg = 'testmake';
+    $config{ $arg } = prompt( $arg ) || 'make';
 }
 
 =item umask
@@ -1220,6 +1262,9 @@ sub sort_configkeys {
 
         # Archive report and logfile
         qw( adir lfile ),
+
+        # make fine-tuning
+        qw( makeopt testmake ),
     );
 
     my $i = 0;
@@ -1242,6 +1287,7 @@ C<write_sh()> creates the shell-script.
 sub write_sh {
     my $cwd = cwd();
     my $jcl = "$options{jcl}.sh";
+    my $smokeperl = File::Spec->catfile( $FindBin::Bin, 'smokeperl.pl' );
     my $cronline = schedule_entry( File::Spec->catfile( $cwd, $jcl ), 
                                    $cron, $crontime );
     my $handle_lock = $config{killtime} ? <<EO_CONT : <<EO_DIE;
@@ -1275,12 +1321,12 @@ continue=''
 if test -f "\$LOCKFILE" && test -s "\$LOCKFILE" ; then
 $handle_lock
 fi
-echo "\$LOCKFILE" > "\$LOCKFILE"
+echo "\$CFGNAME" > "\$LOCKFILE"
 
-PATH=$cwd:$ENV{PATH}
+PATH=$FindBin::Bin:$ENV{PATH}
 export PATH
 umask $config{umask}
-$^X smokeperl.pl -c "\$CFGNAME" \$continue \$\* > $options{log} 2>&1
+$^X $smokeperl -c "\$CFGNAME" \$continue \$\* > $options{log} 2>&1
 
 rm "\$LOCKFILE"
 EO_SH
@@ -1302,6 +1348,7 @@ because it uses commands that are not supported by B<COMMAND.COM>
 sub write_bat {
     my $cwd = File::Spec->canonpath( cwd() );
 
+    my $smokeperl = File::Spec->catfile( $FindBin::Bin, 'smokeperl.pl' );
     my $copycmd = $config{w32args}->[1] ne "BORLAND" ? "" : <<EOCOPYCMD;
 
 REM I found hanging XCOPY while smoking with BORLAND
@@ -1333,16 +1380,16 @@ cd "\%WD\%"
 set CFGNAME=$options{config}
 set LOCKFILE=$options{prefix}.lck
 if NOT EXIST \%LOCKFILE\% goto START_SMOKE
-    FIND "\%LOCKFILE\%" \%LOCKFILE\% > NUL:
+    FIND "\%CFGNAME\%" \%LOCKFILE\% > NUL:
     if ERRORLEVEL 1 goto START_SMOKE
     echo We seem to be running [or remove \%LOCKFILE\%]>&2
     goto :EOF
 
 :START_SMOKE
-    echo \%LOCKFILE\% > \%LOCKFILE\%
+    echo \%CFGNAME\% > \%LOCKFILE\%
     set OLD_PATH=\%PATH\%
-    set PATH=$cwd;\%PATH\%
-    $^X smokeperl.pl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
+    set PATH=$FindBin::Bin;\%PATH\%
+    $^X $smokeperl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
 
     set PATH=\%OLD_PATH\%
 
@@ -1407,7 +1454,7 @@ sub prompt {
 
 sub prompt_dir {
 
-    if ( exists $conf->{ $_[0] } )  {
+    if ( exists $conf->{ $_[0] } && $conf->{ $_[0] } )  {
         $conf->{ $_[0] } = File::Spec->rel2abs( $conf->{ $_[0] } )
             unless File::Spec->file_name_is_absolute( $conf->{ $_[0] } );
     }
@@ -1416,6 +1463,11 @@ sub prompt_dir {
     
 
         my $dir = prompt( @_ );
+        if ( $dir eq "" && ! @{ $opt{ $_[0] }->{alt} } && 
+             ! $opt{ $_[0] }->{chk} ) {
+            print "Got []\n";
+            return "";
+        }
 
         # thanks to perlfaq5
         $dir =~ s{^ ~ ([^/]*)}
@@ -1770,7 +1822,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 345 2003-08-08 00:29:11Z abeltje $
+    $Id: configsmoke.pl 434 2003-09-23 20:52:03Z abeltje $
 
 =head1 COPYRIGHT
 

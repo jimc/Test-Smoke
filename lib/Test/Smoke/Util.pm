@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 330 2003-08-04 23:13:18Z abeltje $
+# $Id: Util.pm 412 2003-08-27 13:07:23Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.21';
+$VERSION = '0.23';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -11,7 +11,7 @@ use base 'Exporter';
     &get_cfg_filename &get_config
     &check_MANIFEST
     &get_patch
-    &skip_filter
+    &skip_config &skip_filter
 );
 
 @EXPORT_OK = qw( 
@@ -544,7 +544,7 @@ sub get_ncpu {
             last OS_CHECK;
         };
 
-        /hp-ux/i && do {
+        /hp-?ux/i && do {
             my @output = grep /^processor/ => `ioscan -fnkC processor`;
             $cpus = scalar @output;
             last OS_CHECK;
@@ -778,6 +778,21 @@ EO_MSG
         exists $p2u_opt{myusage} and delete $p2u_opt{myusage};
         Pod::Usage::pod2usage( @_ );
     }
+}
+
+=item skip_config( $config ) 
+
+Returns true if this config should be skipped.
+C<$config> should be a B<Test::Smoke::BuildCFG::Config> object.
+
+=cut
+
+sub skip_config {
+    my( $config ) = @_;
+
+    my $skip = $config->has_arg(qw( -Uuseperlio -Dusethreads )) ||
+               $config->has_arg(qw( -Uuseperlio -Duseithreads ));
+    return $skip;
 }
 
 =item skip_filter( $line )

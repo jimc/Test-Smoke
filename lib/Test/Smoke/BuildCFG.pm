@@ -1,13 +1,14 @@
 package Test::Smoke::BuildCFG;
 use strict;
 
-# $Id: BuildCFG.pm 299 2003-07-31 21:08:03Z abeltje $
+# $Id: BuildCFG.pm 431 2003-09-22 19:33:52Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.003';
+$VERSION = '0.004';
 
 use Cwd;
 use File::Spec;
 require File::Path;
+use Test::Smoke::Util qw( skip_config );
 
 my %CONFIG = (
     df_v      => 0,
@@ -67,6 +68,37 @@ sub new {
 
     my $self = bless \%fields, $class;
     $self->read_parse( $config );
+}
+
+=item Test::Smoke::BuildCFG->continue( $logfile[, $cfgname, %options] )
+
+[Constructor | public]
+
+Initialize a new object without the configurations that have already
+been fully processed. If *all* configurations have been processed,
+just pass the equivalent of the C<new()> method.
+
+=cut
+
+sub continue {
+    my $proto = shift;
+    my $class = ref $proto ? ref $proto : $proto;
+
+    my $logfile = shift;
+
+    my $self = $class->new( @_ );
+    $self->{_continue} = 1;
+    return $self unless $logfile && -f $logfile;
+
+    my %seen = __get_smoked_configs( $logfile );
+    my @not_seen = ();
+    foreach my $config ( $self->configurations ) {
+        push @not_seen, $config unless exists $seen{ "$config" } ||
+                                       skip_config( $config );
+    }
+    return $self unless @not_seen;
+    $self->{_list} = \@not_seen;
+    return $self;
 }
 
 =item Test::Smoke::BuildCFG->config( $key[, $value] )
@@ -172,6 +204,7 @@ sub _read {
             $vmsg = "internal content";
         } 
     }
+    $vmsg .= "[continue]" if $self->{_continue};
     $self->{v} and print "Reading build configurations from $vmsg\n";
 }
 
@@ -208,9 +241,10 @@ sub _parse {
     $self->{v} > 1 and printf "Found %d raw-sections\n", scalar @sections;
 
     foreach my $section ( @sections ) {
+        chomp $section;
         my $index = 0;
-        my %opts = map { $_ => $index++ } map { s/^\s+$//; $_ }
-            grep !/^#/ => split /\n/, $section;
+        my %opts = map { s/^\s+$//; $_ => $index++ }
+            grep !/^#/ => split /\n/, $section, -1;
         # Skip empty sections
         next if (keys %opts == 0) or (exists $opts{ "" } and keys %opts == 1);
 
@@ -308,6 +342,32 @@ sub configurations {
     my $self = shift;
 
     @{ $self->{_list} };
+}
+
+=item __get_smoked_configs( $logfile )
+
+Parse the logfile and return a hash(ref) of already processed
+configurations.
+
+=cut
+
+sub __get_smoked_configs {
+    my( $logfile ) = @_;
+
+    my %conf_done = ( );
+    local *LOG;
+    if ( open LOG, "< $logfile" ) {
+        my $conf;
+        # A Configuration is done when we detect a new Configuration:
+        # or the phrase "Finished smoking $patch"
+        while ( <LOG> ) {
+            s/^Configuration:\s*// || /^Finished smoking/ or next;
+            $conf and $conf_done{ $conf }++;
+            chomp; $conf = $_;
+        }
+        close LOG;
+    }
+    return wantarray ? %conf_done : \%conf_done;
 }
 
 =item Test::Smoke::BuildCFG->default_buildcfg()
