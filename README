@@ -72,28 +72,33 @@ over the results captured untill then.
 
 =head2 Distribution
 
-  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.11.tgz
-  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.11.tgz
-  SourceForge project "perl-qa"
+  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.12.tgz
+  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.12.tgz
+  SourceForge project "perl-qa" (depricated)
 
 =head2 Mailing lists
 
   CORE smokers:    smokers@perl.org
   Perl general QA: perl-qa@perl.org
   Smoke reports:   smokers-reports@perl.org
+  Development:     perl5-porters@perl.org
 
 =head2 Archives and web
 
   http://qa.perl.org
   http://archives.develooper.com/daily-build@perl.org/ and/or
   news://nntp.perl.org/perl.daily-build
+  http://www.cpan.org
 
 =head1 COPYRIGHT and LICENCE
 
-Copyright (C) 2001 H.Merijn Brand
+Copyright (C) 2002 H.Merijn Brand
 
 This suite is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, without consulting the author.
+
+(Future) Co-Authors and or contributors should agree to this before
+submitting patches.
 
 =head1 AUTHOR
 
@@ -106,7 +111,9 @@ Contributors and/or co-authors:
       nuts and bolts	Nicholas Clark <nick@plum.flirble.org>
     Portability issues	Will Coleda - IMG <wjc@infomg.com>
     Safety		Richard Soderberg <rs@oregonnet.com>
-    Win32/MSC5/dmake	Mattia Barbon <mbarbon@dsi.unive.it>
+    Win32/MSC5/dmake	Mattia Barbon <mbarbon@dsi.unive.it>,
+			Abe Timmerman <abe@ztreet.demon.nl>
+    Cygwin		John Peacock <jpeacock@rowman.com>
     Sharing issues	Blair Zajac <blair@orcaware.com>
 
 and all the people having useful suggestions and nits, starting at
@@ -123,19 +130,21 @@ As always, have the appropriate amount of fun
 
 =item Win32
 
-Windows configurations are not as easy as Unix, but require make
+Windows configurations are not as easy as Unix, but requires make
 fiddling. Windows2000 however supports long names and <i>might</i>
 just pick up the current way of going around without any hassle.
+
+At the moment of writing, Cygwin (1.3.10-1) configures and builds
+bleading edge perl out of the box and passes all tests :)
 
 =item Initialisation and installation
 
 Though I've tried to make Makefile.PL do what's neccasary, there's
 probably still some issues to be fixed for non-unix operating systems
 
-=item Parrot
-
-Ask the user at setup if he's willing to test Parrot along the way,
-and implement/integrate these tests
+Abe Timmermans has started to extend the smoke suite with options as
+to where and how to fetch the perl sources (rsync/ftp/http/nfs/...),
+stopping and continuing the tests and more fun like that
 
 =back
 

@@ -19,11 +19,20 @@ use Cwd;
 use Getopt::Long;
 use File::Find;
 
+my %win32_makefile_map = (
+    nmake => "Makefile",
+    dmake => "makefile.mk",
+    );
+my $win32_cctype = "MSVC60"; # 2.0 => MSVC20; 5.0 => MSVC; 6.0 => MSVC60
+my $win32_maker  = $Config{make};
+
 my $norun   = 0;
 my $verbose = 0;
 GetOptions (
-    "n|norun|dry-run" => \$norun,
-    "v|verbose:i"     => \$verbose,	# NYI
+    "n|norun|dry-run"  => \$norun,
+    "v|verbose:i"      => \$verbose,	# NYI
+    "m|win32-maker=s"  => \$win32_maker,
+    "c|win32-cctype=s" => \$win32_cctype,
     ) or usage;
 my $config_file = shift;
 
@@ -60,8 +69,8 @@ sub make ($)
     # don't capture STDERR
     $cmd =~ s{2\s*>\s*/dev/null\s*$}{} and $kill_err = 1;
     # Better detection of make vs. nmake vs. dmake required here
-    # dmake + MSVC5, make + DJGPP, make + Cygwin
-    $cmd = "dmake -f smoke.mk $cmd";
+    # dmake + MSVC5, make + DJGPP, make + Cygwin, nmake + MSVC6
+    $cmd = "$win32_maker -f smoke.mk $cmd";
     chdir "win32" or die "unable to chdir () into 'win32'";
     run ($kill_err ? qq{$^X -e "close STDERR; system '$cmd'"} : $cmd);
     chdir ".." or die "unable to chdir() out of 'win32'";
@@ -155,12 +164,20 @@ else {
     }
 
 my $testdir = getcwd;
+exists $Config{ldlibpthname} && $Config{ldlibpthname} and
+    substr ($ENV{$Config{ldlibpthname}}, 0, 0) = "$testdir$Config{path_sep}";
 
 my $patch;
 if (open OK, "<.patch") {
     chomp ($patch = <OK>);
     close OK;
     print LOG "Smoking patch $patch\n\n";
+    }
+if (!$patch and open OK, "< patchlevel.h") {
+    local $/ = undef;
+    ($patch) = (<OK> =~ m/^\s+,"DEVEL(\d+)"\s*$/m);
+    close OK;
+    print LOG "Smoking patch $patch(+)\n\n";
     }
 
 if (open MANIFEST, "< MANIFEST") {
@@ -316,7 +333,8 @@ sub run_tests
 
 	foreach my $perlio (qw(stdio perlio)) {
 	    $ENV{PERLIO} = $perlio;
-	    ttylog "PERLIO = $perlio\t";
+	    $ENV{PERLIO} .= " :crlf" if $^O eq "MSWin32";
+	    ttylog "PERLIO = $ENV{PERLIO}\t";
 
 	    if ($norun) {
 		ttylog "\n";
@@ -327,11 +345,11 @@ sub run_tests
 	    if (is_win32) {
 		chdir "win32" or die "unable to chdir () into 'win32'";
 		# Same as in make ()
-		open TST, "dmake -f smoke.mk test |";
+		open TST, "$win32_maker -f smoke.mk test |";
 		chdir ".." or die "unable to chdir () out of 'win32'";
 		}
 	    else {
-		open TST, "make test |";
+		open TST, "make _test |";
 		}
 
 	    my @nok = ();
@@ -358,6 +376,11 @@ sub run_tests
 		m,^\s+$testdir/, ||
 		m,^sh mv-if-diff\b, ||
 		m,File \S+ not changed, ||
+		# cygwin
+		m,^dllwrap: no export definition file provided, ||
+		m,^dllwrap: creating one. but that may not be what you want, ||
+		m,^(GNUm|M)akefile:\d+: warning: overriding commands for target `perlmain.o', ||
+		m,^(GNUm|M)akefile:\d+: warning: ignoring old commands for target `perlmain.o', ||
 		# Don't know why BSD's make does this
 		m,^Extracting .*with variable substitutions, ||
 		# Or these
@@ -381,7 +404,7 @@ sub run_tests
 	    else {
 		my @harness;
 		for (@nok) {
-		    m:^(\w+/[-\w/]+).*: or next;
+		    m|^(?:\.\.[\\/])?(\w+/[-\w/]+).*| or next;
 		    # Remeber, we chdir into t, so -f is false for op/*.t etc
 		    push @harness, (-f "$1.t") ? "../$1.t" : "$1.t";
 		    }
@@ -413,6 +436,7 @@ sub Configure
 	"-Duseithreads"		=> "USE_ITHREADS",
 	"-Duseperlio"		=> "USE_PERLIO",
 	"-Dusemultiplicity"	=> "USE_MULTI",
+	"-Duseimpsys"		=> "USE_IMP_SYS",
 	"-DDEBUGGING"		=> "USE_DEBUGGING",
 	);
     my %opts = (
@@ -433,7 +457,7 @@ sub Configure
 	}
 
     local (*IN, *OUT);
-    my $in =  "win32/makefile.mk";
+    my $in =  "win32/$win32_makefile_map{$win32_maker}";
     my $out = "win32/smoke.mk";
 
     open IN,  "< $in"  or die "unable to open '$in'";
@@ -446,7 +470,7 @@ sub Configure
 	    $_ = ($opts{USE_DEBUGGING} ? "" : "#") . $1 . "\n";
 	    }
 	elsif (m/^\s*#?\s*(CCTYPE\s*\*?=\s*)(\w+)$/) {
-	    $_ = ($2 eq "MSVC" ? "" : "#" ) . $1 . $2 . "\n";
+	    $_ = ($2 eq $win32_cctype ? "" : "#" ) . $1 . $2 . "\n";
 	    }
 	elsif (m/^\s*CC\s*=\s*cl$/) {
 	    chomp;

@@ -8,21 +8,69 @@
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "1.11";
+$VERSION = "1.12";
 
-use Config;
-my $email = shift || getpwuid $<;
-my $testd = shift || "/usr/3gl/CPAN/perl-current";
+my $mailer = "mailx";
+
+=head1 NAME
+
+mkovz.pl - Create matrix for smoke test results.
+
+=head1 SYNOPSYS
+
+	$ ./mkovz.pl [ e-mail [ builddir ]]
+
+=head1 DESCRIPTION
+
+C<mkovz.pl> processes the output created by the C<mktest.pl> program to
+ createa nice report and (optionally) send it to the smokers mailinglist.
+
+=head2 ARGUMENTS
+
+C<mkovz.pl> can take two (2) arguments:
+
+=over 4
+
+=item e-mail
+
+This specifies the e-mailaddress to which the report is e-mailed.
+
+You can use B<no-mail> to skip the mailing bit.
+
+If you specify no e-mailaddress the current username is used.
+
+=item builddir
+
+The C<builddir> is the directory where you have just build perl and where the 
+B<mktest.out> file is that C<mktest.pl> left there.
+
+The default is the current working directory.
+
+=back
+
+=cut
+
+use File::Spec;
+use Cwd;
+
+require Win32 if $^O eq "MSWin32";
+my $email = shift || ($^O eq "MSWin32" ? Win32::LoginName () : getpwuid $<);
+my $testd = shift || cwd ();
+
+my %Config;
+get_smoke_Config (qw( version osname osvers cc ccversion gccversion ));
+
 my (%rpt, @confs, %confs, @manifest);
 
-open RPT, "> $testd/mktest.rpt" or die "mktest.rpt: $!";
+open RPT, "> " . File::Spec->catfile ($testd, "mktest.rpt")
+    or die "mktest.rpt: $!";
 select RPT;
 
 my $perlio = "";
 my $conf   = "";
 my $debug  = "";
 $rpt{patch} = "?";
-my ($out, @out) = ("$testd/mktest.out", 1 .. 5);
+my ($out, @out) = (File::Spec->catfile ($testd, "mktest.out"), 1 .. 5);
 open OUT, "<$out" or die "Can't open $out: $!";
 for (<OUT>) {
     m/^\s*$/ and next;
@@ -172,21 +220,59 @@ for my $i (0 .. $#fail) {
 close RPT;
 select STDOUT;
 
-my $mailer = "mailx";
-my $subject = "Smoke $rpt{patch} $Config{osname} $Config{osvers} $testd";
-if ($mailer =~ m/sendmail/) {
-    local (*MAIL, *BODY, $/);
-    open  BODY, "< $testd/mktest.rpt";
-    open  MAIL, "| $mailer -i -t";
-    print MAIL join "\n",
-	"To: $email",
-	"From: ...",
-	"Subject: $subject",
-	"",
-	<BODY>;
-    close BODY;
-    close MAIL;
-    }
-else {
-    system "$mailer -s '$subject' $email < $testd/mktest.rpt";
-    }
+send_mail () unless $email =~ /^no\-?e?mail$/i;
+
+sub send_mail
+{
+    my $subject = "Smoke $rpt{patch} $Config{osname} $Config{osvers} $testd";
+    if ($mailer =~ m/sendmail/) {
+        local (*MAIL, *BODY, $/);
+        open  BODY, "<" . File::Spec->catfile ($testd, "mktest.rpt");
+        open  MAIL, "| $mailer -i -t";
+        print MAIL join "\n",
+	    "To: $email",
+	    "From: ...",
+	    "Subject: $subject",
+	    "",
+	    <BODY>;
+        close BODY;
+        close MAIL;
+        }
+    else {
+        system "$mailer -s '$subject' $email < " . 
+               File::Spec->catfile ($testd, "mktest.rpt");
+        }
+    } # send_mail
+
+sub get_smoke_Config 
+{
+    %Config = map { ( lc $_ => "" ) } @_;
+
+    my $smoke_Config_pm = File::Spec->catfile ($testd, "lib", "Config.pm");
+    
+    open my $fh, $smoke_Config_pm
+        or die "Can't open '$smoke_Config_pm': $!";
+
+    while (<$fh>) {
+        if (m/^my \$config_sh = <<'!END!';/ .. m/^!END!/) {
+            m/!END!(?:';)?$/      and next;
+            m/^([^=]+)='([^']*)'$/ or next;
+            exists $Config{lc $1} and $Config{lc $1} = $2;
+            }
+        }
+    } # get_smoke_Config
+
+=head1 CHANGES
+
+1.12
+
+	- Use Config.pm of the smoked perl
+	- A bit more Win32 minded :-)
+
+=head1 AUTHOR
+
+H.Merijn Brand <h.m.brand@hccnet.nl>
+Abe Timmerman  <abe@ztreet.demon.nl>
+
+=cut
+

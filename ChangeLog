@@ -1,3 +1,22 @@
+*** Release 1.12
+
+    Thu 07 Mar 2002, Merijn
+
+	- Adjusted the count calulation in smoke.cfg (Abigail)
+	- Added some cygwin filtering
+	- 'make _test' aot 'make test' will accallerate a bit
+	- Extend $ENV{$Config{ldlibpthname}} with build dir (Schwern)
+	- Fallback to patchlevel.h if .patch is missing (John)
+	- Some win32 enhancements (Abe)
+	- Use $testd/lib/Config.pm to create internal %Config (Abe, thanks!)
+	- Win32::LoginName () instead of getpwuid () for poor Win32 users (Abe)
+	- Default $testd is Cwd::cwd () (Abe)
+	- Better portability using File::Spec (Abe)
+        - More polite way to skip mail (Abe)
+	- Starting POD for mkovz.pl (Abe)
+	- Removed the Parrot parts
+	- Actualize README
+
 *** Release 1.11
 
     Mon 19 Nov 2001, Merijn
