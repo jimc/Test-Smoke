@@ -1,35 +1,52 @@
 =head1 NAME
 
-Perl Core Smoke Test Suite
+README - Perl Core Smoke Test Suite
 
 =head1 SYNOPSIS
 
   # at 22:25
-  sh smoke.sh [~/perlsmoke/perl-current [smoke.cfg]]
-  #
+  $ sh smoke.sh [~/perlsmoke/perl-current [smoke.cfg]]
 
-  or for the brave and trustworthy
+or for the brave and trustworthy (not on Win32/VMS)
 
-  # perl Makefile.PL
+  $ perl Configure.pl
+
+or use the new wrapper script and its configuration (unixy/Win32)
+
+  $ perl configsmoke.pl
+  $ ./mysmoke.sh
 
 =head1 DESCRIPTION
 
-The perl core smoke test suite is a set of simple scripts that try to
+The perl core smoke test suite is a set of scripts and modules that try to
 run the perl core tests on as many configurations as possible and combine
-that into a easy to parse report.
+the results into an easy to read report.
 
-The perl source tree is refreshed using rsync to the latest level of the
-perl development branche before the smoke tests start. Note that rsync in
-the smoke uses --delete, which <b>removes</b> any existing files on that
-directory that are not part of the perl source tree.
+The basic cycle looks like:
+
+    fetch_sourcetree
+    foreach $config ( @configurations ) {
+        make distclean
+        ./Configure $config
+        make
+        make test (and log failures)
+    }
+    create_report()
+    mail_report()
 
 =head1 INSTALLATION
+
+This package doesn't follow the standard Perl installation mantra!
+Although there is a standard B<Makefile.PL> it will not create an
+I<install> target in the resulting B<Makefile>. We presume the program
+will be run from the directory it was extracted in.
 
 Create an empty directory where the perl source tree is to be placed when
 smoking (e.g. ~/perlsmoke/perl-current).
 
-Create or use a location to put the three scripts needed for the smoke
-(e.g. ~/perlsmoke/smoke), and put the files from the distribution there.
+Create or use a location to put the files needed for smoking
+(e.g. ~/perlsmoke/smoke), and put all files from the distribution
+there (exept for the t/ directory).
 Probably you already did so, because you are reading this file.
 
 Edit smoke.sh and change the PC= definition to reflect the location you
@@ -43,7 +60,32 @@ threading or 64bit configurations)
 
 If something useful happens, do it every night using cron instead of at.
 
-=head2 Win32 users
+=head1 CONFIGURATION
+
+As of v1.16_10 there is more than one way to run and configure the perl core 
+smokesuite.
+
+=over 4
+
+=item The old way (Unixy)
+
+Run the B<Configure.pl> script, this will change some values in the 
+B<smoke.sh> shell script and can set your crontab if you want.
+
+=item Tho old way (MSWin32)
+
+Edit the B<smokew32.bat> batch file and set the right values.
+
+=item The new (preferred) way (Unixy/MSWin32)
+
+Use the new B<smokeperl.pl> wrapper script that can be configured by
+running the B<configsmoke.pl> script.
+These new scripts can handle different configurations for smoking
+(like different perl-versions).
+
+=back
+
+=head1 Win32 users
 
 To make it clear, the perl core smoke suite treats B<cygwin> as a unixy
 platform and not as true Win32.
@@ -54,10 +96,12 @@ files for automation: B<smokew32.bat> and B<smokew32.cfg> please read
 those before you start.
 
 To sync up with the current perl source-tree you'll need a working
-rsync (cygwin).
+rsync (cygwin) and as of v1.16_10 you can use the new 
+B<synctree.pl> script to get snapshots (if you have a working B<patch>
+program you can even patch your snapshot up to perl-current).
 
-There is an issue with automatically sending the report to the
-daily-build mailinglist, wich we hope is resolved in the next version.
+We now include the B<Mail::Sendmail> module to help sending the report
+to the <daily-build-reports@perl.org> mailinglist.
 
 =head1 Slow Systems
 
@@ -84,13 +128,14 @@ over the results captured untill then.
 
 =head2 Distribution
 
-  $CPAN/ABELTJE/Test-Smoke-1.16.tar.gz
+  $CPAN/ABELTJE/Test-Smoke-1.16_12.tar.gz
   SourceForge project "perl-qa" (depricated)
 
 =head2 Mailing lists
 
   Perl general QA: perl-qa@perl.org
-  Smoke reports:   daily-build@perl.org
+  Smoke issues:    smokers@perl.org
+  Smoke reports:   smokers-reports@perl.org
   Development:     perl5-porters@perl.org
 
 =head2 Archives and web
@@ -100,9 +145,19 @@ over the results captured untill then.
   news://nntp.perl.org/perl.daily-build
   http://www.cpan.org
 
+=head2 The new smoke_db (by Alain Barbet)
+
+Alain Barbet has put a lot of effort in registering the smoke test
+reports in a database and build a nice WEB-frontend to view these:
+
+    http://www.alianwebserver.com/cgi-bin/smoke_db
+
 =head1 COPYRIGHT and LICENCE
 
-Copyright (C) 2002 H.Merijn Brand
+Copyright (C) 2001-2002 
+
+  * H.Merijn Brand
+  * Abe Timmerman
 
 This suite is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, without consulting the author.
@@ -122,6 +177,7 @@ Contributors and/or co-authors:
 
     Configurations and
       nuts and bolts	Nicholas Clark <nick@plum.flirble.org>
+    smoke.sh            Jarkko Hietaniemi <jhi@cc.hut.fi>
     Portability issues	Will Coleda - IMG <wjc@infomg.com>
     Safety		Richard Soderberg <rs@oregonnet.com>
     Win32/MSC5/dmake	Mattia Barbon <mbarbon@dsi.unive.it>,
@@ -132,6 +188,7 @@ Contributors and/or co-authors:
 and all the people having useful suggestions and nits, starting at
 YAPC::Europe-2.0.01, where Michael talked me into simplifying my own
 test-suite.
+                                                    H.Merijn Brand
 
 =head1 Misc
 
@@ -143,20 +200,22 @@ As always, have the appropriate amount of fun
 
 =item Win32
 
-Windows configurations are not as easy as Unix, but requires make
+Windows configurations are not as easy as Unix, but requires makefile
 fiddling. Windows2000 however supports long names and <i>might</i>
 just pick up the current way of going around without any hassle.
 
 =item Initialisation and installation
 
-Though I've tried to make Makefile.PL do what's neccasary, there's
-probably still some issues to be fixed for non-unix operating systems
+There has been a change in the installation. Makefile.PL now makes a
+Makefile I<without> the 'install' target, mainly for the 'test'
+target. The configuration functionality that used to be in
+C<Makefile.PL> has now moved to C<Configure.pl>. 
 
 =item Plan
 
 At this date (early September 2002) my plan for Test::Smoke is:
 
-  - This release (1.15) minor fixes
+  - Releases up to 1.19: refactoring and minor fixes
   - VERSION 1.20, a wrapper script for fetching source-tree etc
   - VERSION 2.00, an objectified version for easier code maintenance
 
