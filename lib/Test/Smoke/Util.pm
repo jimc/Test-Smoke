@@ -187,7 +187,8 @@ sub Configure_win32 {
         CRYPT_SRC       => undef,
         CRYPT_LIB       => undef,
     );
-    my $def_re = qr/((?:(?:PERL|USE)_\w+)|BCCOLD)/;
+#    my $def_re = qr/((?:(?:PERL|USE)_\w+)|BCCOLD)/;
+    my $def_re = '((?:(?:PERL|USE)_\w+)|BCCOLD)';
     my @w32_opts = grep ! /^$def_re/, keys %opts;
     my $config_args = join " ", 
         grep /^-D[a-z_]+/, quotewords( '\s+', 1, $command );
@@ -402,7 +403,7 @@ sub check_MANIFEST {
     return \%MANIFEST;
 }
 
-=item get_patch( )
+=item get_patch( [$ddir] )
 
 Try to find the patchlevel, look for B<.patch> or try to get it from
 B<patchlevel.h> as a fallback.
@@ -410,21 +411,57 @@ B<patchlevel.h> as a fallback.
 =cut
 
 sub get_patch {
+    my( $ddir ) = @_;
     local *OK;
+    my $p_file = defined $ddir 
+               ? File::Spec->catfile( $ddir, '.patch' ) 
+               : '.patch';
     my $patch;
-    if ( open OK, "<.patch" ) {
+    if ( open OK, "< $p_file" ) {
         chomp( $patch = <OK> );
         close OK;
         return $patch;
     }
-    if ( !$patch and open OK, "< patchlevel.h" ) {
+    $p_file = defined $ddir 
+            ? File::Spec->catfile( $ddir, 'patchlevel.h' ) 
+            : 'patchlevel.h';
+    if ( !$patch and open OK, "< $p_file" ) {
         local $/ = undef;
-        ( $patch ) = ( <OK> =~ m/^\s+,"DEVEL(\d+)"\s*$/m );
+        ( $patch ) = ( <OK> =~ m/^\s+,"(?:DEVEL|MAINT)(\d+)"\s*$/m );
         close OK;
         return "$patch(+)";
     }
 }
 
+=item version_from_patchlevel_h( $ddir )
+
+C<version_from_patchlevel_h()> returns a "dotted" version as derived 
+from the F<patchlevel.h> file in the distribution.
+
+=cut
+
+sub version_from_patchlevel_h {
+    my( $ddir ) = @_;
+
+    my $file = defined $ddir 
+             ? File::Spec->catfile( $ddir, 'patchlevel.h' )
+             : 'patchlevel.h';
+
+    my( $revision, $version, $subversion ) = qw( 5 ? ? );
+    local *PATCHLEVEL;
+    if ( open PATCHLEVEL, "< $file" ) {
+        my $patchlevel = do { local $/; <PATCHLEVEL> };
+        close PATCHLEVEL;
+        $revision   = $patchlevel =~ /^#define PERL_REVISION\s+(\d+)/m 
+                    ? $1 : '?';
+        $version    = $patchlevel =~ /^#define PERL_VERSION\s+(\d+)/m
+                    ? $1 : '?';
+        $subversion = $patchlevel =~ /^#define PERL_SUBVERSION\s+(\d+)/m 
+                    ? $1 : '?';
+    }
+    return "$revision.$version.$subversion";
+}
+ 
 =item get_ncpu( $osname )
 
 C<get_ncpu()> returns the number of available (online/active/enabled) CPUs.
@@ -530,6 +567,7 @@ sub get_smoked_Config {
     my %Config = map { ( lc $_ => "" ) } @_;
 
     my $perl_Config_pm = File::Spec->catfile ($dir, "lib", "Config.pm");
+    my $perl_config_sh = File::Spec->catfile( $dir, 'config.sh' );
     local *CONF;
     if ( open CONF, "< $perl_Config_pm" ) {
 
@@ -541,17 +579,21 @@ sub get_smoked_Config {
             }
         }
         close CONF;
-    } else {
-        my $perl_config_sh = File::Spec->catfile( $dir, 'config.sh' );
-        open CONF, "< $perl_config_sh" or do {
-            warn "Can't find 'Config.pm' or 'config.sh'";
-            return;
-        };
+    } elsif ( open CONF, "< $perl_config_sh" ) {
         while ( <CONF> ) {
             m/^([^=]+)='(.*)'$/ or next;
             exists $Config{ lc $1} and $Config{ lc $1 } = $2;
         }
         close CONF;
+    } else { 
+        # Fall-back values from POSIX::uname() (not reliable)
+        require POSIX;
+        my( $osname, undef, $osvers, undef, $arch) = POSIX::uname();
+        $Config{osname} = lc $osname if exists $Config{osname};
+        $Config{osvers} = lc $osvers if exists $Config{osvers};
+        $Config{archname} = lc $arch if exists $Config{archname};
+        $Config{version} = version_from_patchlevel_h( $dir )
+            if exists $Config{version};
     }
 
     return %Config;
@@ -647,14 +689,23 @@ sub skip_filter {
 
 =head1 COPYRIGHT
 
-(c) 2001-2002, All rights reserved.
+(c) 2001-2003, All rights reserved.
 
   * H. Merijn Brand <h.m.brand@hccnet.nl>
-  * Nicholas Clark <nick@plum.flirble.org>
-  * Abe Timmerman <abeltje@cpan.org>
+  * Nicholas Clark <nick@unfortu.net>
   * Jarkko Hietaniemi <jhi@iki.fi>
+  * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+
+See:
+
+  * <http://www.perl.com/perl/misc/Artistic.html>,
+  * <http://www.gnu.org/copyleft/gpl.html>
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

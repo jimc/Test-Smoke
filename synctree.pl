@@ -7,18 +7,22 @@ use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use Test::Smoke::Syncer;
 
-use vars qw( $VERSION );
-$VERSION = '0.006';
+use vars qw( $VERSION $conf );
+$VERSION = '0.007';
 
 my %opt = (
-    type => 'error',
-    ddir => '',
-    v    => 0,
+    type   => '',
+    ddir   => '',
+    v      => 0,
 
-    help => 0,
+    config => '',
+    help   => 0,
+    man    => 0,
 );
 
-my %valid_type = map { $_ => 1 } qw( rsync snapshot copy forest );
+my $defaults = Test::Smoke::Syncer->config( 'all_defaults' );
+
+my %valid_type = map { $_ => 1 } qw( rsync snapshot copy hardlink forest );
 
 =head1 NAME
 
@@ -28,11 +32,22 @@ synctree.pl - Cleanup and sync the perl-current source-tree
 
     $ ./synctree.pl -t rsync -d ../perl-current [--help | more options]
 
+or
+
+   $ ./synctree.pl -c smokeperl_config
+
 =head1 OPTIONS
 
 Options depend on the B<type> option, exept for some.
 
 =over 4
+
+=item * B<Configuration file>
+
+    -c | --config <configfile> Use the settings from the configfile
+
+F<synctree.pl> can use the configuration file created by F<configsmoke.pl>.
+Other options can override the settings from the configuration file.
 
 =item * B<General options>
 
@@ -61,11 +76,15 @@ Options depend on the B<type> option, exept for some.
     --patch <command>        (patch)
     --cleanup <level>        (0) none; (1) snapshot; (2) diffs; (3) both
 
-=item B<options for> -t copy
+=item * B<options for> -t copy
 
     --cdir <directory>       Source directory for copy_from_MANIFEST()
 
-=item B<options for> -t forest
+=item * B<options for> -t hardlink
+
+    --hdir <directory>       Source directory to hardlink from
+
+=item * B<options for> -t forest
 
     --fsync <synctype>       Master sync-type (One of the above)
     --mdir <directory>       Master directory for primary sync
@@ -89,10 +108,26 @@ GetOptions( \%opt,
     'ftype=s', 'fdir=s', 'hdir=s',
 
     'help|h', 'man|m',
+
+    'config|c=s',
 ) or do_pod2usage( verbose => 1 );
 
 $opt{man}  and do_pod2usage( verbose => 2, exitval => 0 );
 $opt{help} and do_pod2usage( verbose => 1, exitval => 0 );
+
+if ( $opt{config} && -f $opt{config} ) {
+    require $opt{config};
+
+    foreach my $option ( keys %opt ) {
+        if ( $option eq 'type' ) {
+            $opt{type} ||= $conf->{sync_type};
+        } elsif ( exists $conf->{ $option } ) {
+            $opt{ $option } ||= $conf->{ $option }
+        }
+    }
+}
+
+$opt{ $_ } ||= $conf->{ $_ } || $defaults->{ $_ } foreach keys %$defaults;
 
 exists $valid_type{ $opt{type} } or do_pod2usage( verbose => 0 );
 $opt{ddir} or do_pod2usage( verbose => 0 );
@@ -104,23 +139,6 @@ my $syncer = Test::Smoke::Syncer->new( $opt{type} => \%opt );
 $patchlevel = $syncer->sync;
 
 $opt{v} and print "$opt{ddir} now up to patchlevel $patchlevel\n";
-
-##### forest()
-#
-# This is an idea from Nicholas Clark: $opt{type} eq 'forest'
-# set up a master directory for the sourcetree ($opt{f_type})
-# Copy the master directory as hardlinks to an intermediate directory
-# run the regenheaders.pl script in the intermediate directory
-# use this as your sync source and again use hardlinks to set up the
-# actual build directory.
-# looks like:
-#   ./synctree.pl -t forest -d perl -ftype rsync -fdir master590 -hdir tree590
-#     * master590/  : rsynced
-#     * tree590/    : hardlinks (run regenheaders.pl)
-#     * perl/       : hardlinks (from tree590/)
-# I still need a way to clean a hardlinked source-tree!
-#
-#####
 
 sub do_pod2usage {
     eval { require Pod::Usage };
@@ -141,15 +159,29 @@ EO_MSG
 
 =head1 SEE ALSO
 
-L<perlhack|"Keeping in sync">, L<Test::Smoke::Syncer>
+L<perlhack/"Keeping in sync">, L<Test::Smoke::Syncer>
 
 =head1 COPYRIGHT
 
-(c) 2002, All rights reserved.
+(c) 2002-2003, All rights reserved.
 
   * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+
+See:
+
+=over 4
+
+=item * http://www.perl.com/perl/misc/Artistic.html
+
+=item * http://www.gnu.org/copyleft/gpl.html
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

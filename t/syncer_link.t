@@ -25,7 +25,7 @@ use_ok( 'Test::Smoke::Syncer' );
     } ) };
 
     ok( $@, "croak on omitted {hdir}" );
-    like( $@, qr/No source-directory.*?at \Q$0\E line 100/, "It's a croak()" );
+    like( $@, "/No source-directory.*?at \Q$0\E line 100/", "It's a croak()" );
 }
 
 SKIP: {
@@ -81,54 +81,21 @@ sub inodes {
 }
 
 sub find_uncompress {
-    my $tar = whereis( 'tar' );
-
-    my $uncompress = '';
-    if ( $tar ) {
-        my $zip = whereis( 'gzip' );
-        $uncompress = "$zip -cd %s | $tar -xf -" if $zip;
-    }
-
-    unless ( $uncompress ) {
-        eval { require Archive::Tar; };
-        unless ( $@ ) {
-            eval { require Compress::Zlib; };
-            $uncompress = 'Archive::Tar';
-        }
-    }
-
-    if ( $tar && !$uncompress ) { # try tar by it self
-        $uncompress = "$tar -xzf %s";
-    }
-
-    return $uncompress;
+    return find_untargz;
 }
 
 sub do_uncompress {
     my( $tar, $ddir, $sfile ) = @_;
-
-    my $cmd = sprintf $tar, $sfile;
-    $cmd eq $tar and $cmd .= " $sfile";
 
     chdir $ddir or do {
         warn "Cannot chdir($ddir): $!";
         return;
     };
 
-    local *STDERR;
-    open STDERR, ">&STDOUT"; #don't make a fuzz if you cannot dup
+    do_untargz( $tar, $sfile );
 
-    local *UNZIP; my $output;
-
-    if ( open UNZIP, "| $cmd" ) {
-        local $/;
-        $output = <UNZIP>;
-        close UNZIP or return;
-    } else {
-        return;
-    }
     # I cannot use Test::Smoke::Syncer::Snapshot to extract
-    # but I need check_dot_patch()
+    # but I need check_dot_patch() for the tests
     my $syncer = Test::Smoke::Syncer->new( snapshot => { 
         v    => 2,
         ddir => 'perl',
@@ -137,5 +104,5 @@ sub do_uncompress {
 
     chdir File::Spec->updir;
 
-    return $output || 1;
+    return 1;
 }

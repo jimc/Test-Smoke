@@ -5,7 +5,8 @@ use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin );
 use TestLib;
-use Test::More 'no_plan';
+
+use Test::More tests => 16;
 
 my $eg_config = { plevel => 19000, os => 'linux', osvers => '2.4.18-4g',
                   arch => 'i686/1 cpu', sum => 'PASS', version => '5.9.0' };

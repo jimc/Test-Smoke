@@ -4,7 +4,7 @@
 # (c)'01 H.Merijn Brand [27 August 2001]
 #    and Nicholas Clark
 # 20020909: Abe Timmerman
-# REVISION: 1.15
+# REVISION: 1.17
 use strict;
 
 sub usage ()
@@ -25,12 +25,15 @@ use File::Spec;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use Test::Smoke::Util;
+use Test::Smoke::Policy;
 
-my $win32_cctype = "MSVC60"; # 2.0 => MSVC20; 5.0 => MSVC; 6.0 => MSVC60
-my $win32_maker  = $Config{make};
-my $smoker       = $Config{cf_email};
-my $fdir         = undef;
-my $locale       = undef;
+my $win32_cctype   = "MSVC60"; # 2.0 => MSVC20; 5.0 => MSVC; 6.0 => MSVC60
+my $win32_maker    = $Config{make};
+my $smoker         = $Config{cf_email};
+my $fdir           = undef;
+my $locale         = undef;
+my $is56x          = undef;
+my $force_c_locale = undef;
 
 =head1 NAME
 
@@ -50,13 +53,17 @@ mktest.pl - Configure, build and test bleading edge perl
 
 =item * -m | --win32-maker <dmake | nmake>
 
-=item * -c | --win32-cctype <BORLAND | GCC | MSVC20 | MSVC | MSVC60>
+=item * -c | --win32-cctype <BORLAND|GCC|MSVC20|MSVC|MSVC60>
 
 =item * -s | --smoker <your-email-address>
 
 =item * -f | --forest <basedir>
 
 =item * -l | --locale <somelocale>
+
+=item * --is56x
+
+=item * --[no]force-c-locale
 
 =back
 
@@ -79,6 +86,8 @@ GetOptions (
     "s|smoker=s"       => \$smoker,
     "f|forest=s"       => \$fdir,
     "l|locale=s"       => \$locale,
+    "is56x"            => \$is56x,
+    "force-c-locale!"  => \$force_c_locale,
 ) or usage;
 
 $verbose and print "$0 running at verbose level $verbose\n";
@@ -92,6 +101,9 @@ open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
 open OUT,    "> mktest.out";	select ((select (OUT),    $| = 1)[0]);
 				select ((select (STDOUT), $| = 1)[0]);
+
+# Do we need this for smoking from 5.8.0 under locale?
+binmode( TTY ); binmode( STDERR ); binmode( OUT );
 
 =item is_win32( )
 
@@ -172,28 +184,21 @@ foreach my $f (sort keys %$MANIFEST) {
         ($MANIFEST->{ $f } ? "still has" : "did not declare"), " $f\n";
 }
 
-my $Policy = -f "../Policy.sh" && -r _
-    ? do {
-	local ($/, *POL);
-	open POL, "<../Policy.sh" or die "../Policy.sh: $!";
-	<POL>;
-	}
-    : join "", <DATA>;
+my $Policy = Test::Smoke::Policy->new( File::Spec->updir, $verbose );
 
 my @p_conf = ("", "");
 
-run_tests( \@p_conf, $Policy, "-Dusedevel", [], @config );
+run_tests( \@p_conf, "-Dusedevel", [], @config );
 
 close OUT;
 
-sub run_tests
-{
+sub run_tests {
     # policy.sh
     # configuration command line built up so far
     # hash of substitutions in Policy.sh (mostly cflags)
     # array of things still to test (in @_ ?)
 
-    my ($p_conf, $policy, $old_config_args, $substs, $this_test, @tests) = @_;
+    my ($p_conf, $old_config_args, $substs, $this_test, @tests) = @_;
 
     # $this_test is either
     # [ "", "-Dthing" ]
@@ -207,50 +212,53 @@ sub run_tests
     }
 
     foreach my $conf (@$this_test) {
-	my $config_args = $old_config_args;
-	# Try not to add spurious spaces as it confuses mkovz.pl
-	length $conf and $config_args .= " $conf";
-	my @substs = @$substs;
-	if (defined $policy_target) {
-	    # This set of permutations also need to subst inside Policy.sh
-	    # somewhere.
-	    push @substs, [$policy_target, $conf];
-	}
+        my $config_args = $old_config_args;
+        # Try not to add spurious spaces as it confuses mkovz.pl
+        length $conf and $config_args .= " $conf";
 
-	if (@tests) {
-	    # Another level of tests
-	    run_tests ($p_conf, $policy, $config_args, \@substs, @tests);
-	    next;
-	}
+        $Policy->reset_rules;
+        $Policy->set_rules( $_ ) foreach @$substs;
+        my @substs = @$substs;
+        if ( defined $policy_target ) {
+            # This set of permutations also need to subst inside Policy.sh
+            # somewhere.
+            push @substs, [ $policy_target, $conf ];
+            $Policy->set_rules( $substs[-1] );
+        }
 
-	# No more levels to expand
-	my $s_conf = join "\n" => "", "Configuration: $config_args",
-				  "-" x 78, "";
+        if ( @tests ) { # Another level of tests
+            run_tests ($p_conf, $config_args, \@substs, @tests);
+            next;
+        }
 
-	# Skip officially unsupported combo's
-	$config_args =~ m/-Uuseperlio/ && $config_args =~ m/-Dusei?threads/
-	    and next; # patch 17000
+        # No more levels to expand
+        my $s_conf = join "\n" => "", "Configuration: $config_args",
+                                  "-" x 78, "";
 
-	ttylog $s_conf;
+        # Skip officially unsupported combo's
+        $config_args =~ m/-Uuseperlio/ && $config_args =~ m/-Dusei?threads/
+            and next; # patch 17000
 
-	# You can put some optimizations (skipping configurations) here
-	if ( $^O =~ m/^(?: hpux | freebsd )$/x &&
-	     $config_args =~ m/longdouble|morebits/) {
-	    # longdouble is turned off in Configure for hpux, and since
-	    # morebits is the same as 64bitint + longdouble, these have
-	    # already been tested. FreeBSD does not support longdoubles
-	    # well enough for perl (eg no sqrtl)
-	    ttylog " Skipped this configuration for this OS " .
+        ttylog $s_conf;
+
+        # You can put some optimizations (skipping configurations) here
+        if ( $^O =~ m/^(?: hpux | freebsd )$/x &&
+             $config_args =~ m/longdouble|morebits/) {
+            # longdouble is turned off in Configure for hpux, and since
+            # morebits is the same as 64bitint + longdouble, these have
+            # already been tested. FreeBSD does not support longdoubles
+            # well enough for perl (eg no sqrtl)
+            ttylog " Skipped this configuration for this OS " .
                    "(duplicate test)\n";
-	    next;
-	}
+            next;
+        }
 
         if ( is_win32 && $win32_cctype eq "BORLAND" &&
              $config_args =~ /-Duselargefiles/ ) {
             # MSWin32 + BORLAND doesn't support USE_LARGE_FILES
             # I send in a patch to unset USE_LARGE_FILES for BORLAND
-            ttylog " Skipped this configuration for this compiler " .
-                   "(not supported)\n";
+#            ttylog " Skipped this configuration for this compiler " .
+#                   "(not supported)\n";
             next;
         }
 
@@ -265,58 +273,35 @@ sub run_tests
             make "-i distclean 2>/dev/null";
         }
 
-	print TTY "\nCopy Policy.sh ...";
+        unless ( is_win32 ) {
+            print TTY "\nCopy Policy.sh ...";
+            $verbose > 1 || $ norun and print $Policy->_do_subst;
+            $Policy->write unless $norun;
+        }
 
-	# Turn the array of instructions on what to substitute into one or
-	# more regexps. Initially we have a list of target/value pairs.
-	my %substs;
-	# First group all the values by target.
-	foreach (@substs) {
-	    push @{$substs{$_->[0]}}, $_->[1];
-	}
-	# use Data::Dumper; print Dumper (\@substs, \%substs);
-	# Then for each target do the substitution.
-	# If more than 1 value wishes to substitute, join them with spaces
-	my $this_policy = $policy;
-	while (my ($target, $values) = each %substs) {
-	    unless ($this_policy =~ s/$target/join " ", @$values/seg) {
-		warn "Policy target '$target' failed to match";
-	    }
-	}
-
-	if ($norun) {
-	    print TTY $this_policy;
-	} else {
-	    unlink "Policy.sh";
-	    local *POL;
-	    open   POL, "> Policy.sh";
-	    print  POL $this_policy;
-	    close  POL;
-	}
-
-	print TTY "\nConfigure ...";
+        print TTY "\nConfigure ...";
         # Configure_win32() uses MSVCxx as default, this could be not right
         $config_args .= " -DCCTYPE=$win32_cctype"
             if is_win32 && $config_args !~ /-DCCTYPE=\$win32_cctype/;
 
         my @configure_args;
-	push @configure_args, \&Configure_win32, $win32_maker, @ARGV 
+        push @configure_args, \&Configure_win32, $win32_maker, @ARGV 
             if is_win32;
         run "./Configure $config_args -des", @configure_args;
 
-	unless ($norun or (is_win32 ? -f "win32/smoke.mk"
-				    : -f "Makefile" && -s "config.sh")) {
-	    ttylog " Unable to configure perl in this configuration\n";
-	    next;
-	}
+        unless ($norun or (is_win32 ? -f "win32/smoke.mk"
+                                    : -f "Makefile" && -s "config.sh")) {
+            ttylog " Unable to configure perl in this configuration\n";
+            next;
+        }
 
         unless ( is_win32 || $fdir ) {
             print TTY "\nMake headers ...";
             make "regen_headers";
         }
 
-	print TTY "\nMake ...";
-	make " ";
+        print TTY "\nMake ...";
+        make " ";
 
 	my $perl = "perl$Config{_exe}";
 	unless ($norun or (-s $perl && -x _)) {
@@ -334,21 +319,24 @@ sub run_tests
 	print TTY "\n Tests start here:\n";
 
         # No use testing different io layers without PerlIO
-        # just output it for mkovz.pl
-        my @layers = $config_args =~ /-Uuseperlio\b/ 
+        # just output 'stdio' for mkovz.pl
+        my @layers = ( ($config_args =~ /-Uuseperlio\b/) || $is56x )
             ? qw( stdio ) : qw( stdio perlio );
 
-        $config_args !~ /-Uuseperlio\b/ && $locale and
+        if ( !($config_args =~ /-Uuseperlio\b/ || $is56x) && $locale ) {
             push @layers, 'locale';
+        }
 
 	foreach my $perlio ( @layers ) {
-            local( $ENV{PERLIO}, $ENV{LC_ALL}, $ENV{PERL_UTF8_LOCALE} );
+            local( $ENV{PERLIO}, $ENV{LC_ALL}, $ENV{PERL_UNICODE} ) =
+                 ( "", defined $ENV{LC_ALL} ? $ENV{LC_ALL} : "", "" );
             my $perlio_logmsg = $perlio;
             if ( $perlio ne 'locale' ) {
                 $ENV{PERLIO} = $perlio;
                 is_win32 and $ENV{PERLIO} .= " :crlf";
-            } elsif ( ! is_win32 ) {
-                $ENV{PERL_UTF8_LOCALE} = 1;
+                $ENV{LC_ALL} = 'C' if $force_c_locale;
+            } else {
+                $ENV{PERL_UNICODE} = 1;
                 $ENV{LC_ALL} = $locale;
                 $perlio_logmsg .= ":$locale";
             }
@@ -423,22 +411,27 @@ L<Test::Smoke::Util>, L<mkovz.pl>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2002 H.Merijn Brand, Nicholas Clark, Abe Timmmerman
+(c) 2002-2003, All rights reserved.
 
-This suite is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, without consulting the author.
+  * H.Merijn Brand <h.m.brand@hccnet.nl>
+  * Nicholas Clark <nick@unfortu.net>
+  * Abe Timmerman <abeltje@cpan.org>
 
-(Future) Co-Authors and or contributors should agree to this before
-submitting patches.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+See:
+
+=over 4
+
+=item * http://www.perl.com/perl/misc/Artistic.html
+
+=item * http://www.gnu.org/copyleft/gpl.html
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut
-
-__DATA__
-#!/bin/sh
-
-# Default Policy.sh
-
-# Be sure to define -DDEBUGGING by default, it's easier to remove
-# it from Policy.sh than it is to add it in on the correct places
-
-ccflags='-DDEBUGGING'

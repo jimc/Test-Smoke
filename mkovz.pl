@@ -9,7 +9,7 @@
 use strict;
 
 use vars qw($VERSION);
-$VERSION = $main::VERSION || '1.16_15';
+$VERSION = $main::VERSION || '1.16_20';
 
 use File::Spec;
 use Cwd;
@@ -42,10 +42,13 @@ my $mail_from = $Config{cf_email} ||
 
 # clean up $Config{archname}:
 $Config{archname} =~ s/-$_// 
-    for qw( multi thread 64int 64all ld ), $Config{osname};
+    for qw( multi thread 64int 64all ld perlio ), $Config{osname};
 $Config{archname} =~ s/^$Config{osname}(?:[.-])//i;
 my $cpus = get_ncpu( $Config{osname} ) || '';
 $Config{archname} .= "/$cpus" if $cpus;
+
+my $p_version = sprintf "%d.%03d%03d", split /\./, $Config{version};
+my $is56x = $p_version >= 5.006 && $p_version < 5.007;
 
 =head1 NAME
 
@@ -91,7 +94,7 @@ It's a hack! It should be picked up from B<mktest.out>
 
 =cut
 
-my @layers = qw( stdio perlio );
+my @layers = $is56x ? qw( stdio ) : qw( stdio perlio );
 $locale and push @layers, "locale";
 
 my (%rpt, @confs, %confs, @manifest, $common_cfg);
@@ -249,13 +252,21 @@ for my $conf (@confs) {
                 $rpt_stat .= "F ";
 		my $s_conf = $conf;
 		$debug and substr ($s_conf, 0, 0) = "-DDEBUGGING ";
-		if ($perlio eq "stdio" && ref $rpt{$conf}{$debug}{perlio} and
-		    "@{$rpt{$conf}{$debug}{perlio}}" eq "@{$rpt{$conf}{$debug}{stdio}}") {
+		if ( $perlio eq "stdio" && ref $rpt{$conf}{$debug}{perlio} 
+                     && "@{$rpt{$conf}{$debug}{perlio}}" 
+                     eq "@{$rpt{$conf}{$debug}{stdio}}" ) {
 		    # Squeeze stdio/perlio errors together
                     $rpt_stat .= "F ";
 		    push @fail, [ "stdio/perlio", $s_conf, $res ];
-		    last;
-		}
+		    next;
+		} elsif ( $perlio eq "perlio" && ref $rpt{$conf}{$debug}{stdio}
+                          && "@{ $rpt{$conf}{$debug}{stdio} }"
+                          eq "@{ $rpt{$conf}{$debug}{perlio} }" ) {
+                    next;
+                } elsif ( $perlio eq "locale" ) {
+                    push @fail, [ "locale:$locale", $s_conf, $res ];
+                    next;
+                }
 		push @fail, [ $perlio, $s_conf, $res ];
 		next;
 	    }
@@ -265,7 +276,11 @@ for my $conf (@confs) {
     $rpt_config = join " ", grep defined $_ && !exists $common_args{ $_ }, 
                             quotewords( '\s+', 1, $conf );
     write;
-    $count{ $_ }++ for map { /[OFmct]/ ? $_ : 'o' } split ' ', $rpt_stat;
+    # special casing the '-' should change PASS-so-far
+    # to PASS if the report only has 'O' and '-'
+    $count{ $_ }++ for map { 
+        /[OFmct]/ ? $_ : /-/ ? 'O' : 'o'
+    } split ' ', $rpt_stat;
 }
 
 my @rpt_sum_stat = grep $count{ $_ } > 0 => qw( F m c t );
@@ -276,7 +291,7 @@ if ( @rpt_sum_stat ) {
     $rpt_summary = $count{o} == 0 ? 'PASS' : 'PASS-so-far';
 }
 
-print $locale ? <<EOL : <<EOE;
+print $locale ? <<EOL : $is56x ? <<EOS : <<EOE;
 | | | | | +- LC_ALL = $locale -DDEBUGGING
 | | | | +--- PERLIO = perlio -DDEBUGGING
 | | | +----- PERLIO = stdio  -DDEBUGGING
@@ -287,6 +302,12 @@ print $locale ? <<EOL : <<EOE;
 Summary: $rpt_summary
 
 EOL
+| +--------- -DDEBUGGING
++----------- no debugging
+
+Summary: $rpt_summary
+
+EOS
 | | | +----- PERLIO = perlio -DDEBUGGING
 | | +------- PERLIO = stdio  -DDEBUGGING
 | +--------- PERLIO = perlio
@@ -379,11 +400,28 @@ For more recent changes see B<ChangeLog>.
     - Use Config.pm of the smoked perl
     - A bit more Win32 minded :-)
 
-=head1 AUTHOR
+=head1 COPYRIGHT
 
-  H.Merijn Brand <h.m.brand@hccnet.nl>
-  Abe Timmerman  <abeltje@cpan.org>
+(c) 2002-2003, All rights reserved.
+
+  * H.Merijn Brand <h.m.brand@hccnet.nl>
+  * Abe Timmerman <abeltje@cpan.org>
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+See:
+
+=over 4
+
+=item * http://www.perl.com/perl/misc/Artistic.html
+
+=item * http://www.gnu.org/copyleft/gpl.html
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut
-
-

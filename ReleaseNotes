@@ -1,6 +1,6 @@
 =head1 NAME
 
-ReleaseNotes - These are the Release Notes for 1.16_15
+ReleaseNotes - These are the Release Notes for 1.16_20
 
 =head1 SYNOPSIS
 
@@ -16,13 +16,13 @@ I have done a lot of refactoring and wrote loads of new code.
 =item 1
 
 B<smokeperl.pl> is the new way to smoke. It is a wrapper script around
-good ol' B<mktest.pl> and B<mkovz.pl>
+good ol' F<mktest.pl> and F<mkovz.pl>
 
 It also uses the backends to B<synctree.pl> and B<mailrpt.pl>
 
 =item 2
 
-B<configsmoke.pl> helps you create a configuration for
+B<configsmoke.pl> helps you create a (mandatory) configuration for
 B<perlsmoke.pl>. This configuration is stored in a separate file, so
 that it is possible to have different configurations.
 
@@ -40,7 +40,8 @@ Distribution now contains Mail::Sendmail (esp. for Win32)
 
 =item 5
 
--Uuseperlio will now only do one (1) testrun and it's back in B<smoke.cfg>
+-Uuseperlio will now only do one (1) testrun and it's back in 
+F<perlcurrent.cfg>
 
 =item 6
 
@@ -57,20 +58,45 @@ The subject of the message  containing the report has changed:
 =item 8
 
 If your platform supports B<UTF-8 locales> you will now be able to do
-an extra run of B<make test>  with B<$ENV{LC_ALL}> set to such a
+an extra run of B<make test> with B<$ENV{LC_ALL}> set to such a
 locale.
+
+=item 9
+
+All the backends now have a front end script (F<synctree.pl>,
+F<patchtree.pl>, F<mailrpt.pl> and F<W32Configure.pl>
+
+=item 10
+
+There now is a B<--smartsmoke> option that will exit after the
+SYNCTREE step if the the patchlevel is the same as before.
+
+=item 11
+
+Some hacks are in place to support the smoking of perl-5.6.2 to be, as
+it doesn't need the extended PerlIO testing we use for 5.8+.
+
+=item 12
+
+To configure Test::Smoke for smoking perl-5.6.x(MAINT):
+
+    $ perl configsmoke.pl -p smoke56x
+
+To configre Test::Smoke for smoking perl-5.8.x(MAINT):
+
+    $ perl configsmoke.pl -p smoke58x
 
 =back
 
 =head1 TODO
 
-I don't know if all of this will make it into 1.17...
+I don't know if all of these will make it into 1.17...
 
 =over 4
 
-=item B<Start an FAQ>
+=item B<make install> needs to be sorted out!
 
-=item B<MSVCxx detection for configsmoke.pl>
+=item B<Start an FAQ>
 
 =item B<crontab/at stuff for configsmoke.pl>
 
@@ -82,12 +108,25 @@ I don't know if all of this will make it into 1.17...
 
 =head1 COPYRIGHT
 
-(c) 2002, All rights reserved.
+(c) 2002-2003, All rights reserved.
 
   * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-=cut
+See:
 
+=over 4
+
+=item * http://www.perl.com/perl/misc/Artistic.html
+
+item * http://www.gnu.org/copyleft/gpl.html
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=cut

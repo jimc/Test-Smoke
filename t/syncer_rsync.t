@@ -69,6 +69,6 @@ my %df_rsync = (
 #line 500
     my $sync = eval { Test::Smoke::Syncer->new( 'nogo' ) };
     ok( $@, "Error on unknown type" );
-    like( $@, qr|Invalid sync_type 'nogo' at t.syncer_rsync\.t line 500|,
+    like( $@, qq|/Invalid sync_type 'nogo' at t.syncer_rsync\.t line 500/|,
         "Error message on unknown type" );
 }

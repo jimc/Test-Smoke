@@ -6,18 +6,15 @@ use File::Spec;
 use Cwd;
 use FindBin;
 use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
-use Test::Smoke::Mailer;
+use Test::Smoke::Patcher;
 
 use vars qw( $VERSION $conf );
-$VERSION = '0.004';
+$VERSION = '0.001';
 
 my %opt = (
-    type    => undef,
+    type    => 'multi',
     ddir    => '',
-    to      => '', #'smokers-reports@perl.org',
-    cc      => '',
-    from    => '',
-    mserver => '',
+    pfile   => '',
     v       => 0,
 
     config  => '',
@@ -25,17 +22,17 @@ my %opt = (
     man     => 0,
 );
 
-my $defaults = Test::Smoke::Mailer->config( 'all_defaults' );
+my $defaults = Test::Smoke::Patcher->config( 'all_defaults' );
 
-my %valid_type = map { $_ => 1 } qw( mail mailx sendmail Mail::Sendmail );
+my %valid_type = map { $_ => 1 } qw( single multi );
 
 =head1 NAME
 
-mailrpt.pl - Send the smoke report by mail
+patchtree.pl - Patch the sourcetree
 
 =head1 SYNOPSIS
 
-    $ ./mailrpt.pl -t mailx -d ../perl-current [--help | more options]
+    $ ./patchtree.pl -f patchfile -d ../perl-current [--help | more options]
 
 or
 
@@ -43,47 +40,29 @@ or
 
 =head1 OPTIONS
 
-Options depend on the B<type> option, exept for some.
-
 =over 4
 
 =item * B<Configuration file>
 
     -c | --config <configfile> Use the settings from the configfile
 
-F<mailrpt.pl> can use the configuration file created by F<configsmoke.pl>.
+F<patchtree.pl> can use the configuration file created by F<configsmoke.pl>.
 Other options can override the settings from the configuration file.
 
 =item * B<General options>
 
     -d | --ddir <directory>  Set the directory for the source-tree (cwd)
-    --to <emailaddresses>    Comma separated list (smokers-reports@perl.org)
-    --cc <emailaddresses>    Comma separated list
+    -f | --pfile <patchfile> Set the resource containg patch info
     -v | --verbose           Be verbose
-
-    -t | --type <type>       mail mailx sendmail Mail::Sendmail [mandatory]
-
-=item * B<options for> -t mail/mailx
-
-no extra options
-
-=item * B<options for> -t sendmail
-
-    --from <address>
-
-=item * B<options for> -t Mail::Sendmail
-
-    --from <address>
-    --mserver <smtpserver>  (localhost)
 
 =back
 
 =cut
 
 GetOptions( \%opt,
-    'type|t=s', 'ddir|d=s', 'to=s', 'cc=s', 'v|verbose+',
+    'pfile|f=s', 'ddir|d=s', 'v|verbose+',
 
-    'from=s', 'mserver=s',
+    'popts=s',
 
     'help|h', 'man|m',
 
@@ -98,7 +77,7 @@ if ( $opt{config} && -f $opt{config} ) {
 
     foreach my $option ( keys %opt ) {
         if ( $option eq 'type' ) {
-            $opt{type} ||= $conf->{mail_type};
+            $opt{type} ||= $conf->{patch_type};
         } elsif ( exists $conf->{ $option } ) {
             $opt{ $option } ||= $conf->{ $option }
         }
@@ -110,9 +89,10 @@ $opt{ $_ } ||= $defaults->{ $_ } foreach keys %$defaults;
 exists $valid_type{ $opt{type} } or do_pod2usage( verbose => 0 );
 
 $opt{ddir} && -d $opt{ddir} or do_pod2usage( verbose => 0 );
+$opt{pfile} && -f $opt{pfile} or do_pod2usage( verbose => 0 );
 
-my $mailer = Test::Smoke::Mailer->new( $opt{type} => \%opt );
-$mailer->mail;
+my $patcher = Test::Smoke::Patcher->new( $opt{type} => \%opt );
+eval{ $patcher->patch };
 
 sub do_pod2usage {
     eval { require Pod::Usage };
@@ -133,7 +113,7 @@ EO_MSG
 
 =head1 SEE ALSO
 
-L<Test::Smoke::Mailer>, L<mkovz.pl>
+L<Test::Smoke::Patcher>
 
 =head1 COPYRIGHT
 
@@ -148,9 +128,9 @@ See:
 
 =over 4
 
-=item * http://www.perl.com/perl/misc/Artistic.html
+item * http://www.perl.com/perl/misc/Artistic.html
 
-=item * http://www.gnu.org/copyleft/gpl.html
+item * http://www.gnu.org/copyleft/gpl.html
 
 =back
 

@@ -21,11 +21,18 @@ Test::Smoke::SourceTree - Manipulate the perl source-tree
 
 =head1 SYNOPSIS
 
-    use Test::Smoke::SourceTree;
+    use Test::Smoke::SourceTree qw( :mani_const );
 
     my $tree = Test::Smoke::SourceTree->new( $tree_dir );
 
     my $mani_check = $tree->check_MANIFEST;
+    foreach my $file ( sort keys %$mani_check ) {
+        if ( $mani_check->{ $file } == ST_MISSING ) {
+            print "MANIFEST declared '$file' but it is missing\n";
+        } elsif ( $mani_check->{ $file } == ST_UNDECLARED ) {
+            print "MANIFEST did not declare '$file'\n";
+        }
+    }
 
     $tree->clean_from_MANIFEST;
 
@@ -237,11 +244,20 @@ sub copy_from_MANIFEST {
 
 =head1 COPYRIGHT
 
-(c) 2002, All rights reserved.
+(c) 2002-2003, All rights reserved.
 
   * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+
+See:
+
+  * <http://www.perl.com/perl/misc/Artistic.html>,
+  * <http://www.gnu.org/copyleft/gpl.html>
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

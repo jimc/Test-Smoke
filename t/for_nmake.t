@@ -38,15 +38,15 @@ SKIP: {
     close MF;
 
     # This should be set
-    like( $makefile, qr/^INST_DRV\s*=\s*F:\n/m , '$(INST_DRV)' );
-    like( $makefile, qr/^INST_DRV\t= untuched\n/m, "Untuched 1" );
-    like( $makefile, qr/^# INST_DRV\t= untuched\n/m, "Untuched 2" );
+    like( $makefile, '/^INST_DRV\s*=\s*F:\n/m', '$(INST_DRV)' );
+    like( $makefile, '/^INST_DRV\t= untuched\n/m', "Untuched 1" );
+    like( $makefile, '/^# INST_DRV\t= untuched\n/m', "Untuched 2" );
 
     #These should be unset
-    like( $makefile, qr/^#USE_MULTI\s*= define\n/m, '#$(USE_MULTI)' );
-    like( $makefile, qr/^#USE_ITHREADS\s*= define\n/m, '#$(USE_ITHREADS)' );
-    like( $makefile, qr/^#USE_IMP_SYS\s*= define\n/m, '#$(USE_IMP_SYS)' );
-    like( $makefile, qr/^#USE_LARGE_FILES\s*= define\n/m,
+    like( $makefile, '/^#USE_MULTI\s*= define\n/m', '#$(USE_MULTI)' );
+    like( $makefile, '/^#USE_ITHREADS\s*= define\n/m', '#$(USE_ITHREADS)' );
+    like( $makefile, '/^#USE_IMP_SYS\s*= define\n/m', '#$(USE_IMP_SYS)' );
+    like( $makefile, '/^#USE_LARGE_FILES\s*= define\n/m',
           '#$(USE_LARGE_FILES)' );
 }
 
@@ -65,15 +65,15 @@ SKIP: {
     close MF;
 
     # This should now be set twice
-    like( $makefile, qr/^CCTYPE\s*= MSVC60\nCCTYPE\s*= MSVC60\n/m , 
+    like( $makefile, '/^CCTYPE\s*= MSVC60\nCCTYPE\s*= MSVC60\n/m',
           '$(CCTYPE) set twice' );
-    like( $makefile, qr/^\s*CCTYPE=\$\(CCTYPE\) > somewhere\n/m, 
+    like( $makefile, '/^\s*CCTYPE=\$\(CCTYPE\) > somewhere\n/m',
           "Untuched CCTYPE" );
 
     #These should be unset
-    like( $makefile, qr/^#USE_MULTI\s*= define\n/m, '#$(USE_MULTI)' );
-    like( $makefile, qr/^#USE_ITHREADS\s*= define\n/m, '#$(USE_ITHREADS)' );
-    like( $makefile, qr/^#USE_IMP_SYS\s*= define\n/m, '#$(USE_IMP_SYS)' );
+    like( $makefile, '/^#USE_MULTI\s*= define\n/m', '#$(USE_MULTI)' );
+    like( $makefile, '/^#USE_ITHREADS\s*= define\n/m', '#$(USE_ITHREADS)' );
+    like( $makefile, '/^#USE_IMP_SYS\s*= define\n/m', '#$(USE_IMP_SYS)' );
 }
 
 # Check that all three are set for -Duseithreads
@@ -91,9 +91,9 @@ SKIP: {
     close MF;
 
     #These should be set
-    like( $makefile, qr/^USE_MULTI\s*= define\n/m, '$(USE_MULTI) set' );
-    like( $makefile, qr/^USE_ITHREADS\s*= define\n/m, '$(USE_ITHREADS) set' );
-    like( $makefile, qr/^USE_IMP_SYS\s*= define\n/m, '$(USE_IMP_SYS) set' );
+    like( $makefile, '/^USE_MULTI\s*= define\n/m', '$(USE_MULTI) set' );
+    like( $makefile, '/^USE_ITHREADS\s*= define\n/m', '$(USE_ITHREADS) set' );
+    like( $makefile, '/^USE_IMP_SYS\s*= define\n/m', '$(USE_IMP_SYS) set' );
 }
 
 # This will be a full configuration:
@@ -111,7 +111,7 @@ SKIP: {
     close MF;
 
     #These should be set
-    like( $makefile, qr/^USE_LARGE_FILES\s*= define\n/m, 
+    like( $makefile, '/^USE_LARGE_FILES\s*= define\n/m',
           '$(USE_LARGE_FILES) set' );
 }
 
@@ -131,16 +131,16 @@ SKIP: {
     close MF;
 
     #These should be set
-    like( $makefile, qr/^USE_MULTI\s*= define\n/m, '$(USE_MULTI) set' );
-    like( $makefile, qr/^USE_ITHREADS\s*= define\n/m, '$(USE_ITHREADS) set' );
-    like( $makefile, qr/^USE_IMP_SYS\s*= define\n/m, '$(USE_IMP_SYS) set' );
-    like( $makefile, qr/^\s*PERL_MALLOC\s*= define\n/m, '$(PERL_MALLOC) set' );
-    like( $makefile, qr/^EMAIL\s*= abeltje\@cpan\.org\n/m, '$(EMAIL) set' );
+    like( $makefile, '/^USE_MULTI\s*= define\n/m', '$(USE_MULTI) set' );
+    like( $makefile, '/^USE_ITHREADS\s*= define\n/m', '$(USE_ITHREADS) set' );
+    like( $makefile, '/^USE_IMP_SYS\s*= define\n/m', '$(USE_IMP_SYS) set' );
+    like( $makefile, '/^\s*PERL_MALLOC\s*= define\n/m', '$(PERL_MALLOC) set' );
+    like( $makefile, '/^EMAIL\s*= abeltje\@cpan\.org\n/m', '$(EMAIL) set' );
 
     # This should now be set twice
-    like( $makefile, qr/^CCTYPE\s*= MSVC60\nCCTYPE\s*= MSVC60\n/m , 
+    like( $makefile, '/^CCTYPE\s*= MSVC60\nCCTYPE\s*= MSVC60\n/m', 
           '$(CCTYPE) set twice' );
-    like( $makefile, qr/^\s*CCTYPE=\$\(CCTYPE\) > somewhere\n/m, 
+    like( $makefile, '/^\s*CCTYPE=\$\(CCTYPE\) > somewhere\n/m', 
           "Untuched CCTYPE" );
 }
 
@@ -159,12 +159,12 @@ SKIP: {
     my $makefile = do { local $/; <MF> };
     close MF;
 
-    like( $makefile, qr/
-          ^CFG_VARS \s* = \s* \\\n
-           \s*"osvers=5\.0\ W2000Pro"\t+\\\n
-           \s*"config_args=-Dusedevel"\t+\\\n
+    like( $makefile, '/
+          ^CFG_VARS \s* = \s* \\\\\n
+           \s*"osvers=5\.0\ W2000Pro"\t+\\\\\n
+           \s*"config_args=-Dusedevel"\t+\\\\\n
            \s*"INST_DRV=
-    /mx, "CFG_VARS macro for Config.pm" );
+    /mx', "CFG_VARS macro for Config.pm" );
 }
 
 ok( unlink( $smoke_mk ), "Remove makefile" );
@@ -182,13 +182,13 @@ SKIP: {
     my $makefile = do { local $/; <MF> };
     close MF;
 
-    like( $makefile, qr/
-          ^CFG_VARS \s* = \s* \\\n
-           \s*"osvers=5\.0\ W2000Pro"\t+\\\n
-           \s*"ccversion=cl\ 6\.0"\t+\\\n
-           \s*"config_args=-Dusedevel"\t+\\\n
+    like( $makefile, '/
+          ^CFG_VARS \s* = \s* \\\\\n
+           \s*"osvers=5\.0\ W2000Pro"\t+\\\\\n
+           \s*"ccversion=cl\ 6\.0"\t+\\\\\n
+           \s*"config_args=-Dusedevel"\t+\\\\\n
            \s*"INST_DRV=
-    /mx, "CFG_VARS macro for Config.pm" );
+    /mx', "CFG_VARS macro for Config.pm" );
 }
 
 ok( unlink( $smoke_mk ), "Remove makefile" );
@@ -206,13 +206,13 @@ SKIP: {
     my $makefile = do { local $/; <MF> };
     close MF;
 
-    like( $makefile, qr/
-          ^CFG_VARS \s* = \s* \\\n
-           \s*"osvers=5\.0\ W2000Pro"\t+\\\n
-           \s*"ccversion=cl\ 6\.0"\t+\\\n
-           \s*"config_args=-Dusedevel"\t+\\\n
+    like( $makefile, '/
+          ^CFG_VARS \s* = \s* \\\\\n
+           \s*"osvers=5\.0\ W2000Pro"\t+\\\\\n
+           \s*"ccversion=cl\ 6\.0"\t+\\\\\n
+           \s*"config_args=-Dusedevel"\t+\\\\\n
            \s*"INST_DRV=
-    /mx, "CFG_VARS macro for Config.pm" );
+    /mx', "CFG_VARS macro for Config.pm" );
 }
 
 END { 

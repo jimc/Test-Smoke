@@ -1,6 +1,10 @@
 #! perl -w
 use strict;
 
+use FindBin;
+use lib $FindBin::Bin;
+use TestLib;
+
 use File::Find;
 use File::Spec;
 use Data::Dumper;
@@ -10,18 +14,6 @@ use Test::More tests => 14;
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 
 chdir 't' or die "chdir: $!" if -d 't';
-
-sub get_dir($) {
-    my( $path ) = @_;
-    my @files;
-    find sub {
-        -f or return;
-        (my $name = $File::Find::name ) =~ s/^\Q$path\E//;
-        push @files, $name;
-    }, $path;
-
-    return @files;
-}
 
 SKIP: {
     my @MANIFEST = ( 'MANIFEST', get_dir( './' ) );
@@ -67,7 +59,7 @@ SKIP: {
         sort { length( $b ) <=> length( $a ) } @extra_names;
 
     for my $file ( @extras ) {
-        like( $file, qr/^$regex$/, "MANIFEST still has: $file" );
+        like( $file, "/^$regex\$/", "MANIFEST still has: $file" );
     }
 
     1 while unlink 'MANIFEST';

@@ -13,9 +13,11 @@ use strict;
 # we can concentrate on doing the untargz and patch stuff
 #
 #####
-
+use FindBin;
+use lib $FindBin::Bin;
+use TestLib;
 use File::Spec;
-use File::Path;
+
 use Test::More;
 
 BEGIN {
@@ -69,26 +71,10 @@ sub Net::FTP::get {
         die "Can't write '$dest': $!";
     }
 }
+sub Net::FTP::DESTROY { }
 BEGIN { $^W = 1; }
 
-sub whereis {
-    my $prog = shift;
-    return undef unless $prog; # you shouldn't call it '0'!
-
-    require Config;
-    my $p_sep = $Config::Config{path_sep};
-    my @path = split /\Q$p_sep\E/, $ENV{PATH};
-    my @pext = split /\Q$p_sep\E/, $ENV{PATHEXT} || '';
-    unshift @pext, '';
-
-    foreach my $dir ( @path ) {
-        foreach my $ext ( @pext ) {
-            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
-            return $fname if -x $fname;
-        }
-    }
-    return '';
-}
+require Test::Smoke::Patcher; # for testing only
 
 # Now begin testing
 use_ok( 'Test::Smoke::Syncer' );
@@ -156,9 +142,9 @@ SKIP: { # Here we try for gzip/tar
 
 }
 
-# Cleanup testfiles!
-my $snapshot = File::Spec->catfile( 't', "perl\@20000.tgz" );
-1 while unlink $snapshot;
+END { # Cleanup testfiles!
+    my $snapshot = File::Spec->catfile( 't', "perl\@20000.tgz" );
+    1 while unlink $snapshot;
 
-require File::Path;
-File::Path::rmtree( File::Spec->catdir( 't', 'perl-current' ) );
+    rmtree( File::Spec->catdir( 't', 'perl-current' ) );
+}

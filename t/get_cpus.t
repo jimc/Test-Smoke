@@ -12,7 +12,7 @@ SKIP: {
     my $ncpu = get_ncpu( $Config{osname} );
     skip "OS does not seem to be supported ($Config{osname})", 1
         unless $ncpu;
-    like( $ncpu, qr/^\d+/, "Found: $ncpu" );
+    like( $ncpu, '/^\d+/', "Found: $ncpu" );
 }
 
 

@@ -2,7 +2,7 @@ package Test::Smoke::Mailer;
 use strict;
 
 use vars qw( $VERSION );
-$VERSION = '0.002';
+$VERSION = '0.003';
 
 use Test::Smoke::Util qw( parse_report_Config );
 
@@ -10,7 +10,7 @@ my %CONFIG = (
     df_mailer  => 'Mail::Sendmail',
     df_ddir    => undef,
     df_v       => 0,
-    df_to      => 'daily-builds-reports@perl.org',
+    df_to      => 'daily-build-reports@perl.org',
     df_from    => '',
     df_cc      => '',
     df_mserver => 'localhost',
@@ -139,6 +139,36 @@ sub error {
     return $self->{error} || '';
 }
 
+=item Test::Smoke::Mailer->config( $key[, $value] )
+
+C<config()> is an interface to the package lexical C<%CONFIG>, 
+which holds all the default values for the C<new()> arguments.
+
+With the special key B<all_defaults> this returns a reference
+to a hash holding all the default values.
+
+=cut
+
+sub config {
+    my $dummy = shift;
+
+    my $key = lc shift;
+
+    if ( $key eq 'all_defaults' ) {
+        my %default = map {
+            my( $pass_key ) = $_ =~ /^df_(.+)/;
+            ( $pass_key => $CONFIG{ $_ } );
+        } grep /^df_/ => keys %CONFIG;
+        return \%default;
+    }
+
+    return undef unless exists $CONFIG{ "df_$key" };
+
+    $CONFIG{ "df_$key" } = shift if @_;
+
+    return $CONFIG{ "df_$key" };
+}
+
 1;
 
 =back
@@ -193,14 +223,17 @@ sub mail {
         if exists $self->{cc} && $self->{cc};
     $header   .= "Subject: $subject\n\n";
 
+    $self->{v} > 1 and print "[$self->{sendmailbin} -i -t]\n";
+    $self->{v} and print "Sending report to $self->{to} ";
     local *MAILER;
     if ( open MAILER, "| $self->{sendmailbin} -i -t " ) {
         print MAILER $header, $self->{body};
         close MAILER or
             $self->{error} = "Error in pipe to sendmail: $! (" . $?>>8 . ")";
     } else {
-        $self->{error} = "Cannot fork: $!";
+        $self->{error} = "Cannot fork ($self->{sendmailbin}): $!";
     }
+    $self->{v} and print $self->{error} ? "not OK\n" : "OK\n";
 
     return ! $self->{error};
 }
@@ -256,6 +289,8 @@ sub mail {
     $cmdline   .= qq| -c '$self->{cc}'| if $self->{cc};
     $cmdline   .= qq| $self->{to}|;
 
+    $self->{v} > 1 and print "[$cmdline]\n";
+    $self->{v} and print "Sending report to $self->{to} ";
     local *MAILER;
     if ( open MAILER, "| $cmdline " ) {
         print MAILER $self->{body};
@@ -264,6 +299,7 @@ sub mail {
     } else {
 	$self->{error} = "Cannot fork '$mailer': $!";
     }
+    $self->{v} and print $self->{error} ? "not OK\n" : "OK\n";
 
     return ! $self->{error};
 }
@@ -326,8 +362,13 @@ sub mail {
     $message{from} = $self->{from} if $self->{from};
     $message{smtp} = $self->{mserver} if $self->{mserver};
 
+    $self->{v} > 1 and print "[Mail::Sendmail]\n";
+    $self->{v} and print "Sending report to $self->{to} ";
+
     Mail::Sendmail::sendmail( %message ) or
         $self->{error} = $Mail::Sendmail::error;
+
+    $self->{v} and print $self->{error} ? "not OK\n" : "OK\n";
 
     return ! $self->{error};
 }
@@ -392,7 +433,13 @@ sub mail {
     MIME::Lite->send( smtp => $self->{mserver} ) if $self->{mserver};
 
     my $ml_msg = MIME::Lite->new( %message );
+
+    $self->{v} > 1 and print "[MIME::Lite]\n";
+    $self->{v} and print "Sending report to $self->{to} ";
+
     $ml_msg->send or $self->{error} = "Problem sending mail";
+
+    $self->{v} and print $self->{error} ? "not OK\n" : "OK\n";
 
     return ! $self->{error};
 }
@@ -401,11 +448,20 @@ sub mail {
 
 =head1 COPYRIGHT
 
-(c) 2002, All rights reserved.
+(c) 2002-2003, All rights reserved.
 
   * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+
+See:
+
+  * <http://www.perl.com/perl/misc/Artistic.html>,
+  * <http://www.gnu.org/copyleft/gpl.html>
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

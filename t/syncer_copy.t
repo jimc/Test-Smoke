@@ -1,19 +1,23 @@
 #! /usr/bin/perl -w
 use strict;
 
+use FindBin;
+use lib $FindBin::Bin;
+use TestLib;
 use File::Spec;
+
 use Test::More;
 
 my $cdir = 'origdir';
 my $ddir = 'perl-current';
 # Set up some sort of source-tree
 require File::Copy;
-require File::Path;
+
 SETUP: {
     chdir 't' or plan skip_all => "Cannot chdir 't': $!";
     # Make sure they are all gone
-    File::Path::rmtree( $cdir );
-    File::Path::rmtree( $ddir );
+    rmtree( $cdir );
+    rmtree( $ddir );
 
     mkdir $cdir, 0744 or plan skip_all => "Cannot create test-tree: $!";
     # Copy all *.t files to the new dir
@@ -82,21 +86,7 @@ SKIP: {
 }
 
 END { 
-    File::Path::rmtree( $ddir );
-    File::Path::rmtree( $cdir );
+    rmtree( $ddir );
+    rmtree( $cdir );
     chdir File::Spec->updir;
 }
-
-sub get_dir {
-    my( $path ) = @_;
-    use File::Find;
-    my @files;
-    find( sub {
-        -f or return;
-        (my $name = $File::Find::name ) =~ s/^\Q$path\E//;
-        push @files, $name;
-    }, $path );
-
-    return @files;
-}
-

@@ -78,7 +78,7 @@ Test::Smoke::Syncer - OO interface for syncing the perl source-tree
 
 =head1 DESCRIPTION
 
-At this moment we support three types of syncing the perl source-tree.
+At this moment we support three basic types of syncing the perl source-tree.
 
 =over 4
 
@@ -101,6 +101,18 @@ This method uses the B<File::Copy> module to copy an existing source-tree
 from somewhere on the system (in case rsync doesn't work), this also 
 removes the current source-tree first.
 
+=item forest
+
+This method will sync the source-tree in one of the above basic methods.
+After that, it will create an intermediate copy of the master directory 
+as hardlinks and run the F<regen_headers.pl> script. This should yield
+an up-to-date source-tree. The intermadite directory is now copied as 
+hardlinks to its final directory ({ddir}).
+
+This can be used to change the way B<make distclean> is run from 
+F<mktest.pl> (removes all files that are not in the intermediate
+directory, which may prove faster than traditional B<make distclean>).
+
 =back
 
 =head1 METHODS
@@ -114,7 +126,7 @@ removes the current source-tree first.
 [ Constructor | Public ]
 
 Initialise a new object and check all relevant arguments.
-It returns an object of the appropriate class B<Test::Smoke::Syncer::*>
+It returns an object of the appropriate B<Test::Smoke::Syncer::*> class.
 
 =cut
 
@@ -164,12 +176,23 @@ sub new {
 C<config()> is an interface to the package lexical C<%CONFIG>, 
 which holds all the default values for the C<new()> arguments.
 
+With the special key B<all_defaults> this returns a reference
+to a hash holding all the default values.
+
 =cut
 
 sub config {
     my $dummy = shift;
 
     my $key = lc shift;
+
+    if ( $key eq 'all_defaults' ) {
+        my %default = map {
+            my( $pass_key ) = $_ =~ /^df_(.+)/;
+            ( $pass_key => $CONFIG{ $_ } );
+        } grep /^df_/ => keys %CONFIG;
+        return \%default;
+    }
 
     return undef unless exists $CONFIG{ "df_$key" };
 
@@ -178,12 +201,12 @@ sub config {
     return $CONFIG{ "df_$key" };
 }
 
-=item $syncer->_clear_souce_tree( $tree_dir )
+=item $syncer->_clear_souce_tree( [$tree_dir] )
 
 [ Method | private-ish ]
 
 C<_clear_source_tree()> removes B<all> files in the source-tree 
-using the B<File::Path> module! (See L<File::Path> for caveats.)
+using B<File::Path::rmtree()>. (See L<File::Path> for caveats.)
 
 If C<$tree_dir> is not specified, C<< $self->{ddir} >> is used.
 
@@ -207,7 +230,7 @@ sub _clear_source_tree {
 [ Method | Private-ish ]
 
 C<_relocate_tree()> uses B<File::Copy::move()> to move the source-tree 
-to its destination (C<< $self->{ddir} >>).
+from C<< $source_dir >> to its destination (C<< $self->{ddir} >>).
 
 =cut
 
@@ -243,7 +266,7 @@ sub _relocate_tree {
 
 =item $syncer->check_dot_patch( )
 
-[ Method | Private ]
+[ Method | Public ]
 
 C<check_dot_patch()> checks if there is a '.patch' file in the source-tree.
 It will try to create one if it is not there (this is the case for snapshots).
@@ -298,13 +321,14 @@ sub check_dot_patch {
 C<clean_from_directory()> uses File::Find to get the contents of
 C<$source_dir> and compare these to {ddir} and remove all other files.
 
-The contents of @leave_these should be in "MANIFEST-format".
+The contents of @leave_these should be in "MANIFEST-format"
+(See L<Test::Smoke::SourceTree>).
 
 =cut
 
 sub clean_from_directory {
     my $self = shift;
-    my $source_dir = shift;
+    my $source_dir = File::Spec->rel2abs( shift );
 
     require Test::Smoke::SourceTree;
     my $tree = Test::Smoke::SourceTree->new( $source_dir );
@@ -322,7 +346,7 @@ sub clean_from_directory {
         return unless -f;
         my $file = $tree->abs2mani( $File::Find::name );
         return if exists $orig_dir{ $file };
-        $self->{v} > 1 and print "unlink $file";
+        $self->{v} > 1 and print "Unlink '$file'";
         1 while unlink $_;
         $self->{v} > 1 and print -e $_ ? ": $!\n" : "\n";
     }, $self->{ddir} );
@@ -373,7 +397,12 @@ sub new {
 
 =item $object->sync( )
 
-Do the actual sync.
+Do the actual sync using a call to the B<rsync> program.
+
+B<rsync> can also be used as a smart version of copy. If you 
+use a local directory to rsync from, make sure the destination path
+ends with a I<path separator>! (This does not seem to work for source
+paths mounted via NFS.)
 
 =cut
 
@@ -382,9 +411,11 @@ sub sync {
 
     my $command = join " ", $self->{rsync}, $self->{opts};
     $command .= " -v" if $self->{v};
+    my $redir = $self->{v} ? "" : " >" . File::Spec->devnull;
 
-    $command .= " $self->{source} $self->{ddir}";
+    $command .= " $self->{source} $self->{ddir}$redir";
 
+    $self->{v} > 1 and print "[$command]\n";
     if ( system $command ) {
         my $err = $? >> 8;
         require Carp;
@@ -398,7 +429,7 @@ sub sync {
 
 =head1 Test::Smoke::Syncer::Snapshot
 
-This handles syncing with the B<Net::FTP> module. 
+This handles syncing from a snapshot with the B<Net::FTP> module. 
 It should only be visible from the "parent-package" so no direct 
 user-calls on this.
 
@@ -515,8 +546,11 @@ sub _fetch_snapshot {
     } else {
         $self->{v} and print "get ftp://$self->{server}$self->{sdir}/" .
                              "$snap_name ";
-        $ftp->get( $snap_name, $local_snap );
-        $self->{v} and print "$snap_size OK\n";
+        my $l_file = $ftp->get( $snap_name, $local_snap );
+        my $ok = $l_file eq $local_snap && $snap_size == -s $local_snap;
+        $ok or printf "Error in get(%s) [%d]\n", $l_file || "", 
+                                                 (-s $local_snap);
+        $ok && $self->{v} and print "[$snap_size] OK\n";
     }
     $ftp->quit;
 
@@ -569,7 +603,7 @@ sub _extract_snapshot {
 
     chdir $cwd or do {
         require Carp;
-        Carp::croak "Can't chdir '$extract_base': $!";
+        Carp::croak "Can't chdir($extract_base) back: $!";
     };
 
     if ( $self->{cleanup} & 1 ) {
@@ -581,7 +615,7 @@ sub _extract_snapshot {
 
 C<_extract_with_Archive_Tar()> uses the B<Archive::Tar> and
 B<Compress::Zlib> modules to extract the snapshot. 
-This tested verry slow on my Linux box!
+(This tested verry slow on my Linux box!)
 
 =cut
 
@@ -621,6 +655,8 @@ template to build a command. Yes that might be dangerous!
 sub _extract_with_external {
     my $self = shift;
 
+    my @dirs_pre = __get_directory_names();
+
     my $command = sprintf $self->{tar}, $self->{snapshot};
     $command .= " $self->{snapshot}" if $command eq $self->{tar};
 
@@ -633,8 +669,16 @@ sub _extract_with_external {
     };
     $self->{v} and print "OK\n";
 
-    # XXX We need this to be *real* in case snapshots change!
-    return File::Spec->canonpath( File::Spec->catdir( cwd(), 'perl' ) );
+    # Yes another process can also create directories here!
+    # Be careful.
+    my %dirs_post = map { ($_ => 1) } __get_directory_names();
+    exists $dirs_post{ $_ } and delete $dirs_post{ $_ }
+        foreach @dirs_pre;
+    # I'll pick the first one that has 'perl' in it
+    my( $base_dir ) = grep /\bperl/ || /perl\b/ => keys %dirs_post;
+    $base_dir ||= 'perl';
+
+    return File::Spec->canonpath( File::Spec->catdir( cwd(), $base_dir ) );
 }
 
 =item $syncer->patch_a_snapshot( $patch_number )
@@ -732,47 +776,37 @@ and updates B<.patch> accordingly.
 
 C<@patch_list> is a list of filenames of these patches.
 
-Check the B<unzip> attribute to find out how to unzip the patch and 
-call the B<patch> program.
-
-  * $patch = <FH>
-  * open PATCH, "| $self->{patch} -u -p1"
-  * print PATCH $patch  
+Checks the B<unzip> attribute to find out how to unzip the patch and 
+uses the B<Test::Smoke::Patcher> module to apply the patch.
 
 =cut
 
 sub _apply_patches {
     my( $self, @patch_list ) = @_;
 
-    my $opts = '-p1';
-    $opts .= " --verbose" if $self->{v} > 1;
-
     my $cwd = cwd();
     chdir $self->{ddir} or do {
         require Carp;
-        Carp::croak "Can't chdir( $self->{ddir} ): $!";
+        Carp::croak "Cannot chdir($self->{ddir}): $!";
     };
 
-    my $redir = $self->{v} ? "" : ">" . File::Spec->devnull . " 2>&1";
-
+    require Test::Smoke::Patcher;
     foreach my $file ( @patch_list ) {
 
         my $patch = $self->_read_patch( $file ) or next;
-        local *PATCH;
-        if ( open PATCH, "| $self->{patch} $opts $redir" ) {
 
-            binmode PATCH;
-            print PATCH $patch;
-            close PATCH or do {
-                require Carp;
-                Carp::carp "Error while patching from '$file': $!";
-                next;
-            };
-         } else {
+        my $patcher = Test::Smoke::Patcher->new( single => {
+            ddir  => $self->{ddir},
+            patch => $self->{patch},
+            pfile => \$patch,
+            v     => $self->{v},
+        });
+        eval { $patcher->patch };
+        if ( $@ ) {
              require Carp;
-	     Carp::carp "Can't fork '$self->{patch}: $!";
+	     Carp::carp "Error while patching:\n\t$@";
              next;
-         }
+        }
 
         $self->_fix_dot_patch( $1 ) if $file =~ /(\d+)\.gz$/;
 
@@ -780,7 +814,10 @@ sub _apply_patches {
             1 while unlink $file;
         }
     }
-    chdir $cwd;
+    chdir $cwd or do {
+        require Carp;
+        Carp::croak "Cannot chdir($cwd) back: $!";
+    };
 }
 
 =item $syncer->_read_patch( $file )
@@ -844,6 +881,27 @@ sub _fix_dot_patch {
     }
 
     return $self->check_dot_patch;
+}
+
+=item __get_directory_names( [$dir] )
+
+[This is B<not> a method]
+
+C<__get_directory_names()> retruns all directory names from 
+C<< $dir || cwd() >>. It does not look at symlinks (there should 
+not be any in the perl source-tree).
+
+=cut
+
+sub __get_directory_names {
+    my $dir = shift || cwd();
+
+    local *DIR;
+    opendir DIR, $dir or return ();
+    my @dirs = grep -d File::Spec->catdir( $dir, $_ ) => readdir DIR;
+    closedir DIR;
+
+    return @dirs;
 }
 
 =back
@@ -969,6 +1027,8 @@ sub sync {
         }
     }, $source_dir );
 
+    $self->clean_from_directory( $source_dir );
+
     return $self->check_dot_patch();
 }
 
@@ -1063,8 +1123,6 @@ sub sync {
     $syncer = Test::Smoke::Syncer->new( hardlink => \%args );
     my $plevel = $syncer->sync;
 
-    $self->clean_from_directory( $self->{fdir} );
-
     return $plevel;
 }
 
@@ -1077,11 +1135,20 @@ L<File::Copy>, L<Test::Smoke::SourceTree>
 
 =head1 COPYRIGHT
 
-(c) 2002, All rights reserved.
+(c) 2002-2003, All rights reserved.
 
   * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+
+See:
+
+  * <http://www.perl.com/perl/misc/Artistic.html>,
+  * <http://www.gnu.org/copyleft/gpl.html>
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

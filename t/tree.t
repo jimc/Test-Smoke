@@ -69,5 +69,5 @@ SKIP: {
 #line 200
     my $tree = eval { Test::Smoke::SourceTree->new() };
     ok( $@, "new() must have arguments" );
-    like( $@, qr/Usage:.*?at \Q$0\E line 200/, "it croak()s alright" );
+    like( $@, "/Usage:.*?at \Q$0\E line 200/", "it croak()s alright" );
 }
