@@ -1,0 +1,96 @@
+=head1 NAME
+
+Perl Core Smoke Test Suite
+
+=head1 SYNOPSIS
+
+  # at 22:25
+  sh smoke.sh [/usr/CPAN/perl-current [smoke.cfg]]
+  #
+
+  or for the brave and trustworthy
+
+  # perl Makefile.PL
+
+=head1 DESCRIPTION
+
+The perl core smoke test suite is a set of simple scripts that try to
+run the perl core tests on as many configurations as possible and combine
+that into a easy to parse report.
+
+The perl source tree is refreshed using rsync to the latest level of the
+perl development branche before the smoke tests start. Note that rsync in
+the smoke uses --delete, which <b>removes</b> any existing files on that
+directory that are not part of the perl source tree.
+
+=head1 INSTALLATION
+
+Create an empty directory where the perl source tree is to be placed when
+smoking (e.g. /usr/3gl/CPAN/perl-current).
+
+Create or use a location to put the three scripts needed for the smoke
+(e.g. /usr/3gl/CPAN/smoke), and put the files from the distribution there.
+Probably you already did so, because you are reading this file.
+
+Edit smoke.sh and change the PC= definition to reflect the location you
+just chose in the first step of the initialisation. Theoretically you are
+now ready to go, just follow the SYNOPSIS to give it a first shot for
+tonight.
+
+Optionally delete lines from config.sh (or a local copy with a different
+name) for which you are certail your system doesn't support it (like
+threading or 64bit configurations)
+
+If something useful happens, do it every night using cron instead of at.
+
+=head1 Slow Systems
+
+It can happen that your system is not able to persue all the tests, either
+because it is too slow or because some of the configurations are not
+supported by the system. At first, don't worry, they are detected by the
+report creation script and shown as such.
+
+After the first run gave you some idea of how long the smoke will run on
+your system,  you can create your own copy of smoke.cfg where you either
+add new combinations and/or test levels, or delete lines to speed up the
+run time of smoke.
+
+If the test captures too many cycles of your CPU to continue production
+work, just kill the "mktest.pl" process and the report will be generated
+over the results captured untill then.
+
+=head1 COPYRIGHT and LICENCE
+
+Copyright (C) 2001 H.Merijn Brand
+
+This suite is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself, without consulting the author.
+
+=head1 AUTHOR
+
+H.Merijn Brand <h.m.brand@hccnet.nl>, co-authored with Nicholas Clark
+<nick@plum.flirble.org> in dialogue and consultation with Michael
+Schwern <schwern@pobox.com>
+
+=head1 Misc
+
+As always, have the appropriate amount of fun
+
+=head1 TODO
+
+=over 4
+
+=item Win32
+
+Windows configurations are not as easy as Unix, but require make
+fiddling. Windows2000 however supports long names and <i>might</i>
+just pick up the current way of going around without any hassle.
+
+=item Initialisation and installation
+
+Though I've tried to make Makefile.PL do what's neccasary, there's
+probably still some issues to be fixed for non-unix operating systems
+
+=back
+
+=cut

@@ -1,0 +1,8 @@
+MANIFEST
+README
+ChangeLog
+Makefile.PL
+smoke.sh
+smoke.cfg
+mktest.pl
+mkovz.pl

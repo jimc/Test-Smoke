@@ -1,0 +1,56 @@
+*** Release 1.06
+
+    Mon 03 Sep 2001, Merijn
+
+	- Makefile.PL's thoughts of smoking dir now more safe and robust
+	- Added warning in README for --delete effects
+	- VERSION now only in Makefile.PL and mkovz.pl (and ChangeLog :)
+	- mkovz.pl changed to use mail if mailx not found in PATH
+
+*** Release 1.05
+
+    Thu 30 Aug 2001, Merijn
+
+	- safeguard for "="  with clipping cfg lines (Nick)
+	- still more backward compatibility (Will)
+	- report shows smoke version
+	- Makefile.PL should be doing the right stuff now
+
+*** Release 1.04
+
+    Tue 28 Aug 2001, Merijn
+
+	- harness only started if real failures (improved noise filter)
+	- added "make regen_headers" as of Arthur's request
+	- removed 2>&1 in commends, cause it's redirected anyway
+	- removed unneeded (undef) in local declaration
+
+*** Release 1.03
+
+    Mon 27 Aug 2001, Merijn, Nick
+
+	- exits from smoke.sh more verbose (Nick)
+	- several typo's, some harmless
+	- removed -Dusereentrant as of my own request
+	- optimized away longdoubles for freebsd
+	- freebsd has mailx not in default path
+	- removed a multi-OS leftover from mkovz.pl
+	- removed 5.6 requirements (reluctantly)
+
+	- Nick's external configuration system
+	- docs for optional smoke.cfg to mktest.pl
+	- safer config parsing
+	- syntax now still OK for 5.005_03
+
+*** Release 1.02
+
+    Thu 23 Aug 2001, Merijn
+
+	- mkovz.pl accepts smoke folder as second argument
+	- Michael's changes from Aug 22
+	- smoke.sh expands $PATH with folder of smoke.sh
+	- smoke.sh accepts test tree folder as argument
+	- entered README
+	- entered MANIFEST
+	- entered ChangeLog
+	- entered Makefile.PL (don't use that yet!)
