@@ -1,7 +1,7 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 231 2003-07-15 03:10:56Z abeltje $
+# $Id: Syncer.pm 322 2003-08-03 15:33:36Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.008';
 
@@ -299,16 +299,24 @@ sub check_dot_patch {
     local *PATCHLEVEL_H;
     my $patchlevel_h = File::Spec->catfile( $self->{ddir}, 'patchlevel.h' );
     if ( open PATCHLEVEL_H, "< $patchlevel_h" ) {
+        my $declaration_seen = 0;
         while ( <PATCHLEVEL_H> ) {
-            /"(?:DEVEL|MAINT)(\d+)"/ or next;
-            $patch_level = $1;
+            $declaration_seen ||= /local_patches\[\]/;
+            $declaration_seen && /^\s+,"(?:DEVEL|MAINT)(\d+)|(RC\d+)"/ or next;
+            $patch_level = $1 || $2 || '?????';
+            if ( $patch_level =~ /^RC/ ) {
+                $patch_level = $self->version_from_patchlevel_h .
+                               "-$patch_level";
+            } else {
+                $patch_level++;
+            }
         }
         # save 'patchlevel.h' mtime, so you can set it on '.patch'
         my $mtime = ( stat PATCHLEVEL_H )[9];
         close PATCHLEVEL_H;
         # Now create '.patch' and return if $patch_level
         # The patchlevel is off by one in snapshots
-        if ( ++$patch_level ) {
+        if ( $patch_level && $patch_level !~ /-RC\d+$/ ) {
             if ( open DOTPATCH, "> $dot_patch" ) {
                 print DOTPATCH "$patch_level\n";
                 close DOTPATCH; # no use generating the error
@@ -316,11 +324,41 @@ sub check_dot_patch {
             }
             $self->{patchlevel} = $patch_level;
             return $self->{patchlevel};
+        } else {
+            $self->{patchlevel} = $patch_level;
+            return $self->{patchlevel}
         }
     }
     return undef;
 }
 
+=item version_from_patchlevel_h( $ddir )
+
+C<version_from_patchlevel_h()> returns a "dotted" version as derived 
+from the F<patchlevel.h> file in the distribution.
+
+=cut
+
+sub version_from_patchlevel_h {
+    my $self = shift;
+
+    my $file = File::Spec->catfile( $self->{ddir}, 'patchlevel.h' );
+
+    my( $revision, $version, $subversion ) = qw( 5 ? ? );
+    local *PATCHLEVEL;
+    if ( open PATCHLEVEL, "< $file" ) {
+        my $patchlevel = do { local $/; <PATCHLEVEL> };
+        close PATCHLEVEL;
+        $revision   = $patchlevel =~ /^#define PERL_REVISION\s+(\d+)/m 
+                    ? $1 : '?';
+        $version    = $patchlevel =~ /^#define PERL_VERSION\s+(\d+)/m
+                    ? $1 : '?';
+        $subversion = $patchlevel =~ /^#define PERL_SUBVERSION\s+(\d+)/m 
+                    ? $1 : '?';
+    }
+    return "$revision.$version.$subversion";
+}
+ 
 =item $syncer->clean_from_directory( $source_dir[, @leave_these] )
 
 C<clean_from_directory()> uses File::Find to get the contents of

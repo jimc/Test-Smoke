@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 298 2003-07-31 21:03:26Z abeltje $
+# $Id: Smoke.pm 320 2003-08-03 13:41:09Z abeltje $
 use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.17_62';
+$VERSION = '1.18';
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -43,8 +43,14 @@ C<Test::Smoke> exports C<$conf> and C<read_config()> by default.
 
 sub read_config {
     my( $config_name ) = @_;
-    defined $config_name or $config_name = 'smokecurrent_config';
 
+    $config_name = 'smokecurrent_config' 
+        unless defined $config_name && length $config_name;
+    $config_name .= '_config' 
+        unless $config_name =~ /_config$/ || -f $config_name;
+
+    # Enable reloading by hackery
+    delete $INC{ $config_name } if exists $INC{ $config_name };
     eval { require $config_name };
     $ConfigError = $@ ? $@ : undef;
 
@@ -163,7 +169,7 @@ sub skip_config {
 
 =head1 REVISION
 
-$Id: Smoke.pm 298 2003-07-31 21:03:26Z abeltje $
+$Id: Smoke.pm 320 2003-08-03 13:41:09Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -11,7 +11,7 @@ use strict;
 use Test::Smoke;
 use vars qw($VERSION);
 $VERSION = Test::Smoke->VERSION; 
-# $Id: mkovz.pl 300 2003-07-31 22:50:09Z abeltje $
+# $Id: mkovz.pl 316 2003-08-02 12:28:49Z abeltje $
 
 use File::Spec;
 use Cwd;
@@ -150,7 +150,7 @@ for (<OUT>) {
         }
         next;
     }
-    if (m/^\s*Smoking patch (\d+)/) {
+    if (m/^\s*Smoking patch (\d+(?:\.\d+\.\d+-RC\d+)?)/) {
         $rpt{patch} = $1;
         next;
     }
@@ -213,12 +213,12 @@ for (<OUT>) {
         }
         next;
     }
-    if (m/^\s*Unable\ to
-          \ (?=([cbmt]))(?:build|configure|make|test)
-          \ (anything\ but\ mini)?perl/x) {
-        $2 and $1 = uc $1; # M for no perl but miniperl
+    if (my( $status, $mini ) = m/^\s*Unable\ to
+                                 \ (?=([cbmt]))(?:build|configure|make|test)
+                                 \ (anything\ but\ mini)?perl/x) {
+        $mini and $status = uc $status; # M for no perl but miniperl
         foreach my $layer ( @layers ) {
-            $rpt{$conf}{$debug}{ $layer }  = $1;
+            $rpt{$conf}{$debug}{ $layer }  = $status;
         }
         next;
     }
@@ -236,6 +236,10 @@ for (<OUT>) {
     if (m/FAILED/) {
         ref $rpt{$conf}{$debug}{$perlio} or
             $rpt{$conf}{$debug}{$perlio} = [];	# Clean up sparse garbage
+        push @{$rpt{$conf}{$debug}{$perlio}}, $_;
+        next;
+    }
+    if ( /^\s+\d+(?:[-\s]+\d+)*/ ) {
         push @{$rpt{$conf}{$debug}{$perlio}}, $_;
         next;
     }

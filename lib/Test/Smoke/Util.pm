@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 293 2003-07-30 23:08:15Z abeltje $
+# $Id: Util.pm 317 2003-08-03 01:15:09Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -17,7 +17,8 @@ use base 'Exporter';
 @EXPORT_OK = qw( 
     &get_ncpu &get_smoked_Config &parse_report_Config 
     &get_regen_headers &run_regen_headers
-    &calc_timeout
+    &calc_timeout 
+    &do_pod2usage
 );
 
 use Text::ParseWords;
@@ -437,25 +438,37 @@ B<patchlevel.h> as a fallback.
 
 sub get_patch {
     my( $ddir ) = @_;
-    local *OK;
-    my $p_file = defined $ddir 
-               ? File::Spec->catfile( $ddir, '.patch' ) 
-               : '.patch';
-    my $patch;
-    if ( open OK, "< $p_file" ) {
-        chomp( $patch = <OK> );
-        close OK;
-        return $patch;
+    $ddir ||= File::Spec->curdir;
+
+    my $dot_patch = File::Spec->catfile( $ddir, '.patch' );
+    local *DOTPATCH;
+    my $patch_level = '?????';
+    if ( open DOTPATCH, "< $dot_patch" ) {
+        chomp( $patch_level = <DOTPATCH> );
+        close DOTPATCH;
+        return $patch_level if $patch_level =~ /-RC\d+$/;
+        $patch_level =~ tr/0-9//cd;
+        return $1 if $patch_level =~/^([0-9]+)$/;
     }
-    $p_file = defined $ddir 
-            ? File::Spec->catfile( $ddir, 'patchlevel.h' ) 
-            : 'patchlevel.h';
-    if ( !$patch and open OK, "< $p_file" ) {
-        local $/ = undef;
-        ( $patch ) = ( <OK> =~ m/^\s+,"(?:DEVEL|MAINT)(\d+)"\s*$/m );
-        close OK;
-        return "$patch(+)";
+
+    # There does not seem to be a '.patch', try 'patchlevel.h'
+    local *PATCHLEVEL_H;
+    my $patchlevel_h = File::Spec->catfile( $ddir, 'patchlevel.h' );
+    if ( open PATCHLEVEL_H, "< $patchlevel_h" ) {
+        my $declaration_seen = 0;
+        while ( <PATCHLEVEL_H> ) {
+            $declaration_seen ||= /local_patches\[\]/;
+            $declaration_seen && /^\s+,"(?:DEVEL|MAINT)(\d+)|(RC\d+)"/ or next;
+            $patch_level = $1 || $2 || '?????';
+            if ( $patch_level =~ /^RC/ ) {
+                $patch_level = version_from_patchlevel_h( $ddir ) .
+                               "-$patch_level";
+            } else {
+                $patch_level .= '(+)';
+            }
+        }
     }
+    return $patch_level;
 }
 
 =item version_from_patchlevel_h( $ddir )
@@ -467,10 +480,8 @@ from the F<patchlevel.h> file in the distribution.
 
 sub version_from_patchlevel_h {
     my( $ddir ) = @_;
-
-    my $file = defined $ddir 
-             ? File::Spec->catfile( $ddir, 'patchlevel.h' )
-             : 'patchlevel.h';
+    $ddir ||= File::Spec->curdir;
+    my $file = File::Spec->catfile( $ddir, 'patchlevel.h' );
 
     my( $revision, $version, $subversion ) = qw( 5 ? ? );
     local *PATCHLEVEL;
@@ -636,7 +647,8 @@ sub parse_report_Config {
     my( $report ) = @_;
 
     my $version  = $report =~ /^Automated.*for (.+) patch/ ? $1 : '';
-    my $plevel   = $report =~ /^Automated.*patch (\d+)/ ? $1 : '';
+    my $plevel   = $report =~ /^Automated.*patch (\d+(?:\.\d+\.\d+-RC\d+)?)/
+        ? $1 : '';
     my $osname   = $report =~ /\bon (.*) - / ? $1 : '';
     my $osvers   = $report =~ /\bon .* - (.*)/? $1 : '';
     $osvers =~ s/\s+\(.*//;
@@ -737,6 +749,34 @@ sub calc_timeout {
         $timeout = 60 * $kill_min;
     }
     return $timeout;
+}
+
+=item do_pod2man( %pod2usage_options )
+
+If L<Pod::Usage> is there then call its C<pod2usage()>.
+In the other case, print the general message passed with the C<myusage> key.
+
+=cut
+
+sub do_pod2usage {
+    my %p2u_opt = @_;
+    eval { require Pod::Usage };
+    if ( $@ ) {
+        my $usage = $p2u_opt{myusage} || <<__EO_USAGE__;
+Usage: $0 [options]
+__EO_USAGE__
+        print <<EO_MSG;
+$usage
+
+Use 'perldoc $0' for the documentation.
+Please install 'Pod::Usage' for easy access to the docs.
+
+EO_MSG
+        exit( exists $p2u_opt{exitval} ? $p2u_opt{exitval} : 1 );
+    } else {
+        exists $p2u_opt{myusage} and delete $p2u_opt{myusage};
+        Pod::Usage::pod2usage( @_ );
+    }
 }
 
 =item skip_filter( $line )
