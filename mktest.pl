@@ -25,12 +25,17 @@ GetOptions (
     "n|norun|dry-run" => \$norun,
     "v|verbose:i"     => \$verbose,	# NYI
     ) or usage;
-my $config_file = shift || "smoke.cfg";
+my $config_file = shift;
 
 open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
 open LOG,    "> mktest.out";	select ((select (LOG),    $| = 1)[0]);
 				select ((select (STDOUT), $| = 1)[0]);
+
+sub is_win32 ()
+{
+    $^O eq "MSWin32";
+    } # is_win32
 
 # Run a system command or a perl subroutine, unless -n was flagged.
 sub run ($;$)
@@ -49,7 +54,7 @@ sub make ($)
 {
     my $cmd = shift;
 
-    is_win32 () or return run "make $cmd";
+    is_win32 or return run "make $cmd";
 
     my $kill_err;
     # don't capture STDERR
@@ -69,7 +74,10 @@ sub ttylog (@)
     } # ttylog
 
 my @config;
-if (defined $config_file && -s $config_file) {
+unless (defined $config_file) {
+    -s "smoke.cfg" and $config_file = "smoke.cfg";
+    }
+if (defined $config_file) {
     open CONF, "< $config_file" or die "Can't open '$config_file': $!";
     my @conf;
     my @target;
@@ -149,7 +157,6 @@ else {
     }
 
 my $testdir = getcwd;
-run ("unlink qw(perl.ok perl.nok)", sub {unlink qw(perl.ok perl.nok)});
 
 my $patch;
 if (open OK, "<.patch") {
@@ -280,10 +287,10 @@ sub run_tests
 	    }
 
 	print TTY "\nConfigure ...";
-	run "./Configure $config_args -des", is_win32() ? \&Configure : undef;
+	run "./Configure $config_args -des", is_win32 ? \&Configure : undef;
 
-	unless ($norun or (is_win32 () ? -f "win32/smoke.mk"
-				       : -f "Makefile" && -s "config.sh")) {
+	unless ($norun or (is_win32 ? -f "win32/smoke.mk"
+				    : -f "Makefile" && -s "config.sh")) {
 	    ttylog " Unable to configure perl in this configuration\n";
 	    next;
 	    }
@@ -302,7 +309,7 @@ sub run_tests
 
 	$norun or unlink "t/$perl";
 	make "test-prep";
-	unless ($norun or is_win32 () ? -f "t/$perl" : -l "t/$perl") {
+	unless ($norun or is_win32 ? -f "t/$perl" : -l "t/$perl") {
 	    ttylog " Unable to test perl in this configuration\n";
 	    next;
 	    }
@@ -319,7 +326,7 @@ sub run_tests
 		}
 
 	    #FIXME kludge
-	    if (is_win32 ()) {
+	    if (is_win32) {
 		chdir "win32" or die "unable to chdir () into 'win32'";
 		# Same as in make ()
 		open TST, "dmake -f smoke.mk test |";
@@ -372,14 +379,6 @@ sub run_tests
 	    if (grep m/^All tests successful/, @nok) {
 		print TTY "\nOK, archive results ...";
 		$patch and $nok[0] =~ s/\./ for .patch = $patch./;
-		# make {,n}okfile now, cause a failure might not be able to
-		-f "perl.ok"  or run "make okfile";
-		run "cp perl.ok perl.nok";
-		open  OK, ">> perl.ok.$$";
-		print OK $p_conf->[0] eq $s_conf ? "\n" :
-			($p_conf->[0] =  $s_conf);
-		print OK "PERLIO = $perlio\n", @nok;
-		close OK;
 		}
 	    else {
 		my @harness;
@@ -391,87 +390,20 @@ sub run_tests
 		if (@harness) {
 		    local $ENV{PERL_SKIP_TTY_TEST} = 1;
 		    print TTY "\nExtending failures with Harness\n";
-		    my $harness = is_win32 () ?
+		    my $harness = is_win32 ?
 			join " ", map { s{^\.\.[/\\]}{};
 					m/^(?:lib|ext)/ and $_ = "../$_";
 					$_ } @harness :
 			"@harness";
-		    push @nok, "\n",
+		    ttylog "\n",
 			grep !m:\bFAILED tests\b: &&
 			    !m:% okay$: => run "./perl t/harness $harness";
-
-		    open  NOK, ">> perl.nok.$$";
-		    print NOK $p_conf->[1] eq $s_conf ? "\n" :
-			     ($p_conf->[1] =  $s_conf);
-		    print NOK "PERLIO = $perlio\n", @nok;
-		    close NOK;
 		    }
 		}
 	    print TTY "\n";
 	    }
 	}
     } # run_tests
-
-if (-s "perl.ok.$$") {
-    print TTY "\nOK file ...";
-    open OK, -s "perl.nok.$$" ? "< perl.ok.$$" : "< mktest.out";
-    my @nok = <OK>;
-    close OK;
-    unlink "perl.ok.$$";
-    open  OK, "< perl.ok";
-    my @ok = <OK>;
-    close OK;
-    shift @ok;
-    $ok[0] =~ s/Subject:\s+//;
-    $patch and $ok[0] =~ s/\+DEVEL\d+/+DEVEL$patch/;
-    $ok[0] =~ s/-stdio//;
-    splice @ok, 1, 2;
-    splice @ok, 8, 2, map { "    $_\n" } (
-			    "category=dailybuild",
-			    "category=install",
-			    "osname=$^O",
-			    "severity=none",
-			    "status=ok",
-			    "ack=no");
-    splice @ok, 6, 0, "\n", @nok, "\n";
-    open  OK, "> perl.ok";
-    print OK @ok;
-    close OK;
-    }
-else {	# Let's hope not!
-    unlink "perl.ok";
-    }
-
-if (-s "perl.nok.$$") {
-    print TTY "\nNot OK file ...";
-    open NOK, "< perl.nok.$$";
-    my @nok = <NOK>;
-    close NOK;
-    shift @nok;
-    $nok[0] =~ s/Subject:\s+//;
-    $nok[0] =~ s/OK/Not OK/;
-    $patch and $nok[0] =~ s/\+DEVEL\d+/+DEVEL$patch/;
-    $nok[0] =~ s/-stdio//;
-    splice @nok, 1, 2;
-    $nok[2] =~ s/success/build failure/;
-    splice @nok, 8, 2, map { "    $_\n" } (
-			     "category=dailybuild",
-			     "category=install",
-			     "osname=$^O",
-			     "severity=none",
-			     "status=open",
-			     "ack=no");
-    open NOK, "< perl.nok.$$";
-    splice @nok, 5, 1, (<NOK>);
-    close NOK;
-    unlink "perl.nok.$$";
-    open  NOK, "> perl.nok";
-    print NOK @nok;
-    close NOK;
-    }
-else {
-    unlink "perl.nok";
-    }
 
 sub Configure
 {

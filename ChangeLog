@@ -1,3 +1,24 @@
+*** Release 1.10
+
+    Wed 05 Nov 2001, Merijn
+
+	- cron sometimes runs as crond, possibly with options (Abigail)
+	- Included $Config{osvers} in the report
+
+*** Release 1.09
+
+    Wed 26 Sep 2001, Merijn
+
+	- Removed depricated perl.ok and perl.nok file stuff
+	  harness log now printed to LOG :)
+	- added the missing is_win32 () function
+	- smoke.cfg less default than previous default (Blair)
+	- ask for umask, also enable 'none'
+	- log harness to the log, not to out
+	- actually *write* the cron we've prepared (Schwern)
+	- use crontab to (re)submit the new crontab instead of cron (Schwern)
+	- 'ps -f' doesn't work on Mac (Schwern)
+
 *** Release 1.08
 
     Tue 18 Sep 2001, Merijn

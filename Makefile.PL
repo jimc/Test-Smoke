@@ -14,7 +14,7 @@ $^O =~ m/^(?: VMS | MSWin32 )$/x and
 WriteMakefile (
     NAME	=> "Test::Smoke",
     DISTNAME	=> "Test-Smoke",
-    VERSION	=> "1.08",
+    VERSION	=> "1.10",
     AUTHOR	=> 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
 		   'Nicholas Clark <nick@plum.flirble.org>',
 
@@ -85,7 +85,7 @@ while (1) {
 
 open STDERR, ">&STDOUT";
 my $time = "random";
-if (grep m/cron$/, `ps -ef`) {
+if (grep m/\bcrond?\b/, `ps -e`) {
     my ($m, $h);
     while (1) {
 	print "At what time do you want the smoke to start ?\n";
@@ -107,9 +107,24 @@ if (grep m/cron$/, `ps -ef`) {
 	      (map { "  $_" } @cron),
 	      "Shall I use it? [Y/n] > Y\b";
 	unless (scalar <STDIN> =~ m/^[NnFf0]/) { # No, Nee, Nein, Non, False, 0
-	    open CRON, "> cron.tab" or die "cron.tab: $!";
-	    system "cron cron.tab";
-	    unlink "cron.tab";
+	    my $cron;
+	    foreach my $c (qw /crontab cron/) {
+		foreach my $d ((split m/:/ => $ENV{PATH}), "/usr/sbin", "/usr/lib") {
+                    -x "$d/$c" or next;
+                    $cron = "$d/$c";
+                    last;
+		    }
+		$cron or next;
+
+                open  CRON, "> cron.tab" or die "cron.tab: $!";
+                print CRON @cron;
+                close CRON or die "Failed to close cron.tab: $!";
+                system "$cron cron.tab";
+                unlink "cron.tab" or die "Failed to cleanup cron.tab: $!";
+		}
+            # Should be a better test, since we've used crontab to get here :)
+            $cron or
+                warn "Failed to find a `cron' or `crontab' program!\n";
 	    }
 	}
     else {
@@ -129,6 +144,15 @@ while (!(-f $conf && -s _)) {
     -f $conf && -s _ or print "$conf is not a valid smoke configuration\n";
     }
 $conf ne "smoke.cfg" and $sh =~ s:\bsmoke\.cfg\b:$conf:;
+
+my $umask = "";
+print "In order to prevent test failures that are not realy interesting to\n",
+      "the smoke suite, like removing files that are write protected, I'd\n",
+      "like to run with 'umask 0'.\n",
+      "What umask can I use (use 'none' to not set at all) ? [0] > 0\b";
+chomp ($umask = scalar <STDIN>);
+$umask =~ m/^none$/i  and $sh =~ s/^umask 0$//m;
+$umask =~ m/^[0-7]+$/ and $sh =~ s/^umask 0$/umask $umask/m;
 
 move ("smoke.sh", "smoke.sh.org");
 open  SH, "> smoke.sh" or die "smoke.sh: $!";

@@ -72,8 +72,8 @@ over the results captured untill then.
 
 =head2 Distribution
 
-  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.08.tgz
-  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.08.tgz
+  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.10.tgz
+  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.10.tgz
   SourceForge project "perl-qa"
 
 =head2 Mailing lists
@@ -107,6 +107,7 @@ Contributors and/or co-authors:
     Portability issues	Will Coleda - IMG <wjc@infomg.com>
     Safety		Richard Soderberg <rs@oregonnet.com>
     Win32/MSC5/dmake	Mattia Barbon <mbarbon@dsi.unive.it>
+    Sharing issues	Blair Zajac <blair@orcaware.com>
 
 and all the people having useful suggestions and nits, starting at
 YAPC::Europe-2.0.01, where Michael talked me into simplifying my own
@@ -130,6 +131,11 @@ just pick up the current way of going around without any hassle.
 
 Though I've tried to make Makefile.PL do what's neccasary, there's
 probably still some issues to be fixed for non-unix operating systems
+
+=item Parrot
+
+Ask the user at setup if he's willing to test Parrot along the way,
+and implement/integrate these tests
 
 =back
 
