@@ -1,27 +1,22 @@
-MANIFEST	$Id: MANIFEST 349 2003-08-08 22:21:16Z abeltje $
+MANIFEST	$Id: MANIFEST 641 2004-03-07 17:22:36Z abeltje $
 SIGNATURE
 README
 ReleaseNotes
 Changes
-ChangeLog
-Configure.pl
 FAQ
 Makefile.PL
 archiverpt.pl
 configsmoke.pl
 mailrpt.pl
-mktest.pl
-mkovz.pl
 patchtree.pl
 runsmoke.pl
-smoke.sh
-smokew32.bat
+perl55x.cfg
 perl562.cfg
+perl58x.cfg
 perlcurrent.cfg
-smoke.cfg
 w32current.cfg
+smoke55x_dfconfig
 smoke562_dfconfig
-smoke56x_dfconfig
 smoke58x_dfconfig
 smokeperl.pl
 smokestatus.pl
@@ -33,8 +28,10 @@ lib/Test/Smoke/BuildCFG.pm
 lib/Test/Smoke/Mailer.pm
 lib/Test/Smoke/Patcher.pm
 lib/Test/Smoke/Policy.pm
+lib/Test/Smoke/Reporter.pm
 lib/Test/Smoke/Smoker.pm
 lib/Test/Smoke/Syncer.pm
+lib/Test/Smoke/SysInfo.pm
 lib/Test/Smoke/SourceTree.pm
 lib/Test/Smoke/Util.pm
 t/TestLib.pm
@@ -50,6 +47,7 @@ t/manifest.t
 t/patcher.t
 t/parse_report.t
 t/policy.t
+t/reporter.t
 t/regenstuff.t
 t/skip_filter.t
 t/smoked_config.t
@@ -59,10 +57,15 @@ t/syncer_ftp.t
 t/syncer_link.t
 t/syncer_rsync.t
 t/syncer_snap.t
+t/sysinfo.t
 t/tree.t
 t/ts_config.t
+t/util_times.t
 t/win32/Makefile
 t/win32/makefile.mk
+t/ftppub/bugtst01.out
+t/ftppub/bugtst02.out
+t/ftppub/bugtst03.out
 t/ftppub/perl-current-diffs/20000.gz
 t/ftppub/perl-current-diffs/20001.gz
 t/ftppub/perl-current-diffs/20003.gz

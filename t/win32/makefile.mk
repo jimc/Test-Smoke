@@ -1,6 +1,8 @@
 # This is a test makefile.mk for Configure_win32()
 # I need this to test all possible configuration stuff.
 #
+# $Id: makefile.mk 601 2004-02-12 07:21:22Z abeltje $
+#
 # These are not touched by default (Must be checked either way)
 INST_DRV	*= C:
 INST_TOP	*= $(INST_DRV)\perl
@@ -51,6 +53,9 @@ CCHOME		*= C:\MingW
 CCHOME		*= $(MSVCDIR)
 .ENDIF
 
+# IS_WIN95 is self explanatory (not found in Makefile)
+#IS_WIN95	*= define
+
 # EMAIL is used to set -Dcf_email=xxx
 #EMAIL		*= 
 
@@ -67,3 +72,17 @@ CFG_VARS	=				\
 
 some_target : will break arguments up like this \
 		CCTYPE=$(CCTYPE) > somewhere
+
+# This target is used to generate the new makefile (.\makefile.95) for Win95
+
+.\makefile.95: .\makefile.mk
+        $(MINIPERL) genmk95.pl makefile.mk $(MK2)
+
+#--------------------- END Win95 SPECIFIC ---------------------
+
+# a blank target for when builds don't need to do certain things
+# this target added for Win95 port but used to keep the WinNT port able to
+# use this file
+__not_needed:
+        $(NOOP)
+

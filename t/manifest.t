@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: manifest.t 488 2003-11-01 08:45:26Z abeltje $
+# $Id: manifest.t 505 2003-12-21 11:48:43Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;

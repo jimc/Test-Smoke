@@ -1,11 +1,15 @@
 #! /usr/bin/perl -w
 use strict;
+use Data::Dumper;
 
-# $Id: smoker.t 268 2003-07-27 15:08:05Z abeltje $
-use File::Spec;
+# $Id: smoker.t 647 2004-03-11 10:06:20Z abeltje $
+use File::Spec::Functions qw( :DEFAULT devnull abs2rel rel2abs );
+use Cwd;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use_ok( 'Test::Smoke::Smoker' );
+
+my $debug = exists $ENV{SMOKE_DEBUG} && $ENV{SMOKE_DEBUG};
 
 {
     my %config = (
@@ -15,7 +19,7 @@ use_ok( 'Test::Smoke::Smoker' );
     );
 
     local *LOG;
-    open LOG, "> " . File::Spec->devnull;
+    open LOG, "> " . devnull();
 
     my $smoker = Test::Smoke::Smoker->new( \*LOG, %config );
     isa_ok( $smoker, 'Test::Smoke::Smoker' );
@@ -26,6 +30,44 @@ use_ok( 'Test::Smoke::Smoker' );
 
     is_deeply( $smoker, $ref, "Check arguments" );   
 
+    close LOG;
+}
+
+{
+    my @nok = (
+        '../ext/Cwd/t/Cwd.....................FAILED at test 10',
+        'op/magic.............................FAILED at test 37',
+        '../t/op/die..........................FAILED at test 22',
+        'ext/IPC/SysV/t/ipcsysv...............FAILED at test 1',
+
+    );
+    local *LOG;
+    open LOG, "> " . devnull();
+
+    my $smoker = Test::Smoke::Smoker->new( \*LOG,
+        v => 0,
+        ddir => cwd(),
+    );
+
+    my %tests = $smoker->_transform_testnames( @nok );
+    my %raw = (
+        '../ext/Cwd/t/Cwd.t'          => 'FAILED at test 10',
+        '../t/op/magic.t'             => 'FAILED at test 37',
+        '../t/op/die.t'               => 'FAILED at test 22',
+        '../ext/IPC/SysV/t/ipcsysv.t' => 'FAILED at test 1',
+    );
+    my %expect;
+    my $test_base = catdir( cwd, 't' );
+    foreach my $test ( keys %raw ) {
+        my $test_name = rel2abs( $test, $test_base );
+
+        my $test_path = abs2rel( $test_name, $test_base );
+        $test_path =~ tr!\\!/! if $^O eq 'MSWin32';
+        $expect{ $test_path } = $raw{ $test };
+    }
+    is_deeply \%tests, \%expect, "transform testnames" or diag Dumper \%tests;
+
+    $debug and diag Dumper { tests => \%tests, expect => \%expect };
     close LOG;
 }
 

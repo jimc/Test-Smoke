@@ -11,9 +11,9 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use lib $FindBin::Bin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 482 2003-10-20 05:36:13Z abeltje $
+# $Id: configsmoke.pl 641 2004-03-07 17:22:36Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.034';
+$VERSION = '0.038';
 
 use Getopt::Long;
 my %options = ( 
@@ -94,6 +94,17 @@ my @untars = get_avail_tar();
 my $untarmsg = join "", map "\n\t$_" => @untars;
 
 my %versions = (
+    '5.5.x' => { source => 'ftp.linux.activestate.com::perl-5.005xx',
+                 server => 'ftp.funet.fi',
+                 sdir   => '/pub/languages/perl/snap/5.5.x',
+                 sfile  => '',
+                 pdir   => '/pub/staff/gsar/APC/perl-5.005xx-diffs',
+                 cfg    => 'perl55x.cfg',
+                 ddir   => File::Spec->rel2abs( 
+                               File::Spec->catdir( File::Spec->updir,
+                                                   'perl-5.5.x' ) ),
+                 text   => 'Perl 5.00504-to-be',
+                 is56x  => 1},
     '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
                  server => 'http://rgarciasuarez.free.fr',
                  sdir   => '/snap',
@@ -115,7 +126,7 @@ my %versions = (
                                                    'perl-5.8.x' ) ),
                  text   => 'Perl 5.8.2-to-be',
                  cfg    => ( $^O eq 'MSWin32' 
-                        ? 'w32current.cfg' :'perlcurrent.cfg' ),
+                        ? 'w32current.cfg' :'perl58x.cfg' ),
                  is56x  => 0 },
     '5.9.x' => { source => 'ftp.linux.activestate.com::perl-current',
                  server => 'ftp.funet.fi',
@@ -375,7 +386,7 @@ EOT
 
     to => {
        msg => <<EOMSG,
-To which address(es) should the report be send?
+To which address(es) should the report *always* be send?
 \t(comma separated list, *please* do not include perl5-porters!)
 EOMSG
        alt => [ ],
@@ -384,7 +395,8 @@ EOMSG
 
     cc => {
        msg => <<EOMSG,
-To which address(es) should the report be CCed?
+* THIS FEATURE HAS CHANGED IN 1.19! *
+To which address(es) should the report be CCed *on fail*?
 \t(comma separated list, *please* do not include perl5-porters!)
 EOMSG
        alt => [ ],
@@ -450,7 +462,7 @@ EOT
     docron => {
         msg => 'Should the smoke be scheduled?',
         alt => [qw( Y n )],
-        dft => 'y',
+        dft => 'n',
     },
     crontime => {
         msg => 'At what time should the smoke be scheduled?',
@@ -508,7 +520,7 @@ There are two additional configuration default files
 F<smoke562_dfconfig> and F<smoke58x_dfconfig> to help you configure 
 B<Test::Smoke> for these two maintenance branches of the source-tree.
 
-To create a configuration for the perl 5.8.x brach:
+To create a configuration for the perl 5.8.x branch:
 
     $ perl configsmoke.pl -p smoke58x
 
@@ -935,11 +947,8 @@ MAIL: {
     $arg = 'mail_type';
     $config{ $arg } = prompt( $arg );
 
-    my $p5p = 'perl5-porters@perl.org';
     $arg = 'to';
-    while ( !$config{ $arg } || $config{ $arg} =~ /\Q$p5p\E/i ) {
-        $config{ $arg } = prompt( $arg ) 
-    }
+    while ( !$config{ $arg } ) { $config{ $arg } = prompt( $arg ) }
 
     MAILER: {
         local $_ = $config{ 'mail_type' };
@@ -963,7 +972,7 @@ MAIL: {
     $config{ $arg } = prompt_yn( $arg );
 
     $arg = 'cc';
-    do {$config{ $arg } = prompt( $arg )} until $config{ $arg } !~ /\Q$p5p\E/i;
+    $config{ $arg } = prompt( $arg );
 }
 
 =item w32args
@@ -1113,7 +1122,7 @@ If you want this then set the directory where you want the stored
 
 $arg = 'adir';
 $config{ $arg } = prompt_dir( $arg );
-$config{lfile} = $options{log} unless $config{ $arg } eq "";
+$config{lfile} = File::Spec->rel2abs( $options{log}, cwd );
 
 =item schedule stuff
 
@@ -1370,8 +1379,10 @@ because it uses commands that are not supported by B<COMMAND.COM>
 
 sub write_bat {
     my $cwd = File::Spec->canonpath( cwd() );
+    my $findbin_bin = File::Spec->canonpath( $FindBin::Bin );
 
-    my $smokeperl = File::Spec->catfile( $FindBin::Bin, 'smokeperl.pl' );
+    my $smokeperl  = File::Spec->catfile( $findbin_bin, 'smokeperl.pl' );
+    my $archiverpt = File::Spec->catfile( $findbin_bin, 'archiverpt.pl' );
     my $copycmd = $config{w32args}->[1] ne "BORLAND" ? "" : <<EOCOPYCMD;
 
 REM I found hanging XCOPY while smoking with BORLAND
@@ -1382,6 +1393,9 @@ EOCOPYCMD
     my $jcl = "$options{jcl}.cmd";
     my $atline = schedule_entry( File::Spec->catfile( $cwd, $jcl ), 
                                  $cron, $crontime );
+    my $archive = $config{lfile} 
+        ? qq/$^X $archiverpt -c "\%CFGNAME\%"/ : "";
+
     local *MYSMOKEBAT;
     open MYSMOKEBAT, "> $jcl" or
         die "Cannot write '$jcl': $!";
@@ -1411,9 +1425,9 @@ if NOT EXIST \%LOCKFILE\% goto START_SMOKE
 :START_SMOKE
     echo \%CFGNAME\% > \%LOCKFILE\%
     set OLD_PATH=\%PATH\%
-    set PATH=$FindBin::Bin;\%PATH\%
+    set PATH=$findbin_bin;\%PATH\%
     $^X $smokeperl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
-
+    $archive
     set PATH=\%OLD_PATH\%
 
 del \%LOCKFILE\%
@@ -1741,11 +1755,8 @@ sub get_avail_w32compilers {
 }
 
 sub get_Win_version {
-    my @osversion = Win32::GetOSVersion();
-
-    my $win_version = join '.', @osversion[ 1, 2 ];
-    $win_version .= " $osversion[0]" if $osversion[0];
-
+    require Test::Smoke::SysInfo;
+    ( my $win_version = Test::Smoke::SysInfo::__get_os() ) =~ s/^[^-]*- //;
     return $win_version;
 }
 
@@ -1854,7 +1865,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 482 2003-10-20 05:36:13Z abeltje $
+    $Id: configsmoke.pl 641 2004-03-07 17:22:36Z abeltje $
 
 =head1 COPYRIGHT
 

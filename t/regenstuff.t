@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: regenstuff.t 432 2003-09-22 20:11:23Z abeltje $
+# $Id: regenstuff.t 450 2003-09-26 14:16:04Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;

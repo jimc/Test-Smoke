@@ -30,7 +30,7 @@ as possible.
 
 =head2 Where is Test::Smoke?
 
-On CPAN: L<http://search.cpan.org/dist/Test-Smoke>
+On CPAN and L<http://search.cpan.org/dist/Test-Smoke>
 
 =head2 What are these configuration files about?
 
@@ -94,9 +94,10 @@ By specifying a diffent prefix to F<configsmoke.pl>:
 This will create the smokeconfiguration F<mysmoke_config> and a small
 shellscript F<mysmoke.sh> (or F<mysmoke.cmd> if you are on Windows).
 
-There are two (2) special prefixes: B<smoke562> and B<smoke58x>. These
-will set the default answers for F<configsmoke.pl> to be appropriate
-for smoking the maintenance branches for these versions of perl.
+There are three (3) special prefixes: B<smoke55x>, B<smoke562> and
+B<smoke58x>. These will set the default answers for F<configsmoke.pl>
+to be appropriate for smoking the maintenance branches for these
+versions of perl.
 
 =head2 How do I include I<copy-on-write> testing in my smokes?
 
@@ -109,7 +110,7 @@ general.
 
 =item B<-Accflags='-DPERLL_COPY_ON_WRITE'>
 
-The fastest way to do it is to add a new section to your
+The fastest way to do it, is to add a new section to your
 buildconfiguration file, like this:
 
     =
@@ -119,6 +120,8 @@ buildconfiguration file, like this:
     =
 
 That will always work, but IMO looks a bit "loud" in the reports.
+
+B<NOTE>: This is the only way to smoke COW on MSWin32!
 
 =item B<< Default F<Policy.sh> >>
 
@@ -165,34 +168,19 @@ Small wrapper around B<Test::Smoke::Patcher> that can use the settings
 from the smoke-configuration file. It will apply the patches that are
 specified in the patches-to-be-applied file.
 
-=item B<mktest.pl>
-
-This is the main script that runs I<Configure>, I<make> and S<< I<make
-test> >> for all configurations and log the results in F<<
-<builddir>/mktest.out >>.
-
-As of 1.17_55 (1.18-to-be) the use of F<mktest.pl> is deprecated in
-favour of the new F<runsmoke.pl> frontend to B<Test::Smoke::Smoker>. This
-script will not be maintained!
-
 =item B<runsmoke.pl>
 
 Small wrapper around B<Test::Smoke::run_smoke()> that can use the
 settings from the smoke-configuration file. It runs the smoke cycle
-for all configurations and is a replacement for the now unmaintained
+for all configurations and is a replacement for the now removed
 B<mktest.pl>.
-
-=item B<mkovz.pl>
-
-This script generates the report as F<< <builddir>/mktest.rpt >> from
-F<< <builddir>/mktest.out >>. It can also send the report, but
-F<mailrpt.pl> is the preferred way.
 
 =item B<mailrpt.pl>
 
 Small wrapper around B<Test::Smoke::Mailer> that can use the settings
 from the smoke-configuration file. It will check if the report is
-already generated and do so if not (by calling F<mkovz.pl>).
+already generated and do so if not. This is the replacement for the
+now removed B<mkovz.pl>.
 
 =item B<archiverpt.pl>
 
@@ -203,13 +191,13 @@ This script copies the report and the logfile to a configurable place.
 This script prints a little status report for a smoke confifuration:
 
     $ ./smokestatus.pl -c smoke58x
-    Checking status for configuration 'smoke58x'
+    Checking status for configuration 'smoke58x' (5.8.x)
       Change number 21537 started on Sun Oct 26 06:30:39 2003.
         4 out of 10 configurations finished in 3 hours 6 minutes.
         1 configuration showed failures (F).
         0 failures in the running configuration.
         6 configurations to finish, estimated completion in 4 hours 40 minutes
-        Average smoke duration: 46 minutes 42.250 seconds.
+        Average smoke duration: 46 minutes 42 seconds.
 
 =item B<W32Configure.bat>
 
@@ -219,6 +207,80 @@ use some of the settings from the smoke-configuration file.
 This helps users on Windows to create the F<<
 <builddir>/win32/smoke.mk >> makefile for a specific configuration in
 a unixy way.
+
+=back
+
+=head2 How can I skip a step in smokeperl.pl?
+
+F<smokeperl.pl> takes arguments to skip some of the steps it takes:
+
+=over 4
+
+=item B<--nofetch> Do not sync the source-tree before smoking
+
+=item B<--nopatch> Do not patch the source-tree (if applicable)
+
+=item B<--nomail> Do not send the report out by mail
+
+=item B<--noarchive> Do not archive the report and logfile
+
+=back
+
+F<smokeperl.pl> will always do the equivalent of F<runsmoke.pl> and
+generate the report.
+
+After running F<configsmoke.pl> you should have a small
+wrapper-script, that sets up the environment and calls
+F<smokeperl.pl>. All arguments passed to this script will be passed to
+F<smokeperl.pl>! Please see L<smokeperl.pl> for details.
+
+=head2 How do I smoke my patch?
+
+When preparing a patch for admission to perl5-porters it is always a
+good idea to test it. B<Test::Smoke> has a mechanism to smoke-test the
+effects of that patch. Here is a way to set it up:
+
+=over 4
+
+=item Set up Test::Smoke
+
+Install Test::Smoke and create a separate directory to keep all your
+configurations in.
+
+=item Create a build-configurations file
+
+In this configs directory you then create a build-configurations
+file. This is usually done from one of default F<*.cfg> files in the
+Test::Smoke distribution.
+
+=item Configure Test::Smoke with F<configsmoke.pl>
+
+Now you need to configure Test::Smoke by running F<configsmoke.pl> in
+your configs directory (optionally specifying a prefix).
+
+    $ ../smoke/configsmoke.pl -p testpatch
+
+You should be careful with the e-mail options and make sure you
+do not send the results to either <smokers-reports@perl.org> or
+<perl5-porters@perl.org>.
+
+=item Create a patches-to-apply-file
+
+The patches-to-apply-file has a simple format. It has each patch to
+apply on a single line and each line is semicolon separated with the
+full path to the patchfile in the first column and optionally the
+options to pass to L<patch(1)> in the second column. By default B<-p1>
+is passed if no B<-pN> option was specified.
+
+    $ cat mypatch.inc
+    ~/p5p/patches/mypatch.diff;-p0
+
+=item Start the smoke with the --pfile option
+
+    $ ./testpatch.sh --pfile mypatch.inc
+ 
+You can also configure Test::Smoke to always use a
+patches-to-apply-file during F<configsmoke.pl>.
 
 =back
 
@@ -234,6 +296,53 @@ As of version 1.17.02 you can specify a timeout (if you have alarm())
 Yes, but some information might be missing (the compiler info).
 
     $ perl mailrpt.pl -c [configname]
+
+=head2 How can I run continues smokes?
+
+On a unixy system you can try this shellscript if you adjust the
+C<basedir> variable (thank you Johan Vromans for helping with this).
+
+    #! /bin/sh
+    
+    basedir=$HOME/Test-Smoke/smoke
+    cd "$basedir"
+    pidfile=`pwd`/smokeloop.pid
+    stpfile=`pwd`/.stopsmoking
+    versions="58x current"
+
+    if test -f "$pidfile" ; then
+        echo "We seem to be running as: `cat $pidfile`"
+        exit
+    fi
+
+    trap 'trap "" 0 ; rm -f "$pidfile" ; echo "exiting now" ; exit' 0 1 2 3 15
+
+    checkstop() {
+        if test -f "$stpfile" ; then
+            echo "`date`: Stopping on user request"
+            rm -f "$stpfile"
+            exit
+        fi
+    }
+
+    echo $$ > "$pidfile"
+    while test 1 ; do
+        checkstop
+        touch "$pidfile"
+
+        for smokever in $versions ; do
+            nice $basedir/smoke$smokever.sh
+            checkstop
+        done
+
+        perl -e 'sleep 3600 if (1+2*rand)*(time-(stat(shift))[9])<600' \
+            "$pidfile"
+    done
+
+This script assumes it is located in the directory where the
+Test::Smoke suite is installed. You can stop execution between smokes
+for different versions by putting the file F<.stopsmoking> in that
+same directory.
 
 =head2 Where do the reports go?
 
@@ -266,7 +375,7 @@ Posts to the newsgroup will also be mirrored on the mailinglist.
 =item The usenet WWW archive
 
 The usenet mirror also has an archive on the web:
-L<http://nntp.x.perl.org/group/perl.daily-build.reports>
+L<http://www.nntp.perl.org/group/perl.daily-build.reports>
 
 =back
 
@@ -349,7 +458,7 @@ B<daily-build-reports> and there is an alias to B<smokers-reports>.
 
 =head1 REVISION
 
-$Id: FAQ 485 2003-10-26 09:47:34Z abeltje $
+$Id: FAQ 653 2004-03-14 15:11:37Z abeltje $
 
 =head1 COPYRIGHT
 

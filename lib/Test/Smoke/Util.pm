@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 412 2003-08-27 13:07:23Z abeltje $
+# $Id: Util.pm 601 2004-02-12 07:21:22Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.23';
+$VERSION = '0.25';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -17,7 +17,7 @@ use base 'Exporter';
 @EXPORT_OK = qw( 
     &get_ncpu &get_smoked_Config &parse_report_Config 
     &get_regen_headers &run_regen_headers
-    &calc_timeout 
+    &calc_timeout &time_in_hhmm
     &do_pod2usage
 );
 
@@ -122,6 +122,10 @@ installation.
 Set the base directory for the C compiler.
 B<$(CCHOME)\bin> still needs to be in the path!
 
+=item * B<-DIS_WIN95>
+
+sets IS_WIN95 to 'define' to indicate this is Win9[58]
+
 =item * B<-DCRYPT_SRC=...>
 
 The file to use as source for des_fcrypt()
@@ -151,7 +155,9 @@ my %win32_makefile_map = (
 
 sub Configure_win32 {
     my($command, $win32_maker, @args ) = @_;
-    $win32_maker ||= 'nmake';
+    $win32_maker ||= 'nmake'; $win32_maker = lc $win32_maker;
+    my $is_dmake = $win32_maker eq 'dmake';
+    my $is_nmake = $win32_maker eq 'nmake';
 
     local $_;
     my %opt_map = (
@@ -172,6 +178,7 @@ sub Configure_win32 {
         "-Dgcc_v3_2"            => "USE_GCC_V3_2",
         "-Dbccold"              => "BCCOLD",
         "-DCCHOME"              => "CCHOME",
+        "-DIS_WIN95"            => "IS_WIN95",
         "-DCRYPT_SRC"           => "CRYPT_SRC",
         "-DCRYPT_LIB"           => "CRYPT_LIB",
     );
@@ -197,11 +204,12 @@ sub Configure_win32 {
         USE_GCC_V3_2    => 0,
         BCCOLD          => 0,
         CCHOME          => undef,
+        IS_WIN95        => 0,
         CRYPT_SRC       => undef,
         CRYPT_LIB       => undef,
     );
-#    my $def_re = qr/((?:(?:PERL|USE)_\w+)|BCCOLD)/;
-    my $def_re = '((?:(?:PERL|USE)_\w+)|BCCOLD)';
+#    my $def_re = qr/((?:(?:PERL|USE|IS)_\w+)|BCCOLD)/;
+    my $def_re = '((?:(?:PERL|USE|IS)_\w+)|BCCOLD)';
     my @w32_opts = grep ! /^$def_re/, keys %opts;
     my $config_args = join " ", 
         grep /^-D[a-z_]+/, quotewords( '\s+', 1, $command );
@@ -242,8 +250,10 @@ sub Configure_win32 {
     my $donot_change = 0;
     while (<ORG>) {
         if ( $donot_change ) {
+            # need to help the Win95 build
+            $is_dmake and s/\b$win32_makefile_map{ $win32_maker }\b/smoke.mk/;
             if (m/^\s*CFG_VARS\s*=/) {
-                my( $extra_char, $quote ) = $win32_maker =~ /\bnmake\b/ 
+                my( $extra_char, $quote ) = $is_nmake
                     ? ( "\t", '"' ) : ("~", "" );
                 $_ .= join "", map "\t\t$quote$_$quote\t${extra_char}\t\\\n", 
                                    grep /\w+=/, @args;
@@ -551,7 +561,7 @@ sub get_ncpu {
 	};
 
         /irix/i && do {
-            my @output = `hinv -c processor`;
+            my @output = grep /\s+processors?$/i => `hinv -c processor`;
             $cpus = (split " ", $output[0])[0];
             last OS_CHECK;
         };
@@ -649,10 +659,10 @@ sub parse_report_Config {
     my $version  = $report =~ /^Automated.*for (.+) patch/ ? $1 : '';
     my $plevel   = $report =~ /^Automated.*patch (\d+(?:\.\d+\.\d+-RC\d+)?)/
         ? $1 : '';
-    my $osname   = $report =~ /\bon (.*) - / ? $1 : '';
-    my $osvers   = $report =~ /\bon .* - (.*)/? $1 : '';
+    my $osname   = $report =~ /\bon\s+(.*) - / ? $1 : '';
+    my $osvers   = $report =~ /\bon\s+.* - (.*)/? $1 : '';
     $osvers =~ s/\s+\(.*//;
-    my $archname = $report =~ / \((.*)\)/ ? $1 : '';
+    my $archname = $report =~ /:.* \((.*)\)/ ? $1 : '';
     my $summary  = $report =~ /^Summary: (.*)/m ? $1 : '';
 
     return ( $version, $plevel, $osname, $osvers, $archname, $summary );
@@ -750,6 +760,35 @@ sub calc_timeout {
         $timeout = 60 * $kill_min;
     }
     return $timeout;
+}
+
+=item time_in_hhmm( $diff )
+
+Create a string telling elapsed time in days, hours, minutes, seconds
+from the number of seconds.
+
+=cut
+
+sub time_in_hhmm {
+    my $diff = shift;
+
+    # Only show decimal point for diffs < 5 minutes
+    my $digits = $diff =~ /\./ ? $diff < 5*60 ? 3 : 0 : 0;
+    my $days = int( $diff / (24*60*60) );
+    $diff -= 24*60*60 * $days;
+    my $hour = int( $diff / (60*60) );
+    $diff -= 60*60 * $hour;
+    my $mins = int( $diff / 60 );
+    $diff -=  60 * $mins;
+    $diff = sprintf "%.${digits}f", $diff;
+
+    my @parts;
+    $days and push @parts, sprintf "%d day%s",   $days, $days == 1 ? "" : 's';
+    $hour and push @parts, sprintf "%d hour%s",  $hour, $hour == 1 ? "" : 's';
+    $mins and push @parts, sprintf "%d minute%s",$mins, $mins == 1 ? "" : 's';
+    $diff && !$days && !$hour and push @parts, "$diff seconds";
+
+    return join " ", @parts;
 }
 
 =item do_pod2man( %pod2usage_options )

@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 480 2003-10-19 13:21:09Z abeltje $
+# $Id: smokeperl.pl 662 2004-03-26 08:29:59Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -17,14 +17,15 @@ use Config;
 use Test::Smoke::Syncer;
 use Test::Smoke::Patcher;
 use Test::Smoke;
+use Test::Smoke::Reporter;
 use Test::Smoke::Mailer;
 use Test::Smoke::Util qw( get_patch calc_timeout do_pod2usage );
 
 use Getopt::Long;
 Getopt::Long::Configure( 'pass_through' );
-my %options = ( config => 'smokecurrent_config', run => 1,
+my %options = ( config => 'smokecurrent_config', run => 1, pfile => undef,
                 fetch => 1, patch => 1, mail => undef, archive => undef,
-                continue => 0, ccp5p_onfail => undef,
+                continue => 0, ccp5p_onfail => undef, killtime => undef,
                 is56x => undef, defaultenv => undef, smartsmoke => undef );
 
 my $myusage = "Usage: $0 [-c configname]";
@@ -41,6 +42,8 @@ GetOptions( \%options,
     'continue',
     'smartsmoke!',
     'snapshot|s=i',
+    'killtime=s',
+    'pfile=s',
 
     'help|h', 'man',
 ) or do_pod2usage(  verbose => 1, myusage => $myusage );
@@ -78,6 +81,9 @@ It can take these options
   --defaultenv             Run a smoke in the default environment
   --[no]smartsmoke         Don't smoke unless patchlevel changed
   --snapshot <patchlevel>  Set a new patchlevel for snapshot smokes
+  --killtime (+)hh::mm     (Re)set the guard-time for this smoke
+
+  --pfile <patchesfile>    Set a patches-to-apply-file
 
 All other arguments are passed to F<Configure>!
 
@@ -100,10 +106,14 @@ defined Test::Smoke->config_error and
 # Correction for backward compatability
 !defined $options{ $_ } && !exists $conf->{ $_ } and $options{ $_ } = 1
     for qw( run fetch patch mail archive );
+
 # Make command-line options override configfile
 defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
-    for qw( is56x defaultenv continue
+    for qw( is56x defaultenv continue killtime pfile
             smartsmoke run fetch patch mail ccp5p_onfail archive );
+
+# Make sure the --pfile command-line override works
+$options{pfile} and $conf->{patch_type} ||= 'multi';
 
 if ( $options{continue} ) {
     $options{v} and print "Will try to continue current smoke\n";
@@ -115,7 +125,7 @@ if ( $options{continue} ) {
 my $cwd = cwd();
 chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
 call_mktest();
-call_mkovz();
+genrpt();
 mailrpt();
 chdir $cwd;
 archiverpt();
@@ -181,7 +191,7 @@ sub call_mktest {
     }
     $timeout and local $SIG{ALRM} = sub {
         warn "This smoke is aborted ($conf->{killtime})\n";
-        call_mkovz();
+        genrpt();
         mailrpt();
         exit(42);
     };
@@ -190,14 +200,10 @@ sub call_mktest {
     run_smoke( $conf->{continue}, @ARGV );
 }
 
-sub call_mkovz {
+sub genrpt {
     return unless $options{run};
-    local @ARGV = ( 'nomail', $conf->{ddir} );
-    push  @ARGV, $conf->{locale} ? $conf->{locale} : "";
-    push  @ARGV, $conf->{defaultenv} if $conf->{defaultenv};
-    my $mkovz = File::Spec->catfile( $FindBin::Bin, 'mkovz.pl' );
-    local $0 = $mkovz;
-    do $mkovz or die "Error in mkovz.pl: $@";
+    my $reporter = Test::Smoke::Reporter->new( $conf );
+    $reporter->write_to_file;
 }
 
 sub mailrpt {
@@ -234,8 +240,8 @@ sub archiverpt {
         my $archived_log = "log${patch_level}.log";
         last SKIP_LOG unless defined $conf->{lfile};
         last SKIP_LOG 
-            unless -f File::Spec->catfile( $FindBin::Bin, $conf->{lfile} );
-        copy( File::Spec->catfile( $FindBin::Bin, $conf->{lfile} ),
+            unless -f $conf->{lfile};
+        copy( $conf->{lfile},
               File::Spec->catfile( $conf->{adir}, $archived_log ) ) or
             die "Cannot copy to '$archived_log': $!";
     }
@@ -260,7 +266,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 480 2003-10-19 13:21:09Z abeltje $
+$Id: smokeperl.pl 662 2004-03-26 08:29:59Z abeltje $
 
 =head1 COPYRIGHT
 

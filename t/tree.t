@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: tree.t 488 2003-11-01 08:45:26Z abeltje $
+# $Id: tree.t 505 2003-12-21 11:48:43Z abeltje $
 
 use Data::Dumper;
 require File::Spec;

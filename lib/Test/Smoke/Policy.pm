@@ -1,7 +1,7 @@
 package Test::Smoke::Policy;
 use strict;
 
-# $Id: Policy.pm 484 2003-10-20 05:46:22Z abeltje $
+# $Id: Policy.pm 505 2003-12-21 11:48:43Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.003';
 

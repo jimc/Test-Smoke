@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: mailer.t 454 2003-09-28 10:42:46Z abeltje $
+# $Id: mailer.t 618 2004-02-22 15:33:30Z abeltje $
 
 use File::Spec;
 use FindBin;
@@ -26,6 +26,7 @@ SKIP: {
 
     my $mailer = Test::Smoke::Mailer->new( $mhowto => {
         ddir => 't',
+        cc   => 'abeltje@test-smoke.org',
     } );
 
     isa_ok( $mailer, 'Test::Smoke::Mailer' );
@@ -39,11 +40,12 @@ SKIP: {
     
     is_deeply( \@config, \@conf, "Config..." );
     my $subj = sprintf "Smoke [%s] %s %s %s %s (%s)", @conf[0, 1, 5, 2, 3, 4];
-
+    
     is( $subject, $subj, "Read the report: $subject" );
     is( $mailer->{body}, $report, "Report read back ok" );
 
     # Now we try to test the new ccp5p_onfail stuff
+    # and the new cc behaviour: no cc unless fail
     is( $mailer->_get_cc( $subject ), '', 
         "p5p not added to cc-list [--noccp5p_onfail]" );
     $mailer->{ccp5p_onfail} = 1;
@@ -62,6 +64,7 @@ SKIP: {
         ddir => 't',
         to   => 'abeltje@cpan.org',
         from => 'abeltje@cpan.org',
+        cc   => 'abeltje@test-smoke.org',
     } );
 
     isa_ok( $mailer, 'Test::Smoke::Mailer' );
@@ -80,14 +83,15 @@ SKIP: {
     is( $mailer->{body}, $report, "Report read back ok" );
 
     # Now we try to test the new ccp5p_onfail stuff
-    is( $mailer->_get_cc( $subject ), '', 
+    is( $mailer->_get_cc( $subject ), 'abeltje@test-smoke.org', 
         "p5p not added to cc-list [--noccp5p_onfail]" );
     $mailer->{ccp5p_onfail} = 1;
-    is( $mailer->_get_cc( $subject ), $Test::Smoke::Mailer::P5P,
+    is( $mailer->_get_cc( $subject ), 
+        'abeltje@test-smoke.org, ' . $Test::Smoke::Mailer::P5P,
         "p5p got added to cc-list [--ccp5p_onfail]" );
     my $old_to = $mailer->{to};
     $mailer->{to} .= ", $Test::Smoke::Mailer::P5P";
-    is( $mailer->_get_cc( $subject ), '', 
+    is( $mailer->_get_cc( $subject ), 'abeltje@test-smoke.org', 
         "p5p not added to cc-list [already in To:]" );
     $mailer->{to} = $old_to;
     $mailer->{cc} = $Test::Smoke::Mailer::P5P;
@@ -195,7 +199,13 @@ sub write_report {
 
 sub create_report {
     my $eg = shift;
-    return "Automated smoke report for $eg->{version} patch " .
-           "$eg->{plevel} on $eg->{os} - $eg->{osvers} ($eg->{arch})\n" .
-           "\n\n\nStuff that goes here\nSummary: $eg->{sum}\n";
+    return <<__EOR__;
+Automated smoke report for $eg->{version} patch $eg->{plevel}
+host: TI UltraSparc I (SpitFire) ($eg->{arch})
+    on $eg->{os} - $eg->{osvers}
+    using cc version 4.2
+    smoketime 4 hours 2 minutes
+
+Summary: $eg->{sum}
+__EOR__
 }

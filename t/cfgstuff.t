@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: cfgstuff.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: cfgstuff.t 527 2004-01-09 01:41:40Z abeltje $
 
 use File::Spec;
 
@@ -17,7 +17,7 @@ my $cfg_name = 'test.cfg';
 is( get_cfg_filename(), undef, "Return undef for no args" );
 is( get_cfg_filename( 'willnotexists' ), undef,
     "Return undef for unknown" );
-is( get_cfg_filename( '../smoke.cfg' ), '../smoke.cfg',
+is( get_cfg_filename( '../perlcurrent.cfg' ), '../perlcurrent.cfg',
     "Confirm existance" );
 
 SKIP: {

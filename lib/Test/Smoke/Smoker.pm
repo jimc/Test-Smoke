@@ -1,18 +1,18 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 483 2003-10-20 05:39:31Z abeltje $
+# $Id: Smoker.pm 663 2004-03-26 08:38:04Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.005';
+$VERSION = '0.014';
 
 use Cwd;
-use File::Spec;
+use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
 use Config;
-use Test::Smoke::Util;
+use Test::Smoke::Util qw( get_smoked_Config skip_filter );
 BEGIN { eval q{ use Time::HiRes qw( time ) } }
 
 my %CONFIG = (
-    df_ddir           => File::Spec->curdir(),
+    df_ddir           => curdir(),
     df_v              => 0,
     df_run            => 1,
     df_fdir           => undef,
@@ -196,9 +196,22 @@ sub smoke {
 
     $self->make_distclean;
 
+    $self->{v} > 1 and $self->extra_manicheck;
+
     $self->handle_policy( $policy, $config->policy );
 
-    $self->Configure( $config ) or do {
+    my $c_result = $self->Configure( $config );
+    # Log the compiler info now, the last config could fail
+    { # can we config.sh without Configure success?
+        my %cinfo = get_smoked_Config( $self->{ddir} => qw(
+            cc ccversion gccversion
+        ));
+        my $version = $cinfo{gccversion} || $cinfo{ccversion};
+        $self->log( "\nCompiler info: $cinfo{cc} version $version\n" )
+            if $cinfo{cc};
+    }
+
+    $c_result or do {
         $self->ttylog( "Unable to configure perl in this configuration\n" );
         return 0;
     };
@@ -247,6 +260,31 @@ sub make_distclean {
         $distclean->clean_from_directory( $self->{fdir}, 'mktest.out' );
     } else {
         $self->_make( "-i distclean 2>/dev/null" );
+    }
+}
+
+=item $smoker->extra_manicheck( )
+
+C<extra_manicheck()> will only work for C<< $self->{v} > 1 >> and does
+an extra integrity check comparing F<MANIFEST> and the
+source-tree. Output is send to the tty.
+
+=cut
+
+sub extra_manicheck {
+    my $self = shift;
+    $self->{v} > 1 or return;
+
+    require Test::Smoke::SourceTree;
+    Test::Smoke::SourceTree->import( qw( :mani_const ) );
+    my $tree = Test::Smoke::SourceTree->new( $self->{ddir} );
+    my $mani_check = $tree->check_MANIFEST(qw( mktest.out mktest.rpt ));
+    foreach my $file ( sort keys %$mani_check ) {
+        if ( $mani_check->{ $file } == ST_MISSING() ) {
+            $self->tty( "manicheck: missing '$file' (not in source-tree)\n" );
+        } elsif ( $mani_check->{ $file } == ST_UNDECLARED() ) {
+            $self->tty( "manicheck: extra '$file' (not in MANIFEST)\n" );
+        }
     }
 }
 
@@ -311,12 +349,22 @@ sub make_ {
 
     $self->tty( "\nmake ..." );
     $self->_make( "" );
+    if ( $self->{is_win32} ) { # Win32 creates config.sh during make
+        my %cinfo = get_smoked_Config( $self->{ddir} => qw(
+            cc ccversion gccversion
+        ));
+        my $version = $cinfo{gccversion} || $cinfo{ccversion};
+        $self->log( "\nCompiler info: $cinfo{cc} version $version\n" )
+            if $cinfo{cc};
+    }
 
     my $exe_ext  = $Config{_exe} || $Config{exe_ext};
     my $miniperl = "miniperl$exe_ext";
     my $perl     = "perl$exe_ext";
     -x $miniperl or return BUILD_NOTHING;
-    return -x $perl ? BUILD_PERL : BUILD_MINIPERL;
+    return -x $perl 
+        ? $self->{_run_exit} ? BUILD_MINIPERL : BUILD_PERL
+        : BUILD_MINIPERL;
 }
 
 =item make_test_prep( )
@@ -329,7 +377,7 @@ sub make_test_prep {
     my $self = shift;
 
     my $exe_ext = $Config{_exe} || $Config{exe_ext};
-    my $perl = File::Spec->catfile( "t", "perl$exe_ext" );
+    my $perl = catfile( "t", "perl$exe_ext" );
 
     $self->{run} and unlink $perl;
     $self->_make( "test-prep" );
@@ -375,14 +423,14 @@ sub make_test {
             $ENV{LC_ALL} = $self->{locale};
             $perlio_logmsg .= ":$self->{locale}";
         }
-        $self->ttylog( "PERLIO = $perlio_logmsg\t" );
+        $self->ttylog( "TSTENV = $perlio_logmsg\t" );
 
         unless ( $self->{run} ) {
             $self->ttylog( "bailing out (--norun)...\n" );
             next;
 	}
 
-        my $test_target = $self->{is56x} ? 'test' : '_test';
+        my $test_target = $self->{is56x} ? 'test-notty' : '_test';
         local *TST;
         # MSWin32 builds from its own directory
         if ( $self->{is_win32} ) {
@@ -406,7 +454,7 @@ sub make_test {
             skip_filter( $_ ) and next;
 
             # make mkovz.pl's life easier
-            s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
+            s/(.)(TSTENV\s+=\s+\w+)/$1\n$2/;
 
             if (m/^u=.*tests=/) {
                 s/(\d\.\d*) /sprintf "%.2f ", $1/ge;
@@ -441,64 +489,56 @@ sub make_test {
 =cut
 
 sub extend_with_harness {
-    my( $self, @nok ) = @_;
-    my( @harness, %inconsistant );
-    for ( @nok ) {
-        m!^(?:\.\.[\\/])?(\w+/[-\w/]+)\.*(.*)! or next;
-        # harness chdir()s into t, so -f is false for t/op/*.t etc
-        my $test_name = "$1.t";
-        my $status = $2;
-        push @harness, (-f $test_name) 
-            ? File::Spec->catdir( File::Spec->updir, $test_name )
-            : $test_name;
-        $inconsistant{ $harness[-1] } = $status;
-    }
+    my $self = shift;
+    my %inconsistent = $self->_transform_testnames( @_ );
+    my @harness = sort keys %inconsistent;
     if ( @harness ) {
         local $ENV{PERL_SKIP_TTY_TEST} = 1;
-        $self->tty( "\nExtending failures with Harness\n" );
-        my $harness = $self->{is_win32} ?
-        join " ", map { 
-            s{^\.\.[/\\]}{};
-	            m/^(?:lib|ext)/ and $_ = "../$_";
-            $_;
-        } @harness : "@harness";
+        my $harness = join " ", @harness;
+        $self->tty( "\nExtending failures with harness:\n\t$harness\n" );
         my $changed_dir;
         chdir 't' and $changed_dir = 1;
         my $harness_all_ok = 0;
+        my $tst_perl = catfile( curdir(), 'perl' );
         my $harness_out = join "", map {
             my( $name, $fail ) = 
                 m/(\S+\.t)\s+.+%\s+([\d?]+(?:[-\s]+\d+)*)/;
             if ( $name ) {
-                delete $inconsistant{ $name };
+                delete $inconsistent{ $name };
                 my $dots = '.' x (40 - length $name );
                 "    $name${dots}FAILED $fail\n";
             } else {
                 ( $fail ) = m/^\s+(\d+(?:[-\s]+\d+)*)/;
-                " " x 41 . "$fail\n";
+                " " x 51 . "$fail\n";
             }
         } grep m/^\s+\d+(?:[-\s]+\d+)*/ ||
                m/\S+\.t\s+.+%\s+[\d?]+(?:[-\s+]\d+)*/ => map {
             /All tests successful/ && $harness_all_ok++;
             $self->{v} > 1 and $self->tty( $_ );
             $_;
-        } $self->_run( "./perl harness $harness" );
+        } $self->_run( "$tst_perl harness $harness" );
+        # safeguard against empty results
+        $inconsistent{ $_ } ||= 'FAILED' for keys %inconsistent;
         $harness_out =~ s/^\s*$//;
         if ( $harness_all_ok ) {
-            $harness_out .= scalar keys %inconsistant
+            $harness_out .= scalar keys %inconsistent
                 ? "Inconsistent test results (between TEST and harness):\n" . 
                   join "", map {
                       my $dots = '.' x (40 - length $_ );
-                      "    $_${dots}$inconsistant{ $_ }\n";
-                  } keys %inconsistant
+                      "    $_${dots}$inconsistent{ $_ }\n";
+                  } keys %inconsistent
                 : $harness_out ? "" : "All tests successful.";
         } else {
-            $harness_out .= join "", map {
-                my $dots = '.' x (40 - length $_ );
-                "    $_${dots}$inconsistant{ $_ }\n";
-            } keys %inconsistant;
+            $harness_out .= scalar keys %inconsistent
+                ? "Inconsistent test results (between TEST and harness):\n" . 
+                  join "", map {
+                      my $dots = '.' x (40 - length $_ );
+                      "    $_${dots}$inconsistent{ $_ }\n";
+                  } keys %inconsistent
+                : "";
         }
         $self->ttylog("\n", $harness_out, "\n" );
-        $changed_dir and chdir File::Spec->updir;
+        $changed_dir and chdir updir();
     }
 }
 
@@ -512,7 +552,7 @@ I<miniperl>, so we do C<< S<make minitest> >>.
 sub make_minitest {
     my $self = shift;
 
-    $self->ttylog( "PERLIO = minitest\t" );
+    $self->ttylog( "TSTENV = minitest\t" );
     local *TST;
     # MSWin32 builds from its own directory
     if ( $self->{is_win32} ) {
@@ -556,9 +596,40 @@ sub make_minitest {
     return 1;
 }
 
+=item $self->_trasnaform_testnames( @notok )
+
+C<_transform_testnames()> takes a list of testnames, as found by
+C<TEST> (testname without C<.t> suffix followed by dots and a reason)
+and returns a hash with the filenames relative to the C<t/> directory
+as keys and the reason as value.
+
+=cut
+
+sub _transform_testnames {
+    my( $self, @notok ) = @_;
+    my %inconsistent;
+    for my $nok ( @notok ) {
+        $nok =~ m!^(?:\.\.[\\/])?(\w+/[-\w/\\]+)\.*(.*)! or next;
+        my( $test_name, $status ) = ( $1, $2 );
+        $test_name .= '.t';
+
+        $test_name = $test_name =~ /^(?:ext|lib|t)\b/
+            ? catfile( updir(), $test_name )
+            : catfile( updir(), 't', $test_name );
+
+        my $test_base = catdir( $self->{ddir}, 't' );
+        $test_name = rel2abs( $test_name, $test_base );
+
+        my $test_path = abs2rel( $test_name, $test_base );
+        $test_path =~ tr!\\!/! if $self->{is_win32};
+        $inconsistent{ $test_path } ||= $status;
+    }
+    return %inconsistent;
+}
+
 =item $self->_run( $command[, $sub[, @args]] )
 
-C<run()> returns C<< qx( $command ) >> unless C<$sub> is specified.
+C<_run()> returns C<< qx( $command ) >> unless C<$sub> is specified.
 If C<$sub> is defined (and a coderef) C<< $sub->( $command, @args ) >> will
 be called.
 
@@ -570,7 +641,9 @@ sub _run {
 
     defined $sub and return &$sub( $command, @args );
 
-    return qx( $command );
+    my @output = qx( $command );
+    $self->{_run_exit} = $? >> 8;
+    return wantarray ? @output : join " ", @output;
 }
 
 =item $self->_make( $command )

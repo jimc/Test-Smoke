@@ -1,7 +1,7 @@
 package TestLib;
 use strict;
 
-# $Id: TestLib.pm 475 2003-10-12 14:23:00Z abeltje $
+# $Id: TestLib.pm 505 2003-12-21 11:48:43Z abeltje $
 use vars qw( $VERSION @EXPORT );
 $VERSION = '0.03';
 

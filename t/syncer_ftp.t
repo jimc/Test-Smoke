@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 477 2003-10-15 09:16:13Z abeltje $
+# $Id: syncer_ftp.t 515 2004-01-04 14:06:56Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot

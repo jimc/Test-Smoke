@@ -1,9 +1,9 @@
 package Test::Smoke::BuildCFG;
 use strict;
 
-# $Id: BuildCFG.pm 484 2003-10-20 05:46:22Z abeltje $
+# $Id: BuildCFG.pm 619 2004-02-23 23:03:38Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.005';
+$VERSION = '0.006';
 
 use Cwd;
 use File::Spec;
@@ -363,6 +363,28 @@ sub policy_targets {
     }
 
     return @targets;
+}
+
+=item as_string
+
+Return the parsed configuration as a string.
+
+=cut
+
+sub as_string {
+    my $self = shift;
+    my @sections;
+    for my $section ( @{ $self->{_sections} } ) {
+        if ( UNIVERSAL::isa( $section, 'ARRAY' ) ) {
+            push @sections, $section;
+        } elsif ( UNIVERSAL::isa( $section, 'HASH' ) ) {
+            push @sections, [
+                "/$section->{policy_target}/",
+                @{ $section->{args} },
+            ];
+        }
+    }
+    return join "=\n", map join( "\n", @$_, "" ) => @sections;
 }
 
 =item __get_smoked_configs( $logfile )

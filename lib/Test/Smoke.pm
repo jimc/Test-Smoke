@@ -1,9 +1,10 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 484 2003-10-20 05:46:22Z abeltje $
-use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.18.10';
+# $Id: Smoke.pm 667 2004-03-27 09:55:15Z abeltje $
+use vars qw( $VERSION $REVISION $conf @EXPORT );
+$VERSION  = '1.19-RC1';
+$REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -121,7 +122,7 @@ sub run_smoke {
 
     exists $Config{ldlibpthname} && $Config{ldlibpthname} and
         $ENV{ $Config{ldlibpthname} } ||= '',
-        substr( $ENV{ $Config{ldlibpthname} }, 0, 0)  = 
+        substr( $ENV{ $Config{ldlibpthname} }, 0, 0)  =
             "$conf->{ddir}$Config{path_sep}";
 
     my $logfile = File::Spec->catfile( $conf->{ddir}, 'mktest.out' );
@@ -171,13 +172,33 @@ sub run_smoke {
    };
 }
 
+=item __get_ts_patchlevel( )
+
+Read the contents of F<.patch> or use the subversion placeholder
+C<Rev>.
+
+=cut
+
+use FindBin;
+use File::Spec::Functions;
+
+sub __get_ts_patchlevel {
+    my( $rev ) = q$Rev: 667 $ =~ /(\d+)/;
+    my $dotpatch = catfile $FindBin::Bin, '.patch';
+    local *DOTPATCH;
+    open DOTPATCH, "< $dotpatch" or return $rev;
+    chomp( my $plevel = <DOTPATCH> );
+    close DOTPATCH;
+    return $plevel > $rev ? $plevel : $rev;
+}
+
 1;
 
 =back
 
 =head1 REVISION
 
-$Id: Smoke.pm 484 2003-10-20 05:46:22Z abeltje $
+$Id: Smoke.pm 667 2004-03-27 09:55:15Z abeltje $
 
 =head1 COPYRIGHT
 

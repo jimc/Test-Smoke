@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_copy.t 475 2003-10-12 14:23:00Z abeltje $
+# $Id: syncer_copy.t 505 2003-12-21 11:48:43Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;
