@@ -14,8 +14,10 @@ sub usage ()
 
 @ARGV == 1 and $ARGV[0] eq "-?" || $ARGV[0] =~ m/^-+help$/ and usage;
 
+use Config;
 use Cwd;
 use Getopt::Long;
+use File::Find;
 
 my $norun   = 0;
 my $verbose = 0;
@@ -42,6 +44,23 @@ sub run ($;$)
 
     return qx($command);
     } # run
+
+sub make ($)
+{
+    my $cmd = shift;
+
+    is_win32 () or return run "make $cmd";
+
+    my $kill_err;
+    # don't capture STDERR
+    $cmd =~ s{2\s*>\s*/dev/null\s*$}{} and $kill_err = 1;
+    # Better detection of make vs. nmake vs. dmake required here
+    # dmake + MSVC5, make + DJGPP, make + Cygwin
+    $cmd = "dmake -f smoke.mk $cmd";
+    chdir "win32" or die "unable to chdir () into 'win32'";
+    run ($kill_err ? qq{$^X -e "close STDERR; system '$cmd'"} : $cmd);
+    chdir ".." or die "unable to chdir() out of 'win32'";
+    } #make
 
 sub ttylog (@)
 {
@@ -128,9 +147,8 @@ else {
 	  },
 	);
     }
-#use Data::Dumper; print Dumper (@config); exit;
 
-my $testdir = cwd;
+my $testdir = getcwd;
 run ("unlink qw(perl.ok perl.nok)", sub {unlink qw(perl.ok perl.nok)});
 
 my $patch;
@@ -138,6 +156,27 @@ if (open OK, "<.patch") {
     chomp ($patch = <OK>);
     close OK;
     print LOG "Smoking patch $patch\n\n";
+    }
+
+if (open MANIFEST, "< MANIFEST") {
+    # I've done no tests yet, and I've been started after the rsync --delete
+    # Now check if I'm in sync
+    my %MANIFEST = ( ".patch" => 1, map { s/\s.*//s; $_ => 1 } <MANIFEST>);
+    find (sub {
+	-d and return;
+	m/^mktest\.(log|out)$/ and return;
+	my $f = $File::Find::name;
+	$f =~ s:^$testdir/?::;
+	if (exists $MANIFEST{$f}) {
+	    delete $MANIFEST{$f};
+	    return;
+	    }
+	$MANIFEST{$f} = 0;
+	}, $testdir);
+    foreach my $f (sort keys %MANIFEST) {
+	ttylog "MANIFEST ",
+	    ($MANIFEST{$f} ? "still has" : "did not declare"), " $f\n";
+	}
     }
 
 my $Policy = -f "../Policy.sh" && -r _
@@ -208,7 +247,7 @@ sub run_tests
 	    }
 
 	print TTY "Make distclean ...";
-	run "make -i distclean 2>/dev/null";
+	make "-i distclean 2>/dev/null";
 
 	print TTY "\nCopy Policy.sh ...";
 
@@ -241,27 +280,29 @@ sub run_tests
 	    }
 
 	print TTY "\nConfigure ...";
-	run "./Configure $config_args -des";
+	run "./Configure $config_args -des", is_win32() ? \&Configure : undef;
 
-	unless ($norun or (-f "Makefile" && -s "config.sh")) {
+	unless ($norun or (is_win32 () ? -f "win32/smoke.mk"
+				       : -f "Makefile" && -s "config.sh")) {
 	    ttylog " Unable to configure perl in this configuration\n";
 	    next;
 	    }
 
 	print TTY "\nMake headers ...";
-	run "make regen_headers";
+	make "regen_headers";
 
 	print TTY "\nMake ...";
-	run "make";
+	make " ";
 
-	unless ($norun or (-s "perl" && -x _)) {
+	my $perl = "perl$Config{_exe}";
+	unless ($norun or (-s $perl && -x _)) {
 	    ttylog " Unable to make perl in this configuration\n";
 	    next;
 	    }
 
-	$norun or unlink "t/perl";
-	run "make test-prep";
-	unless ($norun or -l "t/perl") {
+	$norun or unlink "t/$perl";
+	make "test-prep";
+	unless ($norun or is_win32 () ? -f "t/$perl" : -l "t/$perl") {
 	    ttylog " Unable to test perl in this configuration\n";
 	    next;
 	    }
@@ -277,7 +318,17 @@ sub run_tests
 		next;
 		}
 
-	    open TST, "make test |";
+	    #FIXME kludge
+	    if (is_win32 ()) {
+		chdir "win32" or die "unable to chdir () into 'win32'";
+		# Same as in make ()
+		open TST, "dmake -f smoke.mk test |";
+		chdir ".." or die "unable to chdir () out of 'win32'";
+		}
+	    else {
+		open TST, "make test |";
+		}
+
 	    my @nok = ();
 	    select ((select (TST), $| = 1)[0]);
 	    while (<TST>) {
@@ -334,14 +385,20 @@ sub run_tests
 		my @harness;
 		for (@nok) {
 		    m:^(\w+/[-\w/]+).*: or next;
-		    push @harness, "../$1.t";
+		    # Remeber, we chdir into t, so -f is false for op/*.t etc
+		    push @harness, (-f "$1.t") ? "../$1.t" : "$1.t";
 		    }
 		if (@harness) {
 		    local $ENV{PERL_SKIP_TTY_TEST} = 1;
 		    print TTY "\nExtending failures with Harness\n";
+		    my $harness = is_win32 () ?
+			join " ", map { s{^\.\.[/\\]}{};
+					m/^(?:lib|ext)/ and $_ = "../$_";
+					$_ } @harness :
+			"@harness";
 		    push @nok, "\n",
 			grep !m:\bFAILED tests\b: &&
-			    !m:% okay$: => run "./perl t/harness @harness";
+			    !m:% okay$: => run "./perl t/harness $harness";
 
 		    open  NOK, ">> perl.nok.$$";
 		    print NOK $p_conf->[1] eq $s_conf ? "\n" :
@@ -415,6 +472,69 @@ if (-s "perl.nok.$$") {
 else {
     unlink "perl.nok";
     }
+
+sub Configure
+{
+    my $command = shift;
+
+    local $_;
+    my %opt_map = (
+	"-Dusethreads"		=> "USE_ITHREADS",
+	"-Duseithreads"		=> "USE_ITHREADS",
+	"-Duseperlio"		=> "USE_PERLIO",
+	"-Dusemultiplicity"	=> "USE_MULTI",
+	"-DDEBUGGING"		=> "USE_DEBUGGING",
+	);
+    my %opts = (
+	USE_MULTI	=> 0,
+	USE_ITHREADS	=> 0,
+	USE_IMP_SYS	=> 0,
+	USE_PERLIO	=> 0,
+	USE_DEBUGGIMG	=> 0,
+	);
+
+    ttylog $command;
+    $command =~ m{^\s*\./Configure\s+(.*)} or die "unable to parse command";
+    foreach (split " ", $1) {
+	m/^-[des]{1,3}$/ and next;
+	m/^-Dusedevel$/  and next;
+	die "invalid option '$_'" unless exists $opt_map{$_};
+	$opts{$opt_map{$_}} = 1;
+	}
+
+    local (*IN, *OUT);
+    my $in =  "win32/makefile.mk";
+    my $out = "win32/smoke.mk";
+
+    open IN,  "< $in"  or die "unable to open '$in'";
+    open OUT, "> $out" or die "unable to open '$out'";
+    while (<IN>) {
+	if    (m/^\s*#?\s*(USE_\w+)(\s*\*?=\s*define)$/) {
+	    $_ = ($opts{$1} ? "" : "#") . $1 . $2 . "\n";
+	    }
+	elsif (m/^\s*#?\s*(CFG\s*\*?=\s*Debug)$/) {
+	    $_ = ($opts{USE_DEBUGGING} ? "" : "#") . $1 . "\n";
+	    }
+	elsif (m/^\s*#?\s*(CCTYPE\s*\*?=\s*)(\w+)$/) {
+	    $_ = ($2 eq "MSVC" ? "" : "#" ) . $1 . $2 . "\n";
+	    }
+	elsif (m/^\s*CC\s*=\s*cl$/) {
+	    chomp;
+	    $_ .= " -nologo\n";
+	    # These two ( CC = .. and CCTYPE = ... ), along with
+	    # CCHOME, BCCOLD, BCCVCL, IS_WIN95, are related to
+	    # the tester's environment; The options I see are
+	    # * add some fake flags ( -cc=... -cctype=, etc )
+	    #   This make easy to smoke with various compilers at one time
+	    # * put these in some config file ( a new section in
+	    #   smoke.cfg, o a new environment.cfg )
+	    # * pass them on the command line
+	    #   perl mktext.pl CC=xxx CCTYPE=yyy smoke.cfg
+	    }
+
+	print OUT $_;
+	}
+    } # Configure
 
 __END__
 #!/bin/sh

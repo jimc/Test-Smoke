@@ -8,12 +8,12 @@
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "1.07";
+$VERSION = "1.08";
 
 use Config;
 my $email = shift || getpwuid $<;
 my $testd = shift || "/usr/3gl/CPAN/perl-current";
-my (%rpt, @confs, %confs);
+my (%rpt, @confs, %confs, @manifest);
 
 open RPT, "> $testd/mktest.rpt" or die "mktest.rpt: $!";
 select RPT;
@@ -22,13 +22,23 @@ my $perlio = "";
 my $conf   = "";
 my $debug  = "";
 $rpt{patch} = "?";
-my $out = "$testd/mktest.out";
+my ($out, @out) = ("$testd/mktest.out", 1 .. 5);
 open OUT, "<$out" or die "Can't open $out: $!";
 for (<OUT>) {
     m/^\s*$/ and next;
     m/^-+$/  and next;
+
+    # Buffer for broken lines (Win32, VMS)
+    pop @out;
+    unshift @out, $_;
+    chomp $out[0];
+
     if (m/^\s*Smoking patch (\d+)/) {
 	$rpt{patch} = $1;
+	next;
+	}
+    if (m/^MANIFEST /) {
+	push @manifest, $_;
 	next;
 	}
     if (s/^Configuration:\s*//) {
@@ -80,6 +90,15 @@ for (<OUT>) {
     if (m/^\s*Unable to (?=([cbmt]))(?:build|configure|make|test) perl/) {
 	$rpt{$conf}{$debug}{stdio}  = $1;
 	$rpt{$conf}{$debug}{perlio} = $1;
+	next;
+	}
+    # /Fix/ broken lines
+    if (m/^\s*FAILED/ || m/^\s*DIED/) {
+	foreach my $out (@out) {
+	    $out =~ m/\.\./ or next;
+	    push @{$rpt{$conf}{$debug}{$perlio}}, $out . substr $_, 3;
+	    last;                
+	    }
 	next;
 	}
     if (m/FAILED/) {
@@ -147,7 +166,27 @@ for my $i (0 .. $#fail) {
 	}
     print @{$ref->[-1]}, "\n";
     }
+
+@manifest and print RPT "\n\n", @manifest;
+
 close RPT;
 select STDOUT;
-my $mailer = $^O =~ m/^(?: freebsd | your_no_mailx_sys )$/x ? "mail" : "mailx";
-system "$mailer -s 'Report $testd' $email < $testd/mktest.rpt";
+
+my $mailer = "mailx";
+my $subject = "Smoke $rpt{patch} $Config{osname} $Config{osvers} $testd";
+if ($mailer =~ m/sendmail/) {
+    local (*MAIL, *BODY, $/);
+    open  BODY, "< $testd/mktest.rpt";
+    open  MAIL, "| $mailer -i -t";
+    print MAIL join "\n",
+	"To: $email",
+	"From: ...",
+	"Subject: $subject",
+	"",
+	<BODY>;
+    close BODY;
+    close MAIL;
+    }
+else {
+    system "$mailer -s '$subject' $email < $testd/mktest.rpt";
+    }

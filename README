@@ -41,6 +41,10 @@ Optionally delete lines from config.sh (or a local copy with a different
 name) for which you are certail your system doesn't support it (like
 threading or 64bit configurations)
 
+If you happen to try the smoke on a Win32/MSVC5/dmake configuration (which
+should be supported), create an empty folder 'win32' in the smoke source
+dir (where the mktest.pl resides).
+
 If something useful happens, do it every night using cron instead of at.
 
 =head1 Slow Systems
@@ -55,6 +59,11 @@ your system,  you can create your own copy of smoke.cfg where you either
 add new combinations and/or test levels, or delete lines to speed up the
 run time of smoke.
 
+At the moment there are no guidelines of how to change the configuration
+best to fit the needs of perl5-porters while still getting as much smoke
+out of the test as possible, simply because the needs of perl5-porters
+change over time :)
+
 If the test captures too many cycles of your CPU to continue production
 work, just kill the "mktest.pl" process and the report will be generated
 over the results captured untill then.
@@ -63,8 +72,8 @@ over the results captured untill then.
 
 =head2 Distribution
 
-  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.07.tgz
-  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.07.tgz
+  http://home.hccnet.nl/h.m.brand/Test-Smoke-1.08.tgz
+  $CPAN/authors/id/H/HM/HMBRAND/Test-Smoke-1.08.tgz
   SourceForge project "perl-qa"
 
 =head2 Mailing lists
@@ -88,9 +97,20 @@ under the same terms as Perl itself, without consulting the author.
 
 =head1 AUTHOR
 
-H.Merijn Brand <h.m.brand@hccnet.nl>, co-authored with Nicholas Clark
-<nick@plum.flirble.org> in dialogue and consultation with Michael
-Schwern <schwern@pobox.com>
+H.Merijn Brand <h.m.brand@hccnet.nl> in dialogue and consultation with
+Michael Schwern <schwern@pobox.com>, the Perl QA pumpkin.
+
+Contributors and/or co-authors:
+
+    Configurations and
+      nuts and bolts	Nicholas Clark <nick@plum.flirble.org>
+    Portability issues	Will Coleda - IMG <wjc@infomg.com>
+    Safety		Richard Soderberg <rs@oregonnet.com>
+    Win32/MSC5/dmake	Mattia Barbon <mbarbon@dsi.unive.it>
+
+and all the people having useful suggestions and nits, starting at
+YAPC::Europe-2.0.01, where Michael talked me into simplifying my own
+test-suite.
 
 =head1 Misc
 

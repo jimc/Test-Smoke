@@ -14,7 +14,7 @@ $^O =~ m/^(?: VMS | MSWin32 )$/x and
 WriteMakefile (
     NAME	=> "Test::Smoke",
     DISTNAME	=> "Test-Smoke",
-    VERSION	=> "1.07",
+    VERSION	=> "1.08",
     AUTHOR	=> 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
 		   'Nicholas Clark <nick@plum.flirble.org>',
 
@@ -136,23 +136,26 @@ print SH $sh;
 close SH;
 chmod 0755, "smoke.sh";
 
-my $mail = "mail";
-for (split m/:/, $ENV{PATH}) {
-    -x "$_/mailx" or next;
-    $mail = "mailx";
-    last;
-    }
-if ($mail eq "mail") {
+foreach my $m (qw(mailx sendmail mail)) {
+    my $mp;
+    foreach my $d ((split m/:/, $ENV{PATH}), "/usr/sbin", "/usr/lib") {
+	-x "$d/$m" or next;
+	$mp = "$d/$m";
+	last;
+	}
+    $mp or next;
+
     local $/ = undef;
     open OVZ, "< mkovz.pl" or die "mkovz.pl: $!";
     my $ovz = <OVZ>;
     close OVZ;
-    $ovz =~ s/\byour_no_mailx_sys\b/$^O/;
+    $ovz =~ s/"mailx"/"$mp"/;
     move ("mkovz.pl", "mkovz.pl.org");
     open  OVZ, "> mkovz.pl" or die "mkovz.pl: $!";
     print OVZ $ovz;
     close OVZ;
     chmod 0755, "mkovz.pl";
+    last;
     }
 
 print <<EOM;
