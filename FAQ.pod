@@ -154,6 +154,8 @@ Yes, you can kill all the smoke related processes. Each stage is
 directly logged in F<< <builddir>/mktest.out >>.
 (Can somebody provide some more insight here?)
 
+As of version 1.17.02 you can specify a timeout (if you have alarm())
+
 =head2 Can I still generate a report after an interrupted smoke?
 
 Yes, but some information might be missing (the compiler info).

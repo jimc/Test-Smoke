@@ -2,7 +2,7 @@ package Test::Smoke::SourceTree;
 use strict;
 
 use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS );
-$VERSION = '0.002';
+$VERSION = '0.003';
 
 use File::Spec;
 use File::Find;
@@ -220,7 +220,7 @@ sub copy_from_MANIFEST {
     $verbose and printf " %d items OK\n", scalar @manifest_files;
 
     my $dest = $self->new( $dest_dir );
-    File::Path::mkpath( $$dest, $verbose ) unless -d;
+    File::Path::mkpath( $$dest, $verbose ) unless -d $$dest;
 
     require File::Basename;
     require File::Copy;
@@ -233,7 +233,10 @@ sub copy_from_MANIFEST {
         File::Path::mkpath( $dest_path, $verbose ) unless -d $dest_path;
 
         $verbose > 1 and print "$file -> $dest_name ";
-        my $ok = File::Copy::copy( $self->mani2abs( $file ), $dest_name );
+        my $mode = ( stat $self->mani2abs( $file ) )[2] & 07777;
+        -f $dest_name and unlink $dest_name;
+        my $ok = File::Copy::syscopy( $self->mani2abs( $file ), $dest_name );
+        $ok and $ok &&= chmod $mode, $dest_name;
         $ok or carp "copy '$file' ($dest_path): $!\n";
         $ok && $verbose > 1 and print "OK\n";
     }

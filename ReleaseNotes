@@ -1,15 +1,47 @@
 =head1 NAME
 
-ReleaseNotes - These are the Release Notes for 1.17
+ReleaseNotes - These are the Release Notes for 1.17.02
 
 =head1 SYNOPSIS
 
-These are the major changes since version 1.16.
+These are the major changes since version 1.16 and the fixes done for
+the MAINT branche 1.17.xx.
 
 =head1 DESCRIPTION
 
 I have done a lot of refactoring and wrote loads of new code and
 documentation since v1.16.
+
+Here is a list of fixes in 1.17.xx MAINT:
+
+=over 4
+
+=item 1
+
+C<Test::Smoke::SourceTree::copy_from_MANIFEST()> needs to unlink
+destination file before copying and explicitly set filemode after
+copying. (This was on Solaris 9)
+
+=item 2
+
+Some F<configsmoke.pl> issues: {sync_type} was not propagated as
+default from old configfile. We need to change drive on Windows.
+
+=item 3
+
+F<mkovz.pl> issue with gccversion in the reports
+
+=item 4
+
+Jarkko suggested a timeout mechanism so that smokes are stopped on a
+specific time or after a specified duration.
+
+    {killtime} eq '07:30' stops the smoke at 07:30 (AM)
+    {killtime} eq '+9:30' stop after 9.5 hours
+
+=back
+
+Major changes since 1.16:
 
 =over 4
 

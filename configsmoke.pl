@@ -31,7 +31,7 @@ foreach my $opt (qw( config jcl log )) {
 }
 
 use vars qw( $VERSION $conf );
-$VERSION = '0.014';
+$VERSION = '0.016';
 
 eval { require $options{config} };
 $options{oldcfg} = 1, print "Using '$options{config}' for defaults.\n" 
@@ -357,6 +357,15 @@ Examples:$untarmsg",
         alt => [qw( Y n )],
         dft => 'y',
     },
+    killtime => {
+        msg => "Should this smoke be aborted on/after a specific time?
+\tuse HH:MM to specify a point in time (24 hour notation)
+\tuse +HH::MM to specify a duration
+\tleave empty to finish the smoke without aborting",
+        dft => "",
+        alt => [ ],
+        chk => '^(?:(?:\+\d+)|(?:(?:[0-1]?[0-9])|(?:2[0-3])):[0-5]?[0-9])|$',
+    },
     # Schedule stuff
     docron => {
         msg => 'Should the smoke be scheduled?',
@@ -619,7 +628,6 @@ See also L<Test::Smoke::Syncer>
 =cut
 
 $arg = $want_forest ? 'fsync' : 'sync_type';
-$conf->{sync_type} = $conf->{fsync} || 'rsync' unless $want_forest;
 $config{ $arg } = lc prompt( $arg );
 
 SYNCER: {
@@ -889,6 +897,23 @@ is the same after syncing the source-tree.
 $arg = 'smartsmoke';
 $config{ $arg } = prompt_yn( $arg );
 
+=item killtime
+
+When C<< $Config{d_alarm} >> is found we can use C<alarm()> to abort 
+long running smokes. Leave this value empty to keep the old behaviour.
+
+    07:30 => F<mktest.pl> is aborted on 7:30 localtime
+   +23:45 => F<mktest.pl> is aborted after 23 hours and 45 minutes
+
+Thank you Jarkko for donating this suggestion.
+
+=cut
+
+if ( $Config{d_alarm} ) {
+    $arg = 'killtime';
+    $config{ $arg } = prompt( $arg );
+}
+
 =item schedule stuff
 
 =over 4
@@ -1077,16 +1102,17 @@ REM @{[ scalar localtime ]}
 $copycmd
 REM $atline
 
+set WD=$cwd\
+for \%\%D in ( \%WD\% ) do \%\%~dD
+cd "\%WD\%"
 set CFGNAME=$options{config}
 set LOCKFILE=$options{prefix}.lck
 if NOT EXIST \%LOCKFILE\% goto START_SMOKE
     FIND "\%LOCKFILE\%" \%LOCKFILE\% > NUL:
-    if NOT ERRORLEVEL 1 (echo We seem to be running (or remove \$LOCKFILE)>&2) && exit /B 200
+    if NOT ERRORLEVEL 1 (echo We seem to be running [or remove \%LOCKFILE\%]>&2) && exit /B 200
 
 :START_SMOKE
     echo \%LOCKFILE\% > \%LOCKFILE\%
-    set WD=$cwd\
-    cd "\%WD\%"
     set OLD_PATH=\%PATH\%
     set PATH=$cwd;\%PATH\%
     $^X smokeperl.pl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
