@@ -75,6 +75,17 @@ so we now have a new config-variable C<ccp5p_onfail> that defaults to
 'No'. B<Please> do not try to include p5p in your default C<To:> or
 C<Cc:>, F<configsmoke.pl> will not accept it anymore.
 
+=item 11
+
+Some questions were asked about how to integrate
+C<-DPERL_COPY_ON_WRITE> into the smokes. After the third time I wasn't
+convinced by the answer anymore, the code needs to be smarter!
+
+For people not using an explicit F<Policy.sh> the default one that is
+generated (to handle C<-DDEBUGGING>) is now extended to include all
+policy-targets from the buildconfigurations file in the C<ccflags=''>
+line in F<Policy.sh> (see also L<FAQ>).
+
 =back
 
 Major changes since 1.17
@@ -159,7 +170,7 @@ some extra defaults to help configuring Test::Smoke for this release.
 
 =head1 REVISION
 
-$Id: ReleaseNotes 470 2003-10-10 13:22:57Z abeltje $
+$Id: ReleaseNotes 489 2003-11-02 13:18:28Z abeltje $
 
 =head1 COPYRIGHT
 

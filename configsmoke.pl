@@ -11,9 +11,9 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 use lib $FindBin::Bin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 468 2003-10-10 12:33:59Z abeltje $
+# $Id: configsmoke.pl 482 2003-10-20 05:36:13Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.032';
+$VERSION = '0.034';
 
 use Getopt::Long;
 my %options = ( 
@@ -95,6 +95,10 @@ my $untarmsg = join "", map "\n\t$_" => @untars;
 
 my %versions = (
     '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
+                 server => 'http://rgarciasuarez.free.fr',
+                 sdir   => '/snap',
+                 sfile  => 'perl562-21463.tar.gz',
+                 pdir   => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
                  ddir   => File::Spec->rel2abs( 
                                File::Spec->catdir( File::Spec->updir,
                                                    'perl-5.6.2' ) ),
@@ -102,20 +106,20 @@ my %versions = (
                  text   => 'Perl 5.6.2-to-be',
                  is56x  => 1 },
     '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
-                 server => 'http://www.iki.fi',
-                 sdir   => '/jhi',
-                 sfile  => 'perl@20617.tgz',
+                 server => 'ftp.funet.fi',
+                 sdir   => '/pub/languages/perl/snap/5.8.x',
+                 sfile  => '',
                  pdir   => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
                  ddir   => File::Spec->rel2abs( 
                                File::Spec->catdir( File::Spec->updir,
                                                    'perl-5.8.x' ) ),
-                 text   => 'Perl 5.8.1-to-be',
+                 text   => 'Perl 5.8.2-to-be',
                  cfg    => ( $^O eq 'MSWin32' 
                         ? 'w32current.cfg' :'perlcurrent.cfg' ),
                  is56x  => 0 },
     '5.9.x' => { source => 'ftp.linux.activestate.com::perl-current',
                  server => 'ftp.funet.fi',
-                 sdir   => '/pub/languages/perl/snap/',
+                 sdir   => '/pub/languages/perl/snap/5.9.x',
                  sfile  => '',
                  pdir   => '/pub/staff/gsar/APC/perl-current-diffs',
                  ddir   => File::Spec->rel2abs( 
@@ -313,10 +317,10 @@ Examples:$untarmsg",
         chk => '.+',
     },
 
-    patch => {
+    patchbin => {
         msg => undef,
         alt => [ ],
-        dft => whereis( 'gpatch') || whereis( 'patch' ),
+        dft => find_a_patch(),
     },
 
     popts => {
@@ -773,11 +777,12 @@ SYNCER: {
         $config{ $arg } = prompt( $arg );
 
         $arg = 'patchup';
-        if ( whereis( 'patch' ) ) {
-            $config{ $arg } = lc prompt( $arg ) eq 'y' ? 1 : 0;
+        $config{patchbin} ||= find_a_patch();
+        if ( $config{patchbin} ) {
+            $config{ $arg } = prompt_yn( $arg );
 
             if ( $config{ $arg } ) {
-                for $arg (qw( pserver pdir unzip patch )) {
+                for $arg (qw( pserver pdir unzip patchbin )) {
                     $config{ $arg } = prompt( $arg );
                 }
                 $opt{cleanup}->{msg} .= " 2(patches) 3(both)";
@@ -836,8 +841,8 @@ There is an issue when using the "forest" sync, but I will look into that.
 my $patchbin = find_a_patch();
 PATCHER: {
     last PATCHER unless $patchbin;
-    $config{patch} = $patchbin;
-    print "\nFound [$config{patch}]";
+    $config{patchbin} = $patchbin;
+    print "\nFound [$config{patchbin}]";
     $arg = 'pfile';
     $config{ $arg } = prompt_file( $arg, 1 );
 
@@ -1267,7 +1272,7 @@ sub sort_configkeys {
 
         # Sync related
         qw( sync_type fsync rsync opts source tar server sdir sfile
-            patchup pserver pdir unzip patch cleanup cdir hdir patch pfile ),
+            patchup pserver pdir unzip patchbin cleanup cdir hdir pfile ),
 
         # OS specific make related
         qw( w32args w32cc w32make ),
@@ -1598,10 +1603,9 @@ sub get_avail_sync {
 
     my $pversion = $config{perl_version} || '5.9.x';
 
-    # (has_ftp && 5.9.x) || (has_lwp && !5.6.x)
+    # (has_ftp && 5.9.x) || has_lwp
     unshift @synctype, 'snapshot' 
-        if ( $has_ftp && $pversion eq '5.9.x' ) ||
-           ( $has_lwp && $pversion ne '5.6.2' );
+        if ( $has_ftp && $pversion eq '5.9.x' ) || $has_lwp;
     unshift @synctype, 'rsync' if whereis( 'rsync' );
     return @synctype;
 }
@@ -1850,7 +1854,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 468 2003-10-10 12:33:59Z abeltje $
+    $Id: configsmoke.pl 482 2003-10-20 05:36:13Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 467 2003-10-10 10:22:00Z abeltje $
+# $Id: Smoke.pm 484 2003-10-20 05:46:22Z abeltje $
 use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.18.09';
+$VERSION = '1.18.10';
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -134,7 +134,8 @@ sub run_smoke {
     my $mode = $continue ? ">>" : ">";
     open LOG, "$mode $logfile" or die "Cannot create 'mktest.out': $!";
 
-    my $Policy   = Test::Smoke::Policy->new( File::Spec->updir, $conf->{v} );
+    my $Policy   = Test::Smoke::Policy->new( File::Spec->updir, $conf->{v},
+                                             $BuildCFG->policy_targets );
 
     my $smoker   = Test::Smoke::Smoker->new( \*LOG, $conf );
     $smoker->mark_in;
@@ -176,7 +177,7 @@ sub run_smoke {
 
 =head1 REVISION
 
-$Id: Smoke.pm 467 2003-10-10 10:22:00Z abeltje $
+$Id: Smoke.pm 484 2003-10-20 05:46:22Z abeltje $
 
 =head1 COPYRIGHT
 

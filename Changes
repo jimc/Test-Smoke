@@ -10,6 +10,133 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[   490] By: abeltje                          on 2003-11-09 12:58:28 +0100
+        Log: * [CHANGE]
+	       + update the roadmap with 1.20 to be
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/roadmap.pod
+___________________________________________________________________________
+[   489] By: abeltje                          on 2003-11-02 14:18:28 +0100
+        Log: * [ADD]
+	       + document the default Policy.sh generation from
+		 policy-targets in the build config files (revision 484)
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/ReleaseNotes
+___________________________________________________________________________
+[   488] By: abeltje                          on 2003-11-01 09:45:26 +0100
+        Log: * [CHANGE]
+	       * fiddle with some tests
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/t/manifest.t,
+	     /Test-Smoke-1.18.xx/t/tree.t
+___________________________________________________________________________
+[   487] By: abeltje                          on 2003-11-01 09:44:50 +0100
+        Log: * [CHANGE]
+	       * fiddle with the const subs
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/SourceTree.pm
+___________________________________________________________________________
+[   485] By: abeltje                          on 2003-10-26 10:47:34 +0100
+        Log: * [ADD]
+	       + added a question about COW and the answer with the new
+		 Policy.sh behaviour.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/FAQ
+___________________________________________________________________________
+[   484] By: abeltje                          on 2003-10-20 07:46:22 +0200
+        Log: * [CHANGE]
+	       + After a few questions about how to integrate COW into
+		 smoke, I decided to make default Policy.sh generated from
+		 the policy-sections in the build-configurations file.
+	       * There is no need to create your own Policy.sh if you want
+		 to smoke with that kind of ccflags option anymore.
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/BuildCFG.pm,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke/Policy.pm,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke.pm,
+	     /Test-Smoke-1.18.xx/t/buildcfg.t,
+	     /Test-Smoke-1.18.xx/t/policy.t
+___________________________________________________________________________
+[   483] By: abeltje                          on 2003-10-20 07:39:31 +0200
+        Log: * [CHANGE]
+	       * try to keep better track of inconsistant test result
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/lib/Test/Smoke/Smoker.pm
+___________________________________________________________________________
+[   482] By: abeltje                          on 2003-10-20 07:36:13 +0200
+        Log: * [CHANGE]
+	       * Use the new snapshot directories on
+		 ftp://ftp.funet.fi/pub/languages/perl/snap
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl
+___________________________________________________________________________
+[   481] By: abeltje                          on 2003-10-19 21:02:46 +0200
+        Log: * [FIX]
+	       * still report M even if "make minitest" finished OK
+	       + use "-Dcc=..." as fallback for $Config{cc} when
+		 applicable
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/mkovz.pl
+___________________________________________________________________________
+[   480] By: abeltje                          on 2003-10-19 15:21:09 +0200
+        Log: * [ADD]
+	       + we now support the new perl-5.6.2 snapshots from Rafael's
+		 site
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl,
+	     /Test-Smoke-1.18.xx/smokeperl.pl
+___________________________________________________________________________
+[   479] By: abeltje                          on 2003-10-19 14:28:15 +0200
+        Log: * [CHANGE] by David Landgren
+	       + I have patched smokerstatus.pl to print out the mean
+		 smoke duration. I don't have a diff, but it just involves
+		 adding the following line:
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/smokestatus.pl
+___________________________________________________________________________
+[   478] By: abeltje                          on 2003-10-19 14:18:57 +0200
+        Log: * [FIX]
+	       * The smokestatus needs to know where the *_config or *.lck
+		 files are hence a new switch "--dir"
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/smokestatus.pl
+___________________________________________________________________________
+[   477] By: abeltje                          on 2003-10-15 11:16:13 +0200
+        Log: * [FIX]
+	       * Some testing and a feature request from Merijn showed a
+		 thinko in the patch-a-tree logic.
+	       * the {patch} configvariable is now renamed {patchbin}
+	       * the patchtree() call in smokeperl.pl now works
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/configsmoke.pl,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke/Patcher.pm,
+	     /Test-Smoke-1.18.xx/lib/Test/Smoke/Syncer.pm,
+	     /Test-Smoke-1.18.xx/t/patcher.t,
+	     /Test-Smoke-1.18.xx/t/syncer_ftp.t
+___________________________________________________________________________
+[   475] By: abeltje                          on 2003-10-12 16:23:00 +0200
+        Log: * [FIX]
+	       * testing on Windows revealed another bug in the test-suite
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/t/TestLib.pm,
+	     /Test-Smoke-1.18.xx/t/manifest.t,
+	     /Test-Smoke-1.18.xx/t/syncer_copy.t
+___________________________________________________________________________
+[   474] By: abeltje                          on 2003-10-12 16:17:12 +0200
+        Log: regen Changes for 1.18.10
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/Changes
+___________________________________________________________________________
+[   472] By: abeltje                          on 2003-10-12 13:39:51 +0200
+        Log: * regen SIGNATURE for 1.18.09
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/SIGNATURE
+___________________________________________________________________________
+[   471] By: abeltje                          on 2003-10-10 15:23:20 +0200
+        Log: regen Changes for 1.18.09
+        Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx
+           ! /Test-Smoke-1.18.xx/Changes
+___________________________________________________________________________
 [   470] By: abeltje                          on 2003-10-10 15:22:57 +0200
         Log: * keep up with the VERSION
         Url: http://ztreet.xs4all.nl/svn/Test-Smoke-1.18.xx

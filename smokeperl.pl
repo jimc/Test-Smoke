@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 467 2003-10-10 10:22:00Z abeltje $
+# $Id: smokeperl.pl 480 2003-10-19 13:21:09Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -245,9 +245,11 @@ sub snapshot_name {
     my( $plevel ) = $options{snapshot} =~ /(\d+)/;
     my $sfile = $conf->{sfile};
     if ( $sfile ) {
-        $sfile =~ s/\d+/$plevel/;
+        $sfile =~ s/([-@])\d+\./$1$plevel./;
     } else {
-        $sfile = "perl\@$plevel.$conf->{snapext}";
+        my $sep = $conf->{is56x} ? '562-' : '@';
+        my $ext = $conf->{snapext} || 'tar.gz';
+        $sfile = "perl${sep}${plevel}.$ext";
     }
     return $sfile;
 }
@@ -258,7 +260,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 467 2003-10-10 10:22:00Z abeltje $
+$Id: smokeperl.pl 480 2003-10-19 13:21:09Z abeltje $
 
 =head1 COPYRIGHT
 

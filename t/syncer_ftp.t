@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 330 2003-08-04 23:13:18Z abeltje $
+# $Id: syncer_ftp.t 477 2003-10-15 09:16:13Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot
@@ -71,6 +71,7 @@ sub Net::FTP::get {
     } else {
         die "Can't write '$dest': $!";
     }
+    return $dest;
 }
 sub Net::FTP::DESTROY { }
 BEGIN { $^W = 1; }
@@ -80,7 +81,7 @@ require Test::Smoke::Patcher; # for testing only
 # Now begin testing
 use_ok( 'Test::Smoke::Syncer' );
 
-my $patch = whereis( 'patch' );
+my $patch = find_a_patch();
 SKIP: { # Here we try for 'Archive::Tar'/'Compress::Zlib'
 
     eval { require Archive::Tar; };
@@ -90,12 +91,12 @@ SKIP: { # Here we try for 'Archive::Tar'/'Compress::Zlib'
     $@ and skip "Can't load 'Compress::Zlib'", 3;
 
     my $syncer = Test::Smoke::Syncer->new( snapshot => { v => 0,
-        ddir    => File::Spec->catdir( 't', 'perl-current' ),
-        sdir    => '/t/snap',
-        tar     => 'Archive::Tar',
-        unzip   => 'Compress::Zlib',
-        cleanup => 3,
-        patch   => $patch,
+        ddir     => File::Spec->catdir( 't', 'perl-current' ),
+        sdir     => '/t/snap',
+        tar      => 'Archive::Tar',
+        unzip    => 'Compress::Zlib',
+        cleanup  => 3,
+        patchbin => $patch,
     } );
 
     isa_ok( $syncer, 'Test::Smoke::Syncer::Snapshot' );
@@ -125,12 +126,12 @@ SKIP: { # Here we try for gzip/tar
     $gzip = whereis( 'zcat' ) unless $gzip;
 
     my $syncer = Test::Smoke::Syncer->new( snapshot => { v => 0,
-        ddir    => File::Spec->catdir( 't', 'perl-current' ),
-        sdir    => '/t/snap',
-        tar     => $unpack,
-        unzip   => $gzip,
-        cleanup => 3,
-        patch   => $patch,
+        ddir     => File::Spec->catdir( 't', 'perl-current' ),
+        sdir     => '/t/snap',
+        tar      => $unpack,
+        unzip    => $gzip,
+        cleanup  => 3,
+        patchbin => $patch,
     } );
 
     isa_ok( $syncer, 'Test::Smoke::Syncer::Snapshot' );

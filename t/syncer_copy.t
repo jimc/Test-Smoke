@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_copy.t 461 2003-10-05 10:33:54Z abeltje $
+# $Id: syncer_copy.t 475 2003-10-12 14:23:00Z abeltje $
 
 use FindBin;
 use lib $FindBin::Bin;
@@ -45,7 +45,7 @@ SETUP: {
     print DOTPATCH "20000\n";
     close DOTPATCH or plan skip_all => "Cannot write '.patch': $!";
     # Create a 'MANIFEST'
-    my @MANIFEST = ( 'MANIFEST', get_dir( $cdir ) );
+    my @MANIFEST = map manify_path( $_ ) => ( 'MANIFEST', get_dir( $cdir ) );
     local *MANIFEST;
     my $manifest = File::Spec->catfile( $cdir, 'MANIFEST' );
     open MANIFEST, "> $manifest" or

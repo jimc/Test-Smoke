@@ -1,7 +1,7 @@
 package Test::Smoke::SourceTree;
 use strict;
 
-# $Id: SourceTree.pm 460 2003-10-05 10:30:23Z abeltje $
+# $Id: SourceTree.pm 487 2003-11-01 08:44:50Z abeltje $
 use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS );
 $VERSION = '0.005';
 
@@ -44,8 +44,8 @@ Test::Smoke::SourceTree - Manipulate the perl source-tree
 =cut
 
 # Define some constants
-sub ST_MISSING()    { return 1 }
-sub ST_UNDECLARED() { return 0 }
+sub ST_MISSING()    { 1 }
+sub ST_UNDECLARED() { 0 }
 
 =item Test::Smoke::SourceTree->new( $tree_dir )
 

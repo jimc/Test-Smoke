@@ -11,7 +11,7 @@ use strict;
 use Test::Smoke;
 use vars qw($VERSION);
 $VERSION = Test::Smoke->VERSION; 
-# $Id: mkovz.pl 465 2003-10-09 22:37:13Z abeltje $
+# $Id: mkovz.pl 481 2003-10-19 19:02:46Z abeltje $
 
 use File::Spec;
 use Cwd;
@@ -172,6 +172,14 @@ for (<OUT>) {
         $debug = s/-DDEBUGGING\s*// ? "D" : "";
         s/\s+-des//;
         s/\s+$//;
+        unless ( $Config{cc} ) { # This is fallback
+            my( $cc ) = grep /^-Dcc=(['"])?(.+?)\1/ # '
+                => quotewords( '\s+', 1, $_ );
+            if ( $cc =~ s/^-Dcc=(['"])?(.+?)\1/$2/ ) { #'
+                $Config{cc} = $cc;
+                `$cc -v 2>&1` =~ /version (.+)/ and $Config{ccversion} = $1;
+            }
+        }
         $conf = $_ || " ";
         $confs{$_}++ or push @confs, $conf;
         next;
@@ -180,7 +188,8 @@ for (<OUT>) {
         $perlio = $1;
         if ( $perlio eq 'minitest' ) {
             $rpt{$conf}{$debug}{$_} = "-" for @layers;
-            $rpt{$conf}{$debug}{minitest} = "M";
+            $rpt{$conf}{$debug}{minitest} = 
+                $rpt{$conf}{$debug}{stdio} = "M";
             $perlio = 'stdio';
         }
         # Deal with harness output

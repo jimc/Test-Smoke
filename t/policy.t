@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: policy.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: policy.t 484 2003-10-20 05:46:22Z abeltje $
 # This file checks to see if the new Test::Smoke::Policy object
 # does the same as the old way Merijn originaly wrote
 
@@ -11,7 +11,7 @@ use lib $FindBin::Bin;
 use TestLib;
 use Test::Smoke::Util qw( get_config );
 use Data::Dumper;
-use Test::More tests => 3 + 8 + 24;
+use Test::More tests => 3 + 8 + 24 + 2;
 
 use_ok( 'Test::Smoke::Policy' );
 
@@ -104,4 +104,16 @@ sub run_tests {
         is_deeply( \@new, \@old, "Policy.sh up-to-date: $config_args" );
       
     }
+}
+
+
+{ # Test the new default_Policy
+
+    my @ccflags = qw( -DPERL_COPY_ON_WRITE -DDEBUGGING );
+
+    my $p = Test::Smoke::Policy->new( undef, 0, @ccflags );
+
+    isa_ok $p, "Test::Smoke::Policy";
+    like $p->{_policy}, "/ccflags='@ccflags'/",
+        "Default policy created with '@ccflags'";
 }
