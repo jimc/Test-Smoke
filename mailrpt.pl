@@ -14,12 +14,12 @@ $VERSION = '0.007';
 
 my %opt = (
     type    => undef,
-    ddir    => '',
-    to      => '', #'smokers-reports@perl.org',
-    cc      => '',
-    from    => '',
-    mserver => '',
-    v       => 0,
+    ddir    => undef,
+    to      => undef, #'smokers-reports@perl.org',
+    cc      => undef,
+    from    => undef,
+    mserver => undef,
+    v       => undef,
 
     config  => undef,
     help    => 0,
@@ -40,7 +40,7 @@ mailrpt.pl - Send the smoke report by mail
 
 or
 
-    $ ./mailrpt.pl -c smokecurrent_config
+    $ ./mailrpt.pl -c [smokecurrent_config]
 
 =head1 OPTIONS
 
@@ -82,7 +82,7 @@ no extra options
 =cut
 
 GetOptions( \%opt,
-    'type|t=s', 'ddir|d=s', 'to=s', 'cc=s', 'v|verbose+',
+    'type|t=s', 'ddir|d=s', 'to=s', 'cc=s', 'v|verbose:i',
 
     'from=s', 'mserver=s',
 
@@ -103,6 +103,7 @@ if ( defined $opt{config} ) {
 
     unless ( Test::Smoke->config_error ) {
         foreach my $option ( keys %opt ) {
+            next if defined $opt{ $option };
             if ( $option eq 'type' ) {
                 $opt{type} ||= $conf->{mail_type};
             } elsif ( exists $conf->{ $option } ) {
@@ -115,12 +116,44 @@ if ( defined $opt{config} ) {
     }
 }
 
+foreach( keys %$defaults ) {
+    next if defined $opt{ $_ };
+    $opt{ $_ } = defined $conf->{ $_ } ? $conf->{ $_ } : $defaults->{ $_ };
+}
+
 exists $valid_type{ $opt{type} } or do_pod2usage( verbose => 0 );
 
 $opt{ddir} && -d $opt{ddir} or do_pod2usage( verbose => 0 );
 
+check_for_report();
+
 my $mailer = Test::Smoke::Mailer->new( $opt{type} => \%opt );
 $mailer->mail;
+
+
+# Basically: call mkovz.pl unless -f <builddir>/mktest.rpt
+sub check_for_report {
+
+    my $report = File::Spec->catfile( $opt{ddir}, 'mktest.rpt' );
+
+    if ( -f $report ) {
+        $opt{v} and print "Found [$report]\n";
+        return;
+    }
+
+    local @ARGV = ( 'nomail', $conf->{ddir} );
+    push  @ARGV, $conf->{locale} if $conf->{locale};
+    my $mkovz = File::Spec->catfile( $FindBin::Bin, 'mkovz.pl' );
+    $opt{v} and print "No report found, will now start [$mkovz]\n";
+    {
+        local $0 = $mkovz;
+        do $mkovz or die "Error in mkovz.pl: $@";
+    }
+
+    unless ( -f $report ) {
+        die "Hmmm... cannot find [$report]";
+    }
+}
 
 sub do_pod2usage {
     eval { require Pod::Usage };
