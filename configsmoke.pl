@@ -31,7 +31,7 @@ foreach my $opt (qw( config jcl log )) {
     $options{$opt} = "$options{ $key }$suffix{ $opt }";
 }
 
-# $Id: configsmoke.pl 255 2003-07-21 10:52:24Z abeltje $
+# $Id: configsmoke.pl 297 2003-07-31 21:00:30Z abeltje $
 use vars qw( $VERSION $conf );
 $VERSION = '0.023';
 
@@ -83,11 +83,11 @@ my @untars = get_avail_tar();
 my $untarmsg = join "", map "\n\t$_" => @untars;
 
 my %versions = (
-    '5.6.x' => { source => 'ftp.linux.activestate.com::perl-5.6.x',
+    '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
                  ddir   => File::Spec->rel2abs( 
                                File::Spec->catdir( File::Spec->updir,
-                                                   'perl-5.6.x' ) ),
-                 cfg    => 'perl56x.cfg',
+                                                   'perl-5.6.2' ) ),
+                 cfg    => 'perl562.cfg',
                  text   => 'Perl 5.6.2-to-be',
                  is56x  => 1 },
     '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
@@ -361,7 +361,7 @@ Examples:$untarmsg",
         dft => 'n',
     },
     defaultenv => {
-        msg => 'Run the test-suite without \$ENV{PERLIO}?',
+        msg => "Run the test-suite without \$ENV{PERLIO}?",
         alt => [qw( N y )],
         dft => 'n',
     },
@@ -816,8 +816,11 @@ only do a single pass C<< S<make test> >>.
 =cut
 
 $arg = 'defaultenv';
-$config{ $arg } = prompt_yn( $arg );
-
+if ( $config{is56x} ) {
+    $config{ $arg } = 1;
+} else {
+    $config{ $arg } = prompt_yn( $arg );
+}
 =item locale
 
 C<locale> and its value are passed to F<mktest.pl> and its value is passed
@@ -1148,22 +1151,31 @@ sub save_config {
 
 C<sort_configkeys()> is the hook for B<Data::Dumper>
 
+Order and grouping by Merijn, thanks!
+
 =cut
 
 sub sort_configkeys {
-    my @order = qw( 
-        perl_version is56x defaultenv
-        cfg ddir sync_type fsync 
-        rsync opts source 
-        tar server sdir sfile patchup pserver pdir unzip patch cleanup
-        cdir hdir
-        patch pfile
-        force_c_locale locale
-        mail mail_type mserver to from cc
-        w32args w32cc w32make
-        umask renice
-        smartsmoke v
-        killtime );
+    my @order = ( 
+        # Test::Smoke (startup) related
+        qw( cfg v smartsmoke renice killtime umask ),
+
+        # Perl dist related
+        qw( perl_version is56x ddir ),
+
+        # Sync related
+        qw( sync_type fsync rsync opts source tar server sdir sfile
+            patchup pserver pdir unzip patch cleanup cdir hdir patch pfile ),
+
+        # OS specific make related
+        qw( w32args w32cc w32make ),
+
+        # Test environment related
+        qw( force_c_locale locale defaultenv ),
+
+        # Report related
+        qw( mail mail_type mserver from to cc ),
+    );
 
     my $i = 0;
     my %keyorder = map { $_ => $i++ } @order;
@@ -1701,7 +1713,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 255 2003-07-21 10:52:24Z abeltje $
+    $Id: configsmoke.pl 297 2003-07-31 21:00:30Z abeltje $
 
 =head1 COPYRIGHT
 

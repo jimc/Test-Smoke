@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 257 2003-07-21 16:06:26Z abeltje $
+# $Id: Smoke.pm 298 2003-07-31 21:03:26Z abeltje $
 use vars qw( $VERSION $conf @EXPORT );
-$VERSION = '1.17_60';
+$VERSION = '1.17_62';
 
 use base 'Exporter';
 @EXPORT  = qw( $conf &read_config &run_smoke );
@@ -163,7 +163,7 @@ sub skip_config {
 
 =head1 REVISION
 
-$Id: Smoke.pm 257 2003-07-21 16:06:26Z abeltje $
+$Id: Smoke.pm 298 2003-07-31 21:03:26Z abeltje $
 
 =head1 COPYRIGHT
 

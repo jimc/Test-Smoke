@@ -5,7 +5,7 @@
 #    and Nicholas Clark
 # 20020909: Abe Timmerman
 # REVISION: 1.18 
-# $Id: mktest.pl 223 2003-07-11 19:36:27Z abeltje $
+# $Id: mktest.pl 280 2003-07-28 20:01:35Z abeltje $
 use strict;
 
 sub usage ()

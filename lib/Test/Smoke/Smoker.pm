@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 256 2003-07-21 15:53:48Z abeltje $
+# $Id: Smoker.pm 289 2003-07-30 18:11:33Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.002';
+$VERSION = '0.003';
 
 use Cwd;
 use File::Spec;
@@ -26,6 +26,12 @@ my %CONFIG = (
     df_w32make        => 'nmake',
     df_w32args        => [ ],
 );
+
+# Define some constants that we can use for
+# specifying how far "make" got.
+sub BUILD_MINIPERL() { -1 } # but no perl
+sub BUILD_PERL    () {  1 } # ok
+sub BUILD_NOTHING () {  0 } # not ok
 
 =head1 NAME
 
@@ -192,17 +198,25 @@ sub smoke {
     $self->Configure( $config ) or do {
         $self->ttylog( "Unable to configure perl in this configuration\n" );
         return 0;
-     };
+    };
 
-    $self->make_ or do {
+    my $build_stat = $self->make_;
+  
+    $build_stat == BUILD_MINIPERL and do {
+        $self->ttylog( "Unable to make anything but miniperl",
+                       " in this configuration\n" );
+        return $self->make_minitest( "$config" );
+    };
+       
+    $build_stat == BUILD_NOTHING and do {
         $self->ttylog( "Unable to make perl in this configuration\n" );
         return 0;
-     };
+    };
 
     $self->make_test_prep or do {
         $self->ttylog( "Unable to test perl in this configuration\n" );
         return 0;
-     };
+    };
 
     $self->make_test( "$config" );
 
@@ -295,9 +309,11 @@ sub make_ {
     $self->tty( "\nmake ..." );
     $self->_make( "" );
 
-    my $exe_ext = $Config{_exe} || $Config{exe_ext};
-    my $perl = "perl$exe_ext";
-    return -x $perl;
+    my $exe_ext  = $Config{_exe} || $Config{exe_ext};
+    my $miniperl = "miniperl$exe_ext";
+    my $perl     = "perl$exe_ext";
+    -x $miniperl or return BUILD_NOTHING;
+    return -x $perl ? BUILD_PERL : BUILD_MINIPERL;
 }
 
 =item make_test_prep( )
@@ -363,16 +379,17 @@ sub make_test {
             next;
 	}
 
+        my $test_target = $self->{is56x} ? 'test' : '_test';
         local *TST;
         # MSWin32 builds from its own directory
         if ( $self->{is_win32} ) {
             chdir "win32" or die "unable to chdir () into 'win32'";
             # Same as in make ()
-            open TST, "$self->{w32make} -f smoke.mk _test |";
+            open TST, "$self->{w32make} -f smoke.mk $test_target |";
             chdir ".." or die "unable to chdir () out of 'win32'";
         } else {
             local $ENV{PERL} = "./perl";
-            open TST, "make _test |" or do {
+            open TST, "make $test_target |" or do {
                 use Carp;
                 Carp::carp "Cannot fork 'make _test': $!";
                 next;
@@ -397,37 +414,117 @@ sub make_test {
             $self->tty( $_ );
         }
         close TST or do {
+            my $error = $! || ( $? >> 8);
             require Carp;
-            Carp::carp "Error while reading pipe: $!";
+            Carp::carp "\nError while reading test-results: $error";
         };
-        $self->ttylog( map { "    $_" } @nok );
+#        $self->log( map { "    $_" } @nok );
         if (grep m/^All tests successful/, @nok) {
+            $self->log( "All tests successful\n" );
             $self->tty( "\nOK, archive results ..." );
             $self->{patch} and $nok[0] =~ s/\./ for .patch = $self->{patch}./;
         } else {
-            my @harness;
-            for (@nok) {
-                m|^(?:\.\.[\\/])?(\w+/[-\w/]+).*| or next;
-                # Remeber, we chdir into t, so -f is false for op/*.t etc
-                push @harness, (-f "$1.t") ? "../$1.t" : "$1.t";
-            }
-            if (@harness) {
-                local $ENV{PERL_SKIP_TTY_TEST} = 1;
-       	        $self->tty( "\nExtending failures with Harness\n" );
-                my $harness = $self->{is_win32} ?
-                join " ", map { 
-                    s{^\.\.[/\\]}{};
-       	            m/^(?:lib|ext)/ and $_ = "../$_";
-                    $_;
-                } @harness : "@harness";
-                $self->ttylog( "\n",
-			grep !m:\bFAILED tests\b: && !m:% okay$: 
-                          => $self->_run( "./perl t/harness $harness" ) );
-            }
+            $self->extend_with_harness( @nok );
         }
         $self->tty( "\n" );
         !$had_LC_ALL && exists $ENV{LC_ALL} and delete $ENV{LC_ALL};
     }
+
+    return 1;
+}
+
+=item $self->extend_with_harness( @nok )
+
+=cut
+
+sub extend_with_harness {
+    my( $self, @nok ) = @_;
+    my @harness;
+    for ( @nok ) {
+        m!^(?:\.\.[\\/])?(\w+/[-\w/]+).*! or next;
+        # Remeber, we chdir into t, so -f is false for op/*.t etc
+        my $test_name = "$1.t";
+        push @harness, (-f $test_name) 
+            ? File::Spec->catdir( File::Spec->updir, $test_name )
+            : $test_name;
+    }
+    if ( @harness ) {
+        local $ENV{PERL_SKIP_TTY_TEST} = 1;
+	        $self->tty( "\nExtending failures with Harness\n" );
+        my $harness = $self->{is_win32} ?
+        join " ", map { 
+            s{^\.\.[/\\]}{};
+	            m/^(?:lib|ext)/ and $_ = "../$_";
+            $_;
+        } @harness : "@harness";
+        my $changed_dir;
+        chdir 't' and $changed_dir = 1;
+        my $harness_out = join "", map {
+            my( $name, $fail ) = 
+                m/(\S+\.t)\s+.+[?%]\s+(\d+(?:[-\s]+\d+)*)/;
+            my $dots = '.' x (40 - length $name );
+            "$name${dots}FAILED $fail\n";
+        } grep m/\S+\.t\s+.+?\d+(?:[-\s+]\d+)*/ =>
+            $self->_run( "./perl harness $harness" );
+        $harness_out =~ s/^\s*$//;
+        $harness_out ||= join "", map "    $_" => @nok;
+        $self->ttylog("\n", $harness_out );
+        $changed_dir and chdir File::Spec->updir;
+    }
+}
+
+=item $self->make_minitest( $cfgargs )
+
+C<make> was unable to build a I<perl> executable, but managed to build
+I<miniperl>, so we do C<< S<make minitest> >>.
+
+=cut
+
+sub make_minitest {
+    my $self = shift;
+
+    $self->ttylog( "PERLIO = minitest\t" );
+    local *TST;
+    # MSWin32 builds from its own directory
+    if ( $self->{is_win32} ) {
+        chdir "win32" or die "unable to chdir () into 'win32'";
+        # Same as in make ()
+        open TST, "$self->{w32make} -f smoke.mk minitest |";
+        chdir ".." or die "unable to chdir () out of 'win32'";
+    } else {
+        local $ENV{PERL} = "./perl";
+        open TST, "make minitest |" or do {
+            use Carp;
+            Carp::carp "Cannot fork 'make _test': $!";
+            return 0;
+        };
+    }
+
+    my @nok = ();
+    select ((select (TST), $| = 1)[0]);
+    while (<TST>) {
+        $self->{v} >= 2 and $self->tty( $_ );
+        skip_filter( $_ ) and next;
+        # make mkovz.pl's life easier
+        s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
+
+        if (m/^u=.*tests=/) {
+            s/(\d\.\d*) /sprintf "%.2f ", $1/ge;
+            $self->log( $_ );
+        } else {
+            push @nok, $_;
+        }
+        $self->tty( $_ );
+    }
+    close TST or do {
+        require Carp;
+        Carp::carp "Error while reading pipe: $!";
+    };
+    $self->ttylog( map { "    $_" } @nok );
+
+    $self->tty( "\nOK, archive results ..." );
+    $self->tty( "\n" );
+    return 1;
 }
 
 =item $self->_run( $command[, $sub[, @args]] )

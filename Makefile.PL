@@ -1,5 +1,5 @@
 #! /usr/bin/perl
-# $Id: Makefile.PL 249 2003-07-20 12:56:59Z abeltje $
+# $Id: Makefile.PL 295 2003-07-31 20:51:41Z abeltje $
 use strict;
 use 5.004;
 use ExtUtils::MakeMaker;
@@ -37,6 +37,7 @@ WriteMakefile(
 
     dist	  => { COMPRESS => "gzip -9f",
                        SUFFIX   => ".gz",
+                       PREOP    => "cpansign -s",
 		     },
     PREREQ_PM     => { 'File::Spec' => 0.82, 'Test::More' => 0},
     PMLIBDIRS     => [ File::Spec->curdir ],

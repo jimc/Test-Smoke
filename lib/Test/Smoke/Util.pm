@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 234 2003-07-15 14:05:58Z abeltje $
+# $Id: Util.pm 293 2003-07-30 23:08:15Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.19';
+$VERSION = '0.20';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -133,11 +133,10 @@ The library to use for des_fcrypt()
 
 Set the cf_email option (Config.pm)
 
-=item * <-Accflags=...>
+=item * B<-Accflags=...>
 
 Adds the option to BUILDOPT. This is implemented differently for 
 B<nmake> and B<dmake>.
-
 Returns the name of the outputfile.
 
 =back

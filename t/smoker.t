@@ -1,10 +1,10 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: smoker.t 246 2003-07-20 12:31:58Z abeltje $
+# $Id: smoker.t 268 2003-07-27 15:08:05Z abeltje $
 use File::Spec;
 
-use Test::More 'no_plan';
+use Test::More tests => 3;
 use_ok( 'Test::Smoke::Smoker' );
 
 {

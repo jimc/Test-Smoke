@@ -1,7 +1,7 @@
 package TestLib;
 use strict;
 
-# $Id: TestLib.pm 253 2003-07-20 23:19:05Z abeltje $
+# $Id: TestLib.pm 279 2003-07-28 19:48:46Z abeltje $
 use vars qw( $VERSION @EXPORT );
 $VERSION = '0.02';
 
@@ -10,7 +10,7 @@ use base 'Exporter';
     &whereis 
     &find_unzip &do_unzip
     &find_untargz &do_untargz
-    &get_dir &get_file 
+    &get_dir &get_file &put_file
     &rmtree &mkpath
 );
 
@@ -100,6 +100,33 @@ sub get_file {
     }
 
     return wantarray ? @content : join "", @content;
+}
+
+=item put_file( $content, @path )
+
+The contents of C<@path> are passed to B<< File::Spec->catfile() >>
+
+Writes C<$content> to that file and returns the success/failure.
+
+=cut
+
+sub put_file {
+    my $contents = shift;
+    my $filename = File::Spec->catfile( @_ );
+
+    local *MYFILE;
+    if ( open MYFILE, "> $filename" ) {
+        print MYFILE $contents;
+        close MYFILE or do {
+            warn "Cannot close (@{[cwd]})$filename: $!";
+            return;
+        };
+    } else {
+        warn "Cannot create (@{[cwd]})$filename: $!";
+        return;
+    }
+
+    return 1;
 }
 
 =item rmtree( @_ )
