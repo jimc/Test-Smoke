@@ -2,29 +2,33 @@
 
 # Create matrix for smoke test results
 # (c)'02 H.Merijn Brand [11 Apr 2002]
+# REVISION: #1.03
 
 # mkovz.pl [ e-mail [ folder ]]
 
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "1.13";
+$VERSION = 1.15;
 
+use File::Spec;
 use Cwd;
+use Text::ParseWords;
 
+my $email = shift || 'daily-build@perl.org';
 my $testd = shift || cwd ();
+my $mail_from = ($^O eq "MSWin32" ? win32_username () : getpwuid $<);
+my $mailer = "/usr/bin/mailx";
 
 my %Config;
 get_smoke_Config (qw( version osname osvers cc ccversion gccversion ));
 
 # You can overrule the auto-detected settings here, to be more verbose
 # like including the distribution: "Redhat Linux" instead of plain "linux"
-#$Config{osname} = "cygwin";			# hpux, AIX, MSWin32, ...
-#$Config{osvers} = "1.3.10(0.5132)";		# 11.00, 4.3.3.0, ...
-#$Config{cc}     = "msvc";			# cc, xlc, gcc, ...
-#$Config{ccvers} = "B.11.11.04 + Patch PHCO_25707";
-
-my $mailer = "/usr/bin/mailx";
+#$Config{osname} = "MSWin32";			# hpux, AIX, cygwin, ...
+#$Config{osvers} = "5.0 W2000Pro";		# 11.00, 4.3.3.0, ...
+#$Config{cc}     = "gcc";			# cc, xlc, cl, ...
+#$Config{ccvers} = "2.95.3-6";
 
 =head1 NAME
 
@@ -32,7 +36,7 @@ mkovz.pl - Create matrix for smoke test results.
 
 =head1 SYNOPSYS
 
-	$ ./mkovz.pl [ e-mail [ builddir ]]
+    $ ./mkovz.pl [ e-mail [ builddir ]]
 
 =head1 DESCRIPTION
 
@@ -64,12 +68,24 @@ The default is the current working directory.
 
 =cut
 
-use File::Spec;
+my (%rpt, @confs, %confs, @manifest, $common_cfg);
 
-require Win32 if $^O eq "MSWin32";
-my $email = shift || ($^O eq "MSWin32" ? Win32::LoginName () : getpwuid $<);
+local $: = " \n";
+format RPT_TOP =
+@||||||  Configuration (common) ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+$rpt{patch},           $common_cfg
+~~                     ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                       $common_cfg
+-------  --------------------------------------------------------------
+.
 
-my (%rpt, @confs, %confs, @manifest);
+my( $rpt_stat, $rpt_config );
+format RPT =
+@<<<<<<<<^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+$rpt_stat, $rpt_config
+~~       (cont) ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          $rpt_config
+.
 
 open RPT, "> " . File::Spec->catfile ($testd, "mktest.rpt")
     or die "mktest.rpt: $!";
@@ -113,7 +129,7 @@ for (<OUT>) {
 	}
     if (m/PERLIO\s*=\s*(\w+)/) {
 	$perlio = $1;
-	next;
+#	next;
 	}
     if (m/^\s*All tests successful/) {
 	$rpt{$conf}{$debug}{$perlio} = "O";
@@ -177,33 +193,47 @@ F = Failure(s), extended report at the bottom
 Build failures during:       - = unknown
     c = Configure, m = make, t = make test-prep
 
-         Configuration
--------  --------------------------------------------------------------------
 EOH
+
+# Determine the common cfg args
+my %cfg_args;
+foreach my $conf ( @confs ) {
+    $cfg_args{ $_ }++ for quotewords( '\s+', 1, $conf );
+}
+my %common_args = map { 
+    ( $_ => 1)
+} grep $cfg_args{ $_ } == @confs && ! /^-[DU]use/, keys %cfg_args;
+
+$common_cfg = join " ", sort keys %common_args;
+
+$common_cfg ||= 'none';
 
 my @fail;
 for my $conf (@confs) {
+    ( $rpt_stat, $rpt_config ) = ( "", $conf );
     for my $debug ("", "D") {
 	for my $perlio ("stdio", "perlio") {
 	    my $res = $rpt{$conf}{$debug}{$perlio};
 	    if (ref $res) {
-		print "F ";
+                $rpt_stat .= "F ";
 		my $s_conf = $conf;
 		$debug and substr ($s_conf, 0, 0) = "-DDEBUGGING ";
 		if ($perlio eq "stdio" && ref $rpt{$conf}{$debug}{perlio} and
 		    "@{$rpt{$conf}{$debug}{perlio}}" eq "@{$rpt{$conf}{$debug}{stdio}}") {
 		    # Squeeze stdio/perlio errors together
-		    print "F ";
+                    $rpt_stat .= "F ";
 		    push @fail, [ "stdio/perlio", $s_conf, $res ];
 		    last;
 		    }
 		push @fail, [ $perlio, $s_conf, $res ];
 		next;
 		}
-	    print $res ? $res : "?", " ";
+            $rpt_stat .= ( $res ? $res : "?" ) . " ";
 	    }
 	}
-    print "$conf\n";
+    $rpt_config = join " ", grep !exists $common_args{ $_ }, 
+                            quotewords( '\s+', 1, $conf );
+    write;
     }
 
 print <<EOE;
@@ -213,17 +243,29 @@ print <<EOE;
 +------- PERLIO = stdio
 EOE
 
-@fail and print "\nFailures:\n\n";
-for my $i (0 .. $#fail) {
-    my $ref = $fail[$i];
-    printf "%-12s %-16s %s\n", $^O, @{$ref}[0,1];
-    if ($i < $#fail) {	# More squeezing
-	my $nref = $fail[$i + 1];
-	$ref->[0] eq $nref->[0] and
-	    "@{$ref->[-1]}" eq "@{$nref->[-1]}" and next;
-	}
+if ( @fail ) {
+    my $rpt_pio;
+format RPT_Fail_Config =
+@<<<<<<<<<<<[@<<<<<<<<<<<]^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+$^O,         $rpt_pio,    $rpt_config
+~~            (cont) ^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                     $rpt_config
+.
+
+    $~ = 'RPT_Fail_Config';
+    print "\nFailures:\n\n";
+    for my $i (0 .. $#fail) {
+        my $ref = $fail[$i];
+        ( $rpt_pio, $rpt_config ) = @{ $ref }[0, 1];
+        write;
+        if ($i < $#fail) { # More squeezing
+	    my $nref = $fail[$i + 1];
+            $ref->[0] eq $nref->[0] and
+                "@{$ref->[-1]}" eq "@{$nref->[-1]}" and next;
+        }
     print @{$ref->[-1]}, "\n";
     }
+}
 
 @manifest and print RPT "\n\n", @manifest;
 
@@ -241,7 +283,7 @@ sub send_mail
         open  MAIL, "| $mailer -i -t";
         print MAIL join "\n",
 	    "To: $email",
-	    "From: ...",
+	    "From: $email_from",
 	    "Subject: $subject",
 	    "",
 	    <BODY>;
@@ -259,12 +301,14 @@ sub get_smoke_Config
     %Config = map { ( lc $_ => "" ) } @_;
 
     my $smoke_Config_pm = File::Spec->catfile ($testd, "lib", "Config.pm");
-    
-    open my $fh, $smoke_Config_pm
-        or die "Can't open '$smoke_Config_pm': $!";
+    local *CONF;
+    open CONF, "< $smoke_Config_pm" or do {
+        warn "Can't open '$smoke_Config_pm': $!";
+        return;
+        };
 
-    while (<$fh>) {
-        if (m/^my \$config_sh = <<'!END!';/ .. m/^!END!/) {
+    while (<CONF>) {
+        if (m/^(our|my) \$[cC]onfig_[sS][hH](.*) = <<'!END!';/ .. m/^!END!/) {
             m/!END!(?:';)?$/      and next;
             m/^([^=]+)='([^']*)'$/ or next;
             exists $Config{lc $1} and $Config{lc $1} = $2;
@@ -272,20 +316,38 @@ sub get_smoke_Config
         }
     } # get_smoke_Config
 
+sub win32_username 
+{
+    # Are we on nontoy Windows?
+    my $user = $ENV{USERNAME};
+    $user and return $user;
+
+    # We'll try from Win32.pm
+    eval { require Win32; } ;
+    $@ and return 'unknown';
+    return Win32::LoginName() || 'unknown';
+    } # win32_username
+
 =head1 CHANGES
 
+1.14
+    - Changed part of the report printing to use a format (write) 
+    - switch back the <email> <testdir> args that Merijn accidentally swapped
+    - Be a bit more subtile about Win32 username
+    - Don't die() when lib/Config.pm isn't found
+
 1.13
-	- Moved part of Config to top for easier user changes
+    - Moved part of Config to top for easier user changes
 
 1.12
-
-	- Use Config.pm of the smoked perl
-	- A bit more Win32 minded :-)
+    - Use Config.pm of the smoked perl
+    - A bit more Win32 minded :-)
 
 =head1 AUTHOR
 
-H.Merijn Brand <h.m.brand@hccnet.nl>
-Abe Timmerman  <abe@ztreet.demon.nl>
+  H.Merijn Brand <h.m.brand@hccnet.nl>
+  Abe Timmerman  <abeltje@cpan.org>
 
 =cut
+
 

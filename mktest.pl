@@ -3,7 +3,8 @@
 # Smoke test for perl-current
 # (c)'01 H.Merijn Brand [27 August 2001]
 #    and Nicholas Clark
-
+# 09092002: Abe Timmerman
+# REVISION: 1.04
 use strict;
 
 sub usage ()
@@ -18,6 +19,7 @@ use Config;
 use Cwd;
 use Getopt::Long;
 use File::Find;
+use Text::ParseWords;
 
 my %win32_makefile_map = (
     nmake => "Makefile",
@@ -25,6 +27,7 @@ my %win32_makefile_map = (
     );
 my $win32_cctype = "MSVC60"; # 2.0 => MSVC20; 5.0 => MSVC; 6.0 => MSVC60
 my $win32_maker  = $Config{make};
+my $smoker       = $Config{cf_email};
 
 my $norun   = 0;
 my $verbose = 0;
@@ -33,8 +36,12 @@ GetOptions (
     "v|verbose:i"      => \$verbose,	# NYI
     "m|win32-maker=s"  => \$win32_maker,
     "c|win32-cctype=s" => \$win32_cctype,
+    "s|smoker=s"       => \$smoker,
     ) or usage;
 my $config_file = shift;
+# All remaining stuff in @ARGV is passed to Configure_win32()
+# They are appended to the CFG_VARS macro
+# This is a way to cheat in Win32 and get the right stuff into Config.pm
 
 open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
@@ -164,9 +171,10 @@ else {
     }
 
 my $testdir = getcwd;
+
 exists $Config{ldlibpthname} && $Config{ldlibpthname} and
-    substr ($ENV{$Config{ldlibpthname}} ||= "", 0, 0) =
-           "$testdir$Config{path_sep}";
+    $ENV{$Config{ldlibpthname}} ||= '',
+    substr ($ENV{$Config{ldlibpthname}}, 0, 0) = "$testdir$Config{path_sep}";
 
 my $patch;
 if (open OK, "<.patch") {
@@ -308,7 +316,8 @@ sub run_tests
 	    }
 
 	print TTY "\nConfigure ...";
-	run "./Configure $config_args -des", is_win32 ? \&Configure : undef;
+	run "./Configure $config_args -des", 
+            is_win32 ? \&Configure_win32 : undef;
 
 	unless ($norun or (is_win32 ? -f "win32/smoke.mk"
 				    : -f "Makefile" && -s "config.sh")) {
@@ -396,7 +405,24 @@ sub run_tests
 		# Or these
 		m,cc\s+-o\s+perl.*perlmain.o\s+lib/auto/DynaLoader/DynaLoader\.a\s+libperl\.a, ||
 		m,^\S+ is up to date, ||
-		m,^(   )?### , and next;
+		m,^(   )?### , ||
+		# Clean up Win32's output
+		m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok$, ||
+		m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok\,\s+\d+/\d+\s+skipped:, ||
+		m,^(?:\.\.[/\\])?[\w/\\-]+\.*skipped[: ], ||
+		m,^\t?x?copy , ||
+		m,\d+\s+[Ff]ile\(s\) copied, ||
+		m,\.\.[/\\](?:mini)?perl\.exe ,||
+		m,^\t?cd , ||
+		m,^\b[nd]make\b, ||
+		m,dmake\.exe:?\s+-S, ||
+		m,^\s+\d+/\d+ skipped: , ||
+		m,^\s+all skipped: , ||
+		m,\.+skipped$, ||
+		m,^\s*pl2bat\.bat [\w\\]+, ||
+		m,^Making , ||
+		m,^Skip ,
+		    and next;
 
 		# make mkovz.pl's life easier
 		s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
@@ -440,7 +466,7 @@ sub run_tests
 	}
     } # run_tests
 
-sub Configure
+sub Configure_win32
 {
     my $command = shift;
 
@@ -452,61 +478,97 @@ sub Configure
 	"-Dusemultiplicity"	=> "USE_MULTI",
 	"-Duseimpsys"		=> "USE_IMP_SYS",
 	"-DDEBUGGING"		=> "USE_DEBUGGING",
-	);
+        "-DINST_DRV"            => "INST_DRV",
+        "-DINST_TOP"            => "INST_TOP",
+        "-DINST_VER"            => "INST_VER",
+        "-DINST_ARCH"           => "INST_ARCH",
+        "-Dcf_email"            => "EMAIL",
+        "-DCCTYPE"              => "CCTYPE",
+        "-DCCHOME"              => "CCHOME",
+        "-DCRYPT_SRC"           => "CRYPT_SRC",
+        "-DCRYPT_LIB"           => "CRYPT_LIB",
+    );
     my %opts = (
 	USE_MULTI	=> 0,
 	USE_ITHREADS	=> 0,
 	USE_IMP_SYS	=> 0,
 	USE_PERLIO	=> 0,
-	USE_DEBUGGIMG	=> 0,
-	);
+	USE_DEBUGGING	=> 0,
+        INST_DRV        => 'C:',
+        INST_TOP        => '$(INST_DRV)\perl',
+        INST_VER        => '',
+        INST_ARCH       => '',
+        EMAIL           => $smoker,
+        CCTYPE          => $win32_cctype,
+        CCHOME          => '',
+        CRYPT_SRC       => '',
+        CRYPR_LIB       => '',
+    );
+    my @w32_opts = grep ! /^USE_/, keys %opts;
+    my $config_args = join " ", 
+        grep /^-D[a-z_]+/, quotewords( '\s+', 1, $command );
+    push @ARGV, "config_args=$config_args";
 
     ttylog $command;
     $command =~ m{^\s*\./Configure\s+(.*)} or die "unable to parse command";
     foreach (split " ", $1) {
 	m/^-[des]{1,3}$/ and next;
 	m/^-Dusedevel$/  and next;
-	die "invalid option '$_'" unless exists $opt_map{$_};
-	$opts{$opt_map{$_}} = 1;
-	}
+        my( $option, $value ) = /^(-D\w+)(?:=(.+))?$/;
+	die "invalid option '$_'" unless exists $opt_map{$option};
+	$opts{$opt_map{$option}} = $value ? $value : 1;
+    }
+
+    # If you set one, we do all, so you can have fork()
+    if ( $opts{USE_MULTI} || $opts{USE_ITHREADS} || $opts{USE_IMP_SYS} ) {
+        $opts{USE_MULTI} = $opts{USE_ITHREADS} = $opts{USE_IMP_SYS} = 1;
+    }
 
     local (*ORG, *NEW);
-    my $in =  "win32/$win32_makefile_map{$win32_maker}";
+    my $in =  "win32/$win32_makefile_map{ $win32_maker }";
     my $out = "win32/smoke.mk";
 
-    open ORG, "< $in"  or die "unable to open '$in'";
-    open NEW, "> $out" or die "unable to open '$out'";
+    open ORG, "< $in"  or die "unable to open '$in': $!";
+    open NEW, "> $out" or die "unable to open '$out': $!";
+    my $donot_change = 0;
     while (<ORG>) {
-	if    (m/^\s*#?\s*(USE_\w+)(\s*\*?=\s*define)$/) {
-	    $_ = ($opts{$1} ? "" : "#") . $1 . $2 . "\n";
-	    }
-	elsif (m/^\s*#?\s*(CFG\s*\*?=\s*Debug)$/) {
-	    $_ = ($opts{USE_DEBUGGING} ? "" : "#") . $1 . "\n";
-	    }
-	elsif (m/^\s*#?\s*(CCTYPE\s*\*?=\s*)(\w+)$/) {
-	    $_ = ($2 eq $win32_cctype ? "" : "#" ) . $1 . $2 . "\n";
-	    }
-	elsif (m/^\s*CC\s*=\s*cl$/) {
-	    chomp;
-	    $_ .= " -nologo\n";
-	    # These two ( CC = .. and CCTYPE = ... ), along with
-	    # CCHOME, BCCOLD, BCCVCL, IS_WIN95, are related to
-	    # the tester's environment; The options I see are
-	    # * add some fake flags ( -cc=... -cctype=, etc )
-	    #   This make easy to smoke with various compilers at one time
-	    # * put these in some config file ( a new section in
-	    #   smoke.cfg, o a new environment.cfg )
-	    # * pass them on the command line
-	    #   perl mktext.pl CC=xxx CCTYPE=yyy smoke.cfg
-	    }
+        if ( $donot_change ) {
+            if (m/^\s*CFG_VARS\s*=/) {
+                my $extra_char = $win32_maker =~ /\bnmake\b/ ? "\t" : "~";
+                $_ .= join "", map "\t\t$_\t${extra_char}\t\\\n", @ARGV;
+            }
+            print NEW $_;
+            next;
+        } else {
+            $donot_change = /^#+ CHANGE THESE ONLY IF YOU MUST #+$/;
+        }
 
+        if ( m/^\s*#?\s*(USE_\w+)(\s*\*?=\s*define)$/ ) {
+            $_ = ($opts{$1} ? "" : "#") . $1 . $2 . "\n";
+        } elsif (m/^\s*#?\s*(CFG\s*\*?=\s*Debug)$/) {
+            $_ = ($opts{USE_DEBUGGING} ? "" : "#") . $1 . "\n";
+        } elsif (m/^\s*CFG_VARS\s*=/) {
+            my $extra_char = $win32_maker =~ /\bnmake\b/ ? "\t" : "~";
+            $_ .= join "", map {
+                "\t\t$_\t${extra_char}\t\\\n"
+            } @ARGV;
+        } else {
+            foreach my $cfg_var ( @w32_opts ) {
+                if (  m/^\s*#?\s*($cfg_var\s*\*?=)\s*(.*)$/ ) {
+                    $_ =  $opts{ $cfg_var } ?
+                        "$1 $opts{ $cfg_var }\n":
+                        "#$1 $2\n";
+                    last;
+                }
+            }
+        }
 	print NEW $_;
-	}
+    }
     close ORG;
     close NEW;
-    } # Configure
+} # Configure_win32
 
-__END__
+__DATA__
 #!/bin/sh
 
 # Default Policy.sh

@@ -12,15 +12,16 @@ $^O =~ m/^(?: VMS | MSWin32 )$/x and
     die "OS type $^O is not (yet) supported for automatic configuration";
 
 WriteMakefile (
-    NAME	=> "Test::Smoke",
-    DISTNAME	=> "Test-Smoke",
-    VERSION	=> "1.13",
-    AUTHOR	=> 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
-		   'Nicholas Clark <nick@plum.flirble.org>',
+    NAME	 => "Test::Smoke",
+    DISTNAME	 => "Test-Smoke",
+    VERSION_FROM => "mkovz.pl",
+    AUTHOR	 => 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
+		    'Nicholas Clark <nick@plum.flirble.org>' .
+                    'Abe Timmerman <abeltje@cpan.org>',
 
-    dist	=> { COMPRESS => "gzip -9f",
-		     SUFFIX   => ".gz",
-		     },
+    dist	 => { COMPRESS => "gzip -9f",
+		      SUFFIX   => ".gz",
+		    },
     );
 
 my $sh = "";

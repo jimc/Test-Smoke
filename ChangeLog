@@ -1,12 +1,81 @@
-*** Release 1.13
+2002-09-11  Abe Timmerman  <abeltje@local>
 
-    Thu 06 Jun 2002, Merijn
+	* MANIFEST: (abeltje):
+	  * rename smoke.bat to smokew32.bat
+	  * rename smokewin32.cfg to smokew32.cfg
 
-	- make _test needs $PERL set to ./perl
-	- $Config{ldlibpthname} might not be defined (Abigail)
-	- Renamed file handles to prevent confusion
-	- Some more filtering of noise
-	- skip officially unsupported combo's (e.g. patch #17000)
+	* mkdist.PL: (abeltje):
+	  * Help to build the distribution
+
+	* smokewin32.cfg: Renamed to 'smokew32.cfg'
+
+	* smokew32.cfg: (abeltje):
+	  * An attempt to make life easier for MSWin32 smokers
+
+	* smokew32.bat: 1.01 (abeltje):
+	  * An attempt to make life easier for MSWin32 smokers
+
+	* smoke.sh: (abeltje):
+	  * Changed the "URI" type call to rsync
+	  * All other output (not caught by mktest.pl) now goes to 'mktest.log'
+
+	* smoke.bat: renamed to smokew32.bat
+
+	* mktest.pl: 1.15 (abeltje):
+	    * Configure() renamed to Configure_win32()
+	    * Extended Configure_win32() to take more makefile vars
+	    + More filtering of 'make test' output
+
+	* mkovz.pl: 1.15 (abeltje):
+	  * Merge 1.13 with my own developments
+	  * Changed the reports to use formats
+	  * Config.pm has changed, so get_smoke_Config() had to change
+
+	* README: (abeltje):
+	  + Added more information for MSWin32 users
+	  * Please don't bug Merijn about Test::Smoke
+
+	* Makefile.PL: (abeltje):
+	  + Add 'Abe Timmerman' to authors
+	  * Change VERSION to VERSION_FROM
+
+2002-09-05  Abe Timmerman  <abeltje@local>
+
+	* mkdist.sh: Just a simple helper thingy
+
+2002-09-03  Abe Timmerman  <abeltje@local>
+
+	* ChangeLog, MANIFEST, Makefile.PL, README, mkovz.pl, mktest.pl, smoke.bat, smoke.cfg, smoke.sh, smokewin32.cfg:
+	New file.
+
+	* ChangeLog, MANIFEST, Makefile.PL, README, mkovz.pl, mktest.pl, smoke.bat, smoke.cfg, smoke.sh, smokewin32.cfg:
+	Put 1.13_10 into CVS
+
+*** version 1.13_09
+2002-05-31  Abe Timmerman  <abeltje@local>
+
+	* mkovz.pl: Commit to CVS
+
+	* Configure.pl:
+	Minor stuff, but it still does not make cygwin smoke from ActivePerl :(
+
+	* mktest.pl: Committed to CVS
+
+	* smokeperl.pl: Version 1.13_09
+
+	    - bugfix: patch takes --verbose (not -v)
+	    - major cleanup of hash-key quoting
+	    - another cvs attempt?
+
+2002-05-25  Abe Timmerman  <abeltje@local>
+
+	* Configure.pl: Remove dos line-endings
+
+	* ChangeLog, Configure.pl, MANIFEST, Makefile.PL, Policy.sh, README, Test-Smoke-1.13_08.tar.gz, mkovz.pl, mktest.out, mktest.pl, mysmoke.sh, smoke.bat, smoke.cfg, smoke.sh, smokeperl.pl, smokewin32.cfg:
+	Initial import
+
+	* ChangeLog, Configure.pl, MANIFEST, Makefile.PL, Policy.sh, README, Test-Smoke-1.13_08.tar.gz, mkovz.pl, mktest.out, mktest.pl, mysmoke.sh, smoke.bat, smoke.cfg, smoke.sh, smokeperl.pl, smokewin32.cfg:
+	New file.
 
 *** Release 1.12
 
@@ -22,7 +91,7 @@
 	- Win32::LoginName () instead of getpwuid () for poor Win32 users (Abe)
 	- Default $testd is Cwd::cwd () (Abe)
 	- Better portability using File::Spec (Abe)
-	- More polite way to skip mail (Abe)
+        - More polite way to skip mail (Abe)
 	- Starting POD for mkovz.pl (Abe)
 	- Removed the Parrot parts
 	- Actualize README
