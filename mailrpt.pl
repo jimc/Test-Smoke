@@ -10,7 +10,7 @@ use Test::Smoke::Mailer;
 
 use Test::Smoke;
 use vars qw( $VERSION );
-$VERSION = '0.008';
+$VERSION = '0.009'; # $Id: mailrpt.pl 189 2003-06-22 13:04:26Z abeltje $
 
 my %opt = (
     type    => undef,
@@ -30,7 +30,8 @@ my %opt = (
 
 my $defaults = Test::Smoke::Mailer->config( 'all_defaults' );
 
-my %valid_type = map { $_ => 1 } qw( mail mailx sendmail Mail::Sendmail );
+my %valid_type = map { $_ => 1 } qw( mail mailx sendmail 
+                                     Mail::Sendmail MIME::Lite);
 
 =head1 NAME
 

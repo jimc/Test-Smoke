@@ -9,7 +9,7 @@ use Test::Smoke::Util qw( Configure_win32 );
 
 use Test::Smoke;
 use vars qw( $VERSION );
-$VERSION = '0.004';
+$VERSION = '0.004'; # $Id: W32Configure.pl 151 2003-06-06 14:34:06Z abeltje $
 
 =head1 NAME
 

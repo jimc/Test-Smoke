@@ -9,7 +9,7 @@ use Test::Smoke::Syncer;
 
 use Test::Smoke;
 use vars qw( $VERSION );
-$VERSION = '0.008';
+$VERSION = '0.008'; # $Id: synctree.pl 151 2003-06-06 14:34:06Z abeltje $
 
 my %opt = (
     type   => undef,

@@ -2,7 +2,7 @@ package Test::Smoke::Mailer;
 use strict;
 
 use vars qw( $VERSION );
-$VERSION = '0.006';
+$VERSION = '0.006'; # $Id: Mailer.pm 151 2003-06-06 14:34:06Z abeltje $
 
 use Test::Smoke::Util qw( parse_report_Config );
 

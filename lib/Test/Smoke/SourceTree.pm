@@ -2,7 +2,7 @@ package Test::Smoke::SourceTree;
 use strict;
 
 use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS );
-$VERSION = '0.003';
+$VERSION = '0.003'; # $Id: SourceTree.pm 151 2003-06-06 14:34:06Z abeltje $
 
 use File::Spec;
 use File::Find;

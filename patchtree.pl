@@ -10,7 +10,7 @@ use Test::Smoke::Patcher;
 
 use Test::Smoke;
 use vars qw( $VERSION );
-$VERSION = '0.005';
+$VERSION = '0.005'; # $Id: patchtree.pl 151 2003-06-06 14:34:06Z abeltje $
 
 my %opt = (
     type    => 'multi',

@@ -39,6 +39,20 @@ specific time or after a specified duration.
     {killtime} eq '07:30' stops the smoke at 07:30 (AM)
     {killtime} eq '+9:30' stop after 9.5 hours
 
+=item 5
+
+Merijn was in dire need of a C<--continue> option to be able to run a
+complete smoke with interruptions (shutdows). He provided the patch!
+
+Thank you Merijn, this should also make Abigail happy (who asked for
+this option about a year ago).
+
+=item 6
+
+John Peacock found an error in F<configsmoke.pl> where the rsync
+options were written to the config-file under the wrong key (I<opt>
+instead of B<opts>).
+
 =back
 
 Major changes since 1.16:
@@ -133,6 +147,10 @@ The shellscript (F<smokecurrent.sh>/F<smokecurrent.cmd>) implements a
 sort of lock machanism, so that "overlapping" smokes are prevented.
 
 =back
+
+=head1 REVISION
+
+$Id: ReleaseNotes 201 2003-06-27 21:36:05Z abeltje $
 
 =head1 COPYRIGHT
 

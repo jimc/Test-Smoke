@@ -9,7 +9,7 @@ use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
 
 use Getopt::Long;
 my %options = ( config => 'smokecurrent_config', run => 1,
-                fetch => 1, patch => 1, mail => 1, 
+                fetch => 1, patch => 1, mail => undef, continue => 0,
                 is56x => undef, smartsmoke => undef );
 GetOptions( \%options, 
     'config|c=s', 
@@ -18,6 +18,7 @@ GetOptions( \%options,
     'mail!',
     'run!',
     'is56x',
+    'continue',
     'smartsmoke!',
 );
 
@@ -25,6 +26,7 @@ use Config;
 use Test::Smoke;
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
+# $Id: smokeperl.pl 190 2003-06-22 13:08:32Z abeltje $
 
 =head1 NAME
 
@@ -47,6 +49,7 @@ It can take these options
   --nopatch                Skip the patch step
   --nomail                 Skip the mail step
 
+  --continue               Continue the smoke from previous stop
   --is56x                  This is a perl-5.6.x smoke
   --[no]smartsmoke         Don't smoke unless patchlevel changed
 
@@ -61,8 +64,14 @@ unless ( read_config( $config_file ) ) {
 defined Test::Smoke->config_error and 
     die "!!!Please run 'configsmoke.pl'!!!\nCannot find configuration: $!";
 
-$conf->{is56x} = $options{is56x} if defined $options{is56x};
-$conf->{smartsmoke} = $options{smartsmoke} if defined $options{smartsmoke};
+# Correction for backward compatability
+!defined $options{ $_ } && !exists $conf->{ $_ } and $options{ $_ } = 1
+    for qw( run fetch patch mail );
+# Make command-line options override configfile
+defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
+    for qw( is56x smartsmoke run fetch patch mail );
+$conf->{qw( fetch patch smartsmoke )} = ( 0, 0, 0 )
+    if defined $options{continue};
 
 use Test::Smoke::Syncer;
 use Test::Smoke::Patcher;
@@ -83,7 +92,8 @@ FETCHTREE: {
         print "$conf->{ddir} now up to patchlevel $now_patchlevel\n";
 }
 
-if ( $conf->{smartsmoke} && ($was_patchlevel eq $now_patchlevel) ) {
+if ( $conf->{fetch} && $conf->{smartsmoke} && 
+     ($was_patchlevel eq $now_patchlevel) ) {
     $conf->{v} and print "Skipping this smoke, patchlevel ($was_patchlevel)" .
                          " did not change.\n";
     exit(0);
@@ -133,6 +143,7 @@ sub call_mktest {
        if $conf->{sync_type} eq 'forest' && $conf->{fdir};
     push  @ARGV, "-v", $conf->{v} if $conf->{v};
     push  @ARGV, "--norun" unless $options{run};
+    push  @ARGV, "--continue" if $options{continue};
     push  @ARGV, "--is56x" if $conf->{is56x};
     push  @ARGV, "--force-c-locale" if $conf->{force_c_locale};
     push  @ARGV, @{ $conf->{w32args} } if exists $conf->{w32args};
@@ -152,7 +163,7 @@ sub call_mkovz {
 }
 
 sub mailrpt {
-    unless ( $options{mail} && $options{run} ) {
+    unless ( $conf->{mail} && $options{run} ) {
         $conf->{v} and print "Skipping mailrpt\n";
         return;
     }
@@ -179,6 +190,10 @@ sub calc_timeout {
 =head1 SEE ALSO
 
 L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
+
+=head1 REVISION
+
+$Id: smokeperl.pl 190 2003-06-22 13:08:32Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -2,7 +2,7 @@ package Test::Smoke::Util;
 use strict;
 
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.18';
+$VERSION = '0.18'; # $Id: Util.pm 151 2003-06-06 14:34:06Z abeltje $
 use base 'Exporter';
 @EXPORT = qw( 
     &Configure_win32 

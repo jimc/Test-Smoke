@@ -31,7 +31,7 @@ foreach my $opt (qw( config jcl log )) {
 }
 
 use vars qw( $VERSION $conf );
-$VERSION = '0.016';
+$VERSION = '0.018'; # $Id: configsmoke.pl 200 2003-06-27 21:28:09Z abeltje $
 
 eval { require $options{config} };
 $options{oldcfg} = 1, print "Using '$options{config}' for defaults.\n" 
@@ -208,7 +208,7 @@ my %opt = (
         alt => [ ],
         dft => whereis( 'rsync' ),
     },
-    opt => {
+    opts => {
         msg => 'Which arguments should be used for rsync?',
         alt => [ ],
         dft => '-az --delete',
@@ -308,6 +308,11 @@ Examples:$untarmsg",
     },
 
     # mail stuff
+    mail => {
+        msg => "Would you like your reports send by e-mail?",
+        alt => [qw( Y n )],
+        dft => 'y',
+    },
     mail_type => {
         msg => 'Which mail facility should be used?',
         alt => [ @mailers ],
@@ -360,7 +365,7 @@ Examples:$untarmsg",
     killtime => {
         msg => "Should this smoke be aborted on/after a specific time?
 \tuse HH:MM to specify a point in time (24 hour notation)
-\tuse +HH::MM to specify a duration
+\tuse +HH:MM to specify a duration
 \tleave empty to finish the smoke without aborting",
         dft => "",
         alt => [ ],
@@ -639,7 +644,7 @@ SYNCER: {
         $arg = 'rsync';
         $config{ $arg } = prompt( $arg );
 
-        $arg = 'opt';
+        $arg = 'opts';
         $config{ $arg } = prompt( $arg );
 
         last SYNCER;
@@ -778,13 +783,20 @@ $list
     $config{ $arg } = prompt( $arg );
 }
 
+=item mail
+
+C<{mail}> will set the new default for L<smokeperl.pl>
+
 =item mail_type
 
 See L<Test::Smoke::Mailer> and L<mailrpt.pl>
 
 =cut
 
+$arg = 'mail';
+$config{ $arg } = prompt_yn( $arg );
 MAIL: {
+    last MAIL unless $config{mail};
     $arg = 'mail_type';
     $config{ $arg } = prompt( $arg );
 
@@ -800,7 +812,7 @@ MAIL: {
             $config{ $arg } = prompt( $arg );
 	};
 
-        /^Mail::Sendmail$/ && do {
+        /^(?:Mail::Sendmail|MIME::Lite)$/ && do {
             $arg = 'from';
             $config{ $arg } = prompt( $arg );
 
@@ -1145,18 +1157,23 @@ sub prompt {
 
     my $default = defined $df_val ? $df_val : 'undef';
     if ( @$alt && defined $df_val ) {
-        $default = $alt->[0] unless exists $ok_val{ $df_val };
+        $default = $df_val = $alt->[0] unless exists $ok_val{ $df_val };
     }
     my $alts    = @$alt ? "<" . join( "|", @$alt ) . "> " : "";
     print "\n$message\n";
 
-    my $input;
+    my( $input, $clear );
     INPUT: {
         print "$alts\[$default] \$ ";
         chomp( $input = <STDIN> );
-        $input =~ s/^\s+//;
-        $input =~ s/\s+$//;
-        $input = $df_val unless length $input;
+        if ( $input eq " " ) {
+            $input = "";
+            $clear = 1;
+        } else {
+            $input =~ s/^\s+//;
+            $input =~ s/\s+$//;
+            $input = $df_val unless length $input;
+        }
 
         printf "Input does not match $chk\n" and redo INPUT
             unless $input =~ m/$chk/i;
@@ -1167,7 +1184,7 @@ sub prompt {
 
     }
 
-    my $retval = length $input ? $input : $df_val;
+    my $retval = length $input ? $input : $clear ? "" : $df_val;
     (caller 1)[3] or print "Got [$retval]\n";
     return $retval;
 }
@@ -1356,8 +1373,11 @@ sub get_avail_mailers {
         $map{ $mailer } = whereis( $mailer );
     }
 
-    eval { require Mail::Sendmail; };
+    eval { require Mail::Sendmail };
     $map{ 'Mail::Sendmail' } = $@ ? '' : 'Mail::Sendmail';
+
+    eval { require MIME::Lite };
+    $map{ 'MIME::Lite' } = $@ ? '' : 'MIME::Lite';
 
     return map { ( $_ => $map{ $_ }) } grep length $map{ $_ } => keys %map;
 }

@@ -2,7 +2,7 @@ package Test::Smoke::Policy;
 use strict;
 
 use vars qw( $VERSION );
-$VERSION = '0.002';
+$VERSION = '0.002'; # $Id: Policy.pm 151 2003-06-06 14:34:06Z abeltje $
 
 use File::Spec;
 
