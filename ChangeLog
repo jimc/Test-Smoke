@@ -1,3 +1,14 @@
+*** Release 1.11
+
+    Mon 19 Nov 2001, Merijn
+
+	- Both smoke- and target path may contain blanks
+	- Default config in mktest.pl had one level of -Duselongdouble too many
+	- Absolutify config script path
+	- Now there are more `pwd`'s in smoke.sh, change them all
+	- Took out the blank entry in the second part of smoke.cfg
+	- Safeguarded the mkovz.pl against empty confs
+
 *** Release 1.10
 
     Wed 05 Nov 2001, Merijn

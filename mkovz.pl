@@ -8,7 +8,7 @@
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "1.10";
+$VERSION = "1.11";
 
 use Config;
 my $email = shift || getpwuid $<;
@@ -50,7 +50,7 @@ for (<OUT>) {
 	$debug = s/-DDEBUGGING\s*// ? "D" : "";
 	s/\s+-des//;
 	s/\s+$//;
-	$conf = $_;
+	$conf = $_ || " ";
 	$confs{$_}++ or push @confs, $conf;
 	next;
 	}
@@ -112,7 +112,7 @@ for (<OUT>) {
 my $ccv = $Config{ccversion}||$Config{gccversion};
 print <<EOH;
 Automated smoke report for patch $rpt{patch} on $Config{osname} - $Config{osvers}
-          v$VERSION         using $Config{cc} version $ccv
+          v$VERSION      using $Config{cc} version $ccv
 O = OK
 F = Failure(s), extended report at the bottom
 ? = still running or test results not (yet) available

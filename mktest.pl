@@ -148,8 +148,6 @@ else {
 	  "-Duseperlio -Dusemorebits",
 	  "-Duseperlio -Duse64bitall -Duselongdouble"
 	  ],
-	[ "", "-Duselongdouble"
-	  ],
 	{ policy_target =>       "-DDEBUGGING",
 	  args          => [ "", "-DDEBUGGING" ]
 	  },

@@ -14,7 +14,7 @@ $^O =~ m/^(?: VMS | MSWin32 )$/x and
 WriteMakefile (
     NAME	=> "Test::Smoke",
     DISTNAME	=> "Test-Smoke",
-    VERSION	=> "1.10",
+    VERSION	=> "1.11",
     AUTHOR	=> 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
 		   'Nicholas Clark <nick@plum.flirble.org>',
 
@@ -31,7 +31,7 @@ my $sh = "";
     }
 
 my $sd = cwd;
-$sh =~ s/`pwd`:/$sd:/;
+$sh =~ s/`pwd`/$sd/g;
 
 while (1) {
     print "What directory do you want to use for the source tree ?\n";
