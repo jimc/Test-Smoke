@@ -9,7 +9,7 @@
 use strict;
 
 use vars qw($VERSION);
-$VERSION = $main::VERSION || '1.16_20';
+$VERSION = $main::VERSION || '1.16_21';
 
 use File::Spec;
 use Cwd;
@@ -256,7 +256,6 @@ for my $conf (@confs) {
                      && "@{$rpt{$conf}{$debug}{perlio}}" 
                      eq "@{$rpt{$conf}{$debug}{stdio}}" ) {
 		    # Squeeze stdio/perlio errors together
-                    $rpt_stat .= "F ";
 		    push @fail, [ "stdio/perlio", $s_conf, $res ];
 		    next;
 		} elsif ( $perlio eq "perlio" && ref $rpt{$conf}{$debug}{stdio}

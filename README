@@ -1,6 +1,6 @@
 =head1 NAME
 
-Test::Smoke - Perl Core Test Smoke Suite
+README - Perl Core Test Smoke Suite
 
 =head1 SYNOPSIS
 
@@ -100,7 +100,7 @@ This will ask your for:
 
 =back
 
-=item * F<Configure.pl> (unixy only, depricated)
+=item * F<Configure.pl> (unixy only, deprecated)
 
 This will ask you for:
 
@@ -118,7 +118,7 @@ This will ask you for:
 
 After that it will change some settings in the F<smoke.sh> file.
 
-=item Edit F<smokew32.bat> (MSWin32 only, depricated)
+=item Edit F<smokew32.bat> (MSWin32 only, deprecated)
 
 Edit the F<smokew32.bat> batch file and set the right values.
 
@@ -129,16 +129,21 @@ Edit the F<smokew32.bat> batch file and set the right values.
 To make it clear, the perl core test smoke suite treats B<cygwin> and
 B<DJGPP> as a unixy platforms and not as true MSWin32.
 
+To keep in sync with the source-tree, it is recommended you use the
+B<rsync> program. This currently seems only available with Cygwin
+<http://www.cygwin.com>. (All the cygwin tools run perfectly well
+under CMD.EXE, so don't let that stop you.)
+
 Windows 95/98/ME do not seem to be ideal platforms to run Test::Smoke
 on. F<COMMAND.COM> gives some problems while building perl. (See
 F<README.win32>)
 
 We have found some problems with the default windows debugger
-B<Dr.Watson>. By default Dr.Watson will popup when the moral equivalent
+B<Dr.Watson>. By default Dr.Watson will pop-up when the moral equivalent
 of a segmentation fault happens, this will make the smoke wait for
 user input. You can disable this by starting F<drwtsn32.exe> and
-uncheck the B<Visual Notification> and B<Sound Notification>
-checkboxes and press B<OK>.
+un-check the B<Visual Notification> and B<Sound Notification>
+check-boxes and press B<OK>.
 
 There seems to be a problem with B<Microsoft .NET/Windows XP> and
 segmentation faults, even if B<drwtsn32 -i> is run to set it as the
@@ -146,7 +151,7 @@ default debugger.
 
 =head1 Slow Systems
 
-It can happen that your system is not able to persue all the tests, either
+It can happen that your system is not able to pursue all the tests, either
 because it is too slow or because some of the configurations are not
 supported by the system. At first, don't worry, they are detected by the
 report creation script and shown as such.
@@ -199,7 +204,7 @@ stable and as thoroughly tested as possible.
 =item B<The new smoke_db> (by Alain Barbet)
 
 Alain Barbet has put a lot of effort in storing the smoke test
-reports in a database and build a nice WEB-frontend:
+reports in a database and build a nice WEB-front-end:
 
     http://www.alianwebserver.com/cgi-bin/smoke_db
 
@@ -207,7 +212,7 @@ reports in a database and build a nice WEB-frontend:
 
 =back
 
-=head1 COPYRIGHT and LICENCE
+=head1 COPYRIGHT and LICENSE
 
 Copyright (C) 2001-2003
 
