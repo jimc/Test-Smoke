@@ -14,7 +14,7 @@ $^O =~ m/^(?: VMS | MSWin32 )$/x and
 WriteMakefile (
     NAME	=> "Test::Smoke",
     DISTNAME	=> "Test-Smoke",
-    VERSION	=> "1.12",
+    VERSION	=> "1.13",
     AUTHOR	=> 'H.Merijn Brand <h.m.brand@hccnet.nl> and '.
 		   'Nicholas Clark <nick@plum.flirble.org>',
 

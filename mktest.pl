@@ -38,7 +38,7 @@ my $config_file = shift;
 
 open TTY,    ">&STDERR";	select ((select (TTY),    $| = 1)[0]);
 open STDERR, ">&1";		select ((select (STDERR), $| = 1)[0]);
-open LOG,    "> mktest.out";	select ((select (LOG),    $| = 1)[0]);
+open OUT,    "> mktest.out";	select ((select (OUT),    $| = 1)[0]);
 				select ((select (STDOUT), $| = 1)[0]);
 
 sub is_win32 ()
@@ -79,7 +79,7 @@ sub make ($)
 sub ttylog (@)
 {
     print TTY @_;
-    print LOG @_;
+    print OUT @_;
     } # ttylog
 
 my @config;
@@ -165,19 +165,20 @@ else {
 
 my $testdir = getcwd;
 exists $Config{ldlibpthname} && $Config{ldlibpthname} and
-    substr ($ENV{$Config{ldlibpthname}}, 0, 0) = "$testdir$Config{path_sep}";
+    substr ($ENV{$Config{ldlibpthname}} ||= "", 0, 0) =
+           "$testdir$Config{path_sep}";
 
 my $patch;
 if (open OK, "<.patch") {
     chomp ($patch = <OK>);
     close OK;
-    print LOG "Smoking patch $patch\n\n";
+    print OUT "Smoking patch $patch\n\n";
     }
 if (!$patch and open OK, "< patchlevel.h") {
     local $/ = undef;
     ($patch) = (<OK> =~ m/^\s+,"DEVEL(\d+)"\s*$/m);
     close OK;
-    print LOG "Smoking patch $patch(+)\n\n";
+    print OUT "Smoking patch $patch(+)\n\n";
     }
 
 if (open MANIFEST, "< MANIFEST") {
@@ -213,7 +214,7 @@ my @p_conf = ("", "");
 
 run_tests (\@p_conf, $Policy, "-Dusedevel", [], @config);
 
-close LOG;
+close OUT;
 
 sub run_tests
 {
@@ -255,11 +256,16 @@ sub run_tests
 	# No more levels to expand
 	my $s_conf = join "\n" => "", "Configuration: $config_args",
 				  "-" x 78, "";
+
+	# Skip officially unsupported combo's
+	$config_args =~ m/-Uuseperlio/ && $config_args =~ m/-Dusethreads/
+	    and next; # patch 17000
+
 	ttylog $s_conf;
 
 	# You can put some optimizations (skipping configurations) here
 	if ( $^O =~ m/^(?: hpux | freebsd )$/x &&
-	     $conf =~ m/longdouble|morebits/) {
+	     $config_args =~ m/longdouble|morebits/) {
 	    # longdouble is turned off in Configure for hpux, and since
 	    # morebits is the same as 64bitint + longdouble, these have
 	    # already been tested. FreeBSD does not support longdoubles
@@ -349,6 +355,7 @@ sub run_tests
 		chdir ".." or die "unable to chdir () out of 'win32'";
 		}
 	    else {
+		local $ENV{PERL} = "./perl";
 		open TST, "make _test |";
 		}
 
@@ -359,10 +366,12 @@ sub run_tests
 		m,^ *$, ||
 		m,^	AutoSplitting, ||
 		m,^\./miniperl , ||
-		m,^autosplit_lib, ||
+		m,^\s*autosplit_lib, ||
+		m,^\s*PATH=\S+\s+./miniperl, ||
 		m,^	Making , ||
 		m,^make\[[12], ||
-		m,make( TEST_ARGS=)? (_test|TESTFILE=), ||
+		m,make( TEST_ARGS=)? (_test|TESTFILE=|lib/\w+.pm), ||
+		m,^make:.*Error\s+\d, ||
 		m,^\s+make\s+lib/, ||
 		m,^ *cd t &&, ||
 		m,^if \(true, ||
@@ -381,22 +390,27 @@ sub run_tests
 		m,^dllwrap: creating one. but that may not be what you want, ||
 		m,^(GNUm|M)akefile:\d+: warning: overriding commands for target `perlmain.o', ||
 		m,^(GNUm|M)akefile:\d+: warning: ignoring old commands for target `perlmain.o', ||
+		m,^\s+CCCMD\s+=\s+, ||
 		# Don't know why BSD's make does this
 		m,^Extracting .*with variable substitutions, ||
 		# Or these
 		m,cc\s+-o\s+perl.*perlmain.o\s+lib/auto/DynaLoader/DynaLoader\.a\s+libperl\.a, ||
 		m,^\S+ is up to date, ||
-		m,^   ### , and next;
+		m,^(   )?### , and next;
+
+		# make mkovz.pl's life easier
+		s/(.)(PERLIO\s+=\s+\w+)/$1\n$2/;
+
 		if (m/^u=.*tests=/) {
 		    s/(\d\.\d*) /sprintf "%.2f ", $1/ge;
-		    print LOG;
+		    print OUT;
 		    }
 		else {
 		    push @nok, $_;
 		    }
 		print;
 		}
-	    print LOG map { "    $_" } @nok;
+	    print OUT map { "    $_" } @nok;
 	    if (grep m/^All tests successful/, @nok) {
 		print TTY "\nOK, archive results ...";
 		$patch and $nok[0] =~ s/\./ for .patch = $patch./;
@@ -456,13 +470,13 @@ sub Configure
 	$opts{$opt_map{$_}} = 1;
 	}
 
-    local (*IN, *OUT);
+    local (*ORG, *NEW);
     my $in =  "win32/$win32_makefile_map{$win32_maker}";
     my $out = "win32/smoke.mk";
 
-    open IN,  "< $in"  or die "unable to open '$in'";
-    open OUT, "> $out" or die "unable to open '$out'";
-    while (<IN>) {
+    open ORG, "< $in"  or die "unable to open '$in'";
+    open NEW, "> $out" or die "unable to open '$out'";
+    while (<ORG>) {
 	if    (m/^\s*#?\s*(USE_\w+)(\s*\*?=\s*define)$/) {
 	    $_ = ($opts{$1} ? "" : "#") . $1 . $2 . "\n";
 	    }
@@ -486,8 +500,10 @@ sub Configure
 	    #   perl mktext.pl CC=xxx CCTYPE=yyy smoke.cfg
 	    }
 
-	print OUT $_;
+	print NEW $_;
 	}
+    close ORG;
+    close NEW;
     } # Configure
 
 __END__

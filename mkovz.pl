@@ -1,16 +1,30 @@
 #!/usr/bin/perl -w
 
 # Create matrix for smoke test results
-# (c)'01 H.Merijn Brand [27 August 2001]
+# (c)'02 H.Merijn Brand [11 Apr 2002]
 
 # mkovz.pl [ e-mail [ folder ]]
 
 use strict;
 
 use vars qw($VERSION);
-$VERSION = "1.12";
+$VERSION = "1.13";
 
-my $mailer = "mailx";
+use Cwd;
+
+my $testd = shift || cwd ();
+
+my %Config;
+get_smoke_Config (qw( version osname osvers cc ccversion gccversion ));
+
+# You can overrule the auto-detected settings here, to be more verbose
+# like including the distribution: "Redhat Linux" instead of plain "linux"
+#$Config{osname} = "cygwin";			# hpux, AIX, MSWin32, ...
+#$Config{osvers} = "1.3.10(0.5132)";		# 11.00, 4.3.3.0, ...
+#$Config{cc}     = "msvc";			# cc, xlc, gcc, ...
+#$Config{ccvers} = "B.11.11.04 + Patch PHCO_25707";
+
+my $mailer = "/usr/bin/mailx";
 
 =head1 NAME
 
@@ -51,14 +65,9 @@ The default is the current working directory.
 =cut
 
 use File::Spec;
-use Cwd;
 
 require Win32 if $^O eq "MSWin32";
 my $email = shift || ($^O eq "MSWin32" ? Win32::LoginName () : getpwuid $<);
-my $testd = shift || cwd ();
-
-my %Config;
-get_smoke_Config (qw( version osname osvers cc ccversion gccversion ));
 
 my (%rpt, @confs, %confs, @manifest);
 
@@ -157,10 +166,11 @@ for (<OUT>) {
 	}
     }
 
-my $ccv = $Config{ccversion}||$Config{gccversion};
+$Config{ccvers}	||= $Config{ccversion} || $Config{gccversion};
+
 print <<EOH;
 Automated smoke report for patch $rpt{patch} on $Config{osname} - $Config{osvers}
-          v$VERSION      using $Config{cc} version $ccv
+          v$VERSION      using $Config{cc} version $Config{ccvers}
 O = OK
 F = Failure(s), extended report at the bottom
 ? = still running or test results not (yet) available
@@ -263,6 +273,9 @@ sub get_smoke_Config
     } # get_smoke_Config
 
 =head1 CHANGES
+
+1.13
+	- Moved part of Config to top for easier user changes
 
 1.12
 

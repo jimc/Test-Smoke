@@ -1,3 +1,13 @@
+*** Release 1.13
+
+    Thu 06 Jun 2002, Merijn
+
+	- make _test needs $PERL set to ./perl
+	- $Config{ldlibpthname} might not be defined (Abigail)
+	- Renamed file handles to prevent confusion
+	- Some more filtering of noise
+	- skip officially unsupported combo's (e.g. patch #17000)
+
 *** Release 1.12
 
     Thu 07 Mar 2002, Merijn
@@ -12,7 +22,7 @@
 	- Win32::LoginName () instead of getpwuid () for poor Win32 users (Abe)
 	- Default $testd is Cwd::cwd () (Abe)
 	- Better portability using File::Spec (Abe)
-        - More polite way to skip mail (Abe)
+	- More polite way to skip mail (Abe)
 	- Starting POD for mkovz.pl (Abe)
 	- Removed the Parrot parts
 	- Actualize README
