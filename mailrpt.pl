@@ -2,15 +2,17 @@
 use strict;
 $| = 1;
 
-# $Id: mailrpt.pl 691 2004-04-30 16:24:02Z abeltje $
+# $Id: mailrpt.pl 858 2005-05-01 22:19:51Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.013';
+$VERSION = '0.016';
 
 use Cwd;
 use File::Spec;
-use FindBin;
-use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib File::Spec->catdir( $findbin, 'lib' );
+use lib $findbin;
 use Test::Smoke::Reporter;
 use Test::Smoke::Mailer;
 use Test::Smoke;
@@ -27,6 +29,7 @@ my %opt = (
     mserver      => undef,
     v            => undef,
 
+    rptfile      => 'mktest.rpt',
     mail         => 1,
     report       => undef,
     defaultenv   => undef,
@@ -113,7 +116,7 @@ GetOptions( \%opt,
 
     'help|h', 'man',
 
-    'config|c:s',
+    'config|c:s', 'rptfile|r=s',
 
     'mail|email!', 'report!', 'defaultenv!',
 ) or do_pod2usage( verbose => 1, myusage => $my_usage );
@@ -124,7 +127,7 @@ $opt{help} and do_pod2usage( verbose => 1, exitval => 0, myusage => $my_usage);
 if ( defined $opt{config} ) {
     $opt{config} eq "" and $opt{config} = 'smokecurrent_config';
     read_config( $opt{config} ) or do {
-        my $config_name = File::Spec->catfile( $FindBin::Bin, $opt{config} );
+        my $config_name = File::Spec->catfile( $findbin, $opt{config} );
         read_config( $config_name );
     };
 
@@ -148,13 +151,15 @@ foreach( keys %$defaults ) {
     $opt{ $_ } = defined $conf->{ $_ } ? $conf->{ $_ } : $defaults->{ $_ };
 }
 
-exists $valid_type{ $opt{type} } or do_pod2usage( verbose => 0 );
+if ( $opt{mail} ) {
+    exists $valid_type{ $opt{type} } or do_pod2usage( verbose => 0 );
+}
 
 $opt{ddir} && -d $opt{ddir} or do_pod2usage( verbose => 0 );
 
-check_for_report();
+my $cont = check_for_report();
 
-if ( $opt{mail} ) {
+if ( $cont && $opt{mail} ) {
     my $mailer = Test::Smoke::Mailer->new( $opt{type} => \%opt );
     $mailer->mail;
 }
@@ -162,20 +167,26 @@ if ( $opt{mail} ) {
 # Basically: call mkovz.pl unless -f <builddir>/mktest.rpt
 sub check_for_report {
 
-    my $report = File::Spec->catfile( $opt{ddir}, 'mktest.rpt' );
+    my $report = File::Spec->catfile( $opt{ddir}, $opt{rptfile} );
 
     if ( -f $report ) {
         $opt{v} and print "Found [$report]\n";
-        $opt{report} or return;
+        $opt{report} or return 1;
     } else {
         $opt{v} and print "No report found in [$opt{ddir}].\n";
     }
 
     my $reporter = Test::Smoke::Reporter->new( $conf );
-    $reporter->write_to_file;
-
-    unless ( -f $report ) {
-        die "Hmmm... cannot find [$report]";
+    if ( defined $reporter->{_outfile} ) {
+        $reporter->write_to_file;
+    
+        unless ( -f $report ) {
+            die "Hmmm... cannot find [$report]";
+        }
+        return 1;
+    } else {
+        $opt{v} and print "Skipped, no .out-file\n";
+        return;
     }
 }
 

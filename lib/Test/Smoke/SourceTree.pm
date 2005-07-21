@@ -1,12 +1,13 @@
 package Test::Smoke::SourceTree;
 use strict;
 
-# $Id: SourceTree.pm 505 2003-12-21 11:48:43Z abeltje $
-use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS );
-$VERSION = '0.005';
+# $Id: SourceTree.pm 863 2005-07-21 10:28:14Z abeltje $
+use vars qw( $VERSION @EXPORT_OK %EXPORT_TAGS $NOCASE );
+$VERSION = '0.007';
 
 use File::Spec;
 use File::Find;
+use Cwd;
 use Carp;
 
 use base 'Exporter';
@@ -15,6 +16,8 @@ use base 'Exporter';
     const      => [qw( &ST_MISSING &ST_UNDECLARED )],
 );
 @EXPORT_OK = @{ $EXPORT_TAGS{mani_const} };
+
+$NOCASE = $^O eq 'MSWin32' || $^O eq 'VMS';
 
 =head1 NAME
 
@@ -60,7 +63,12 @@ sub new {
 
     croak sprintf "Usage: my \$tree = %s->new( <directory> )", __PACKAGE__
         unless @_;
-    my $self = File::Spec->rel2abs( shift );
+    # it should be a directory!
+    my $dir = File::Spec->canonpath( shift );
+    my $cwd = cwd();
+    chdir $dir or croak "Cannot chdir($dir): $!";
+    my $self = cwd();
+    chdir $cwd;
     return bless \$self, $class;
 }
 
@@ -109,9 +117,31 @@ be in "MANIFEST" format (i.e. using '/' as directory separator).
 sub mani2abs {
     my $self = shift;
 
-    my @split_path = split m|/|, shift;
+    my $file = shift;
+    if ( $^O eq 'VMS' ) {
+        my @parts = split m/\./, $file;
+        my $last = pop @parts;
+        @parts and
+            $file = join( "_", map { s/[^\w-]/_/g; $_ } @parts ) . ".$last";
+    }
+    my @split_path = split m|/|, $file;
     my $base_path = File::Spec->rel2abs( $$self, @_ );
     return File::Spec->catfile( $base_path, @split_path );
+}
+
+=item $tree->mani2absdir( $dir[, $base_path] )
+
+C<mani2abs()> returns the absolute dirname of C<$dir>, which should 
+be in "MANIFEST" format (i.e. using '/' as directory separator).
+
+=cut
+
+sub mani2absdir {
+    my $self = shift;
+
+    my @split_path = split m|/|, shift;
+    my $base_path = File::Spec->rel2abs( $$self, @_ );
+    return File::Spec->catdir( $base_path, @split_path );
 }
 
 =item $tree->abs2mani( $file )
@@ -146,25 +176,34 @@ sub check_MANIFEST {
 
     my %manifest = %{ $self->_read_mani_file( 'MANIFEST' ) };
 
-    my %ignore = map { 
-        $_ => undef 
+    my %ignore = map {
+        my $entry = $NOCASE ? uc $_ : $_;
+        $entry => undef 
     } ( ".patch", "MANIFEST.SKIP", @_ ), 
       keys %{ $self->_read_mani_file( 'MANIFEST.SKIP', 1 ) };
 
     # Walk the tree, remove all found files from %manifest
     # and add other files to %manifest 
     # unless they are in the ignore list
+    my $cwd = cwd();
+    chdir $$self or die "Cannot chdir($$self): $!";
     require File::Find;
     File::Find::find( sub {
         -f or return;
-        my $mani_name = $self->abs2mani( $File::Find::name );
+        my $cpath = File::Spec->canonpath( $File::Find::name );
+        my( undef, $dirs, $file ) = File::Spec->splitpath( $cpath );
+        my @dirs = grep $_ && length $_ => File::Spec->splitdir( $dirs );
+        $^O eq 'VMS' and $file =~ s/\.$//;
+        my $mani_name = join '/', @dirs, $file;
+        $NOCASE and $mani_name = uc $mani_name;
         if ( exists $manifest{ $mani_name } ) {
             delete $manifest{ $mani_name };
         } else {
             $manifest{ $mani_name } = ST_UNDECLARED
                 unless exists $ignore{ $mani_name };
         }
-    }, $$self );
+    }, '.' );
+    chdir $cwd;
 
     return \%manifest;
 } 
@@ -190,7 +229,18 @@ sub _read_mani_file {
 
     my %manifest = map { 
         m|(\S+)|;
-        ( $1 => ST_MISSING );
+        my $entry = $NOCASE ? uc $1 : $1;
+        if ( $^O eq 'VMS' ) {
+            my @dirs = split m|/|, $entry;
+            my $file = pop @dirs;
+            my @parts = split /[.@#]/, $file;
+            if ( @parts > 1 ) {
+                my $ext = ( pop @parts ) || '';
+                $file = join( "_", @parts ) . ".$ext";
+            }
+            $entry = @dirs ? join( "/", @dirs, $file ) : $file;
+        }
+        ( $entry => ST_MISSING );
     } <MANIFEST>;
     close MANIFEST;
 
@@ -227,6 +277,7 @@ to copy a source-tree to C<< $dest_dir >>.
 
 sub copy_from_MANIFEST {
     my( $self, $dest_dir, $verbose ) = @_;
+    $verbose ||= 0;
 
     my $manifest = $self->mani2abs( 'MANIFEST' );
 
@@ -246,8 +297,8 @@ sub copy_from_MANIFEST {
 
     $verbose and printf " %d items OK\n", scalar @manifest_files;
 
+    File::Path::mkpath( $dest_dir, $verbose ) unless -d $dest_dir;
     my $dest = $self->new( $dest_dir );
-    File::Path::mkpath( $$dest, $verbose ) unless -d $$dest;
 
     require File::Basename;
     require File::Copy;
@@ -259,10 +310,11 @@ sub copy_from_MANIFEST {
 
         File::Path::mkpath( $dest_path, $verbose ) unless -d $dest_path;
 
-        $verbose > 1 and print "$file -> $dest_name ";
-        my $mode = ( stat $self->mani2abs( $file ) )[2] & 07777;
-        -f $dest_name and unlink $dest_name;
-        my $ok = File::Copy::syscopy( $self->mani2abs( $file ), $dest_name );
+        my $abs_file = $self->mani2abs( $file );
+        $verbose > 1 and print "$abs_file -> $dest_name ";
+        my $mode = ( stat $abs_file )[2] & 07777;
+        -f $dest_name and 1 while unlink $dest_name;
+        my $ok = File::Copy::syscopy( $abs_file, $dest_name );
         $ok and $ok &&= chmod $mode, $dest_name;
         $ok or carp "copy '$file' ($dest_path): $!\n";
         $ok && $verbose > 1 and print "OK\n";

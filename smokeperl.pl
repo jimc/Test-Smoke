@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 662 2004-03-26 08:29:59Z abeltje $
+# $Id: smokeperl.pl 867 2005-07-21 14:04:44Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -26,7 +26,8 @@ Getopt::Long::Configure( 'pass_through' );
 my %options = ( config => 'smokecurrent_config', run => 1, pfile => undef,
                 fetch => 1, patch => 1, mail => undef, archive => undef,
                 continue => 0, ccp5p_onfail => undef, killtime => undef,
-                is56x => undef, defaultenv => undef, smartsmoke => undef );
+                is56x => undef, defaultenv => undef, smartsmoke => undef,
+                delay_report => undef, v => undef );
 
 my $myusage = "Usage: $0 [-c configname]";
 GetOptions( \%options, 
@@ -35,6 +36,7 @@ GetOptions( \%options,
     'patch!',
     'ccp5p_onfail!',
     'mail!',
+    'delay_report!',
     'run!',
     'archive!',
     'is56x',
@@ -45,6 +47,7 @@ GetOptions( \%options,
     'killtime=s',
     'pfile=s',
 
+    'v|verbose=i',
     'help|h', 'man',
 ) or do_pod2usage(  verbose => 1, myusage => $myusage );
 
@@ -75,6 +78,7 @@ It can take these options
   --nomail                 Skip the mail step
   --noarchive              Skip the archive step (if applicable)
   --[no]ccp5p_onfail       Do (not) send failure reports to perl5-porters
+  --[no]delay_report       Do (not) create the report now
 
   --continue               Try to continue an interrupted smoke
   --is56x                  This is a perl-5.6.x smoke
@@ -103,14 +107,20 @@ unless ( read_config( $config_file ) ) {
 defined Test::Smoke->config_error and 
     die "!!!Please run 'configsmoke.pl'!!!\nCannot find configuration: $!";
 
+# smartsmoke doesn't make sense with nofetch (unless you say so)
+defined $options{fetch} && !$options{fetch} && !defined $options{smartsmoke}
+    and $options{smartsmoke} = 0;
+
 # Correction for backward compatability
 !defined $options{ $_ } && !exists $conf->{ $_ } and $options{ $_ } = 1
-    for qw( run fetch patch mail archive );
+    for qw( run fetch patch mail archive v );
+!defined $options{ $_ } && !exists $conf->{ $_ } and $options{ $_ } = 0
+    for qw( delay_report );
 
 # Make command-line options override configfile
 defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
-    for qw( is56x defaultenv continue killtime pfile
-            smartsmoke run fetch patch mail ccp5p_onfail archive );
+    for qw( is56x defaultenv continue killtime pfile delay_report
+            smartsmoke run fetch patch mail ccp5p_onfail archive v );
 
 # Make sure the --pfile command-line override works
 $options{pfile} and $conf->{patch_type} ||= 'multi';
@@ -125,8 +135,12 @@ if ( $options{continue} ) {
 my $cwd = cwd();
 chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
 call_mktest();
-genrpt();
-mailrpt();
+unless ( $conf->{delay_report} ) {
+    genrpt();
+    mailrpt();
+} else {
+    $conf->{v} and print "Delayed creation of the report. See 'mailrpt.pl'\n";
+}
 chdir $cwd;
 archiverpt();
 
@@ -266,7 +280,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 662 2004-03-26 08:29:59Z abeltje $
+$Id: smokeperl.pl 867 2005-07-21 14:04:44Z abeltje $
 
 =head1 COPYRIGHT
 

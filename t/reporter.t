@@ -2,25 +2,28 @@
 use strict;
 $| = 1;
 
-# $Id: reporter.t 713 2004-07-23 13:08:49Z abeltje $
+# $Id: reporter.t 847 2005-05-01 15:29:01Z abeltje $
 
 use File::Spec::Functions;
-use FindBin;
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
+use File::Copy;
 
 my $verbose = exists $ENV{SMOKE_VERBOSE} ? $ENV{SMOKE_VERBOSE} : 0;
 my $showcfg = 0;
 
-use Test::More tests => 53;
+use Test::More tests => 66;
 
 use_ok 'Test::Smoke::Reporter';
 
-my $config_sh = catfile( $FindBin::Bin, 'config.sh' );
+my $config_sh = catfile( $findbin, 'config.sh' );
 {
     create_config_sh( $config_sh, version => '5.6.1' );
     my $reporter = Test::Smoke::Reporter->new(
-        ddir       => $FindBin::Bin,
+        ddir       => $findbin,
         v          => $verbose, 
         outfile    => '',
         showcfg    => $showcfg,
@@ -84,7 +87,7 @@ __EOM__
 {
     create_config_sh( $config_sh, version => '5.8.3' );
     my $reporter = Test::Smoke::Reporter->new(
-        ddir    => $FindBin::Bin,
+        ddir    => $findbin,
         v       => $verbose, 
         outfile => '',
         showcfg => $showcfg,
@@ -186,7 +189,7 @@ __EOM__
 {
     create_config_sh( $config_sh, version => '5.9.0' );
     my $reporter = Test::Smoke::Reporter->new(
-        ddir    => $FindBin::Bin,
+        ddir    => $findbin,
         v       => $verbose, 
         outfile => '',
     );
@@ -260,9 +263,10 @@ __EOM__
 
     chomp( my $summary = $reporter->summary );
     is $summary, 'Summary: FAIL(F)', $summary;
-    like $reporter->report, 
-         '/^Failures:\n\[stdio\/perlio\]\s* -DDEBUGGING/m',
-         "Failures:";
+    like $reporter->report, qq@/^
+         Failures: \\s+ \\(common-args\\) \\s+ none \\n
+         \\[stdio\\/perlio\\] \\s* -DDEBUGGING
+    /xm@, "Failures:";
 }
 
 unlink $config_sh;
@@ -270,7 +274,7 @@ unlink $config_sh;
 { # This test is just to test 'PASS' (and not PASS-so-far)
 #    create_config_sh( $config_sh, version => '5.00504' );
     my $reporter = Test::Smoke::Reporter->new( 
-        ddir    => $FindBin::Bin,
+        ddir    => $findbin,
         v       => $verbose, 
         outfile => '',
         is56x   => 1,
@@ -320,7 +324,7 @@ __EOM__
 { # Test a bug reported by Merijn
   # the c's were reported for locale: only
     ok( my $reporter = Test::Smoke::Reporter->new(
-        ddir       => catfile( $FindBin::Bin, 'ftppub' ),
+        ddir       => catfile( $findbin, 'ftppub' ),
         is56x      => 0,
         defaultenv => 0,
         locale     => 'EN_US.UTF-8',
@@ -360,7 +364,7 @@ __EOM__
 
 { # report from cygwin
     ok( my $reporter = Test::Smoke::Reporter->new(
-        ddir       => catdir( $FindBin::Bin, 'ftppub' ),
+        ddir       => catdir( $findbin, 'ftppub' ),
         is56x      => 0,
         defaultenv => 0,
         outfile    => 'bugtst02.out',
@@ -401,7 +405,7 @@ __EOM__
 
 { # report from Win32
     ok( my $reporter = Test::Smoke::Reporter->new(
-        ddir       => catdir( $FindBin::Bin, 'ftppub' ),
+        ddir       => catdir( $findbin, 'ftppub' ),
         is56x      => 0,
         defaultenv => 1,
         is_win32   => 1,
@@ -462,55 +466,94 @@ __EOM__
          unlike $reporter->report, "/Build configurations:\n$bcfg=/", 
                 "hasn't the configurations";
     }
-    my @f_lines = split /n/, $reporter->failures;
-    is_deeply \@f_lines, [split /n/, <<'__EOFAIL__'], "Failures(bugtst03)";
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+    my @f_lines = split /\n/, $reporter->failures;
+    is_deeply \@f_lines, [split /\n/, <<'__EOFAIL__'], "Failures(bugtst03)";
+[default] -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 10 12 14 16-18
     op/magic.t..............................FAILED 37-53
     op/tie.t................................FAILED 22
 
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 9-20
     op/magic.t..............................FAILED 37-53
     op/tie.t................................FAILED 22
 
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 9-20
     ../lib/DBM_Filter/t/utf8.t..............FAILED 13 19
     op/magic.t..............................FAILED 37-53
     op/tie.t................................FAILED 22
 
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads
+[default] -Duseithreads
 Inconsistent test results (between TEST and harness):
     ../ext/threads/t/thread.t...............FAILED test 25
 
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duseithreads -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duseithreads -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 18-20
 
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DDEBUGGING -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duseithreads -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duseithreads -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duseithreads -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -DDEBUGGING -Duseithreads -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 9-20
 
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles -Dusemymalloc
+[default] -Duseithreads -Duselargefiles
+[default] -Duseithreads -Duselargefiles -Dusemymalloc
 Inconsistent test results (between TEST and harness):
     ../ext/threads/t/problems.t.............dubious
 
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
-[default] -DINST_TOP=$(INST_DRV)\Smoke\doesntexist -Duseithreads -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duseithreads -Duselargefiles -Accflags='-DPERL_COPY_ON_WRITE'
+[default] -Duseithreads -Duselargefiles -Dusemymalloc -Accflags='-DPERL_COPY_ON_WRITE'
     ../ext/Cwd/t/cwd.t......................FAILED 18-20
 Inconsistent test results (between TEST and harness):
     ../ext/threads/shared/t/sv_simple.t.....dubious
 __EOFAIL__
 
+}
+
+{ # Test the grepccmsg() feature
+    my $testdir = catdir $findbin, 'perl-current';
+    mkpath $testdir;
+    copy( catfile( $findbin, 'darwin.out'), catfile( $testdir, 'mktest.out' ) );
+
+    ok( my $reporter = Test::Smoke::Reporter->new(
+        ddir       => $testdir,
+        is56x      => 0,
+        defaultenv => 0,
+        lfile      => catfile( $findbin, 'darwin.log' ),
+        v          => $verbose,
+        showcfg    => $showcfg,
+        cfg        => \( my $bcfg = <<'__EOCFG__' )), "init for grepccmsg() ");
+==
+-Duseithreads
+==
+__EOCFG__
+
+    my @ccmsg = split /\n/, <<'EOCCMSG';
+Compiler messages(gcc):
+regcomp.c: In function `S_make_trie':
+regcomp.c:905: warning: `scan' might be used uninitialized in this function
+regcomp.c: In function `S_study_chunk':
+regcomp.c:1618: warning: comparison is always false due to limited range of data type
+pp_sys.c:311: warning: `S_emulate_eaccess' defined but not used
+byterun.c: In function `byterun':
+byterun.c:906: warning: comparison is always false due to limited range of data type
+DProf.xs:140: warning: `unused' attribute ignored
+re_comp.c: In function `S_study_chunk':
+re_comp.c:1618: warning: comparison is always false due to limited range of data type
+EOCCMSG
+
+    ok my $ccmsg = $reporter->ccmessages, "Got compiler messages";
+    for my $line ( @ccmsg ) {
+        like $ccmsg, "/\Q$line\E/ms", "$line";
+    }
+    rmtree $testdir, $verbose;    
 }
 
 sub create_config_sh {

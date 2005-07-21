@@ -2,9 +2,9 @@
 use strict;
 $| = 1;
 
-# $Id: synctree.pl 306 2003-08-01 16:57:12Z abeltje $
+# $Id: synctree.pl 809 2004-12-03 11:14:47Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.010';
+$VERSION = '0.011';
 
 use File::Spec;
 use FindBin;
@@ -27,7 +27,7 @@ my %opt = (
 
 my $defaults = Test::Smoke::Syncer->config( 'all_defaults' );
 
-my %valid_type = map { $_ => 1 } qw( rsync snapshot copy hardlink forest );
+my %valid_type = map { $_ => 1 } qw( rsync snapshot copy hardlink forest ftp );
 
 =head1 NAME
 

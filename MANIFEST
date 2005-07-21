@@ -1,12 +1,10 @@
-MANIFEST	$Id: MANIFEST 703 2004-05-02 23:47:18Z abeltje $
-META.yml
-SIGNATURE
+MANIFEST	$Id: MANIFEST 857 2005-05-01 20:48:21Z abeltje $
 README
 ReleaseNotes
 Changes
-FAQ
 Makefile.PL
 archiverpt.pl
+chkbcfg.pl
 configsmoke.pl
 mailrpt.pl
 patchtree.pl
@@ -15,6 +13,7 @@ perl55x.cfg
 perl562.cfg
 perl58x.cfg
 perlcurrent.cfg
+vmsperl.cfg
 w32current.cfg
 smoke55x_dfconfig
 smoke562_dfconfig
@@ -25,7 +24,9 @@ synctree.pl
 W32Configure.pl
 lib/Mail/Sendmail.pm
 lib/Test/Smoke.pm
+lib/Test/Smoke/FAQ
 lib/Test/Smoke/BuildCFG.pm
+lib/Test/Smoke/FTPClient.pm
 lib/Test/Smoke/Mailer.pm
 lib/Test/Smoke/Patcher.pm
 lib/Test/Smoke/Policy.pm
@@ -36,7 +37,6 @@ lib/Test/Smoke/SysInfo.pm
 lib/Test/Smoke/SourceTree.pm
 lib/Test/Smoke/Util.pm
 t/TestLib.pm
-t/00signature.t
 t/buildcfg.t
 t/cfgstuff.t
 t/for_dmake.t
@@ -44,17 +44,18 @@ t/for_nmake.t
 t/get_cpus.t
 t/get_patch.t
 t/mailer.t
-t/manifest.t
 t/patcher.t
 t/parse_report.t
 t/policy.t
 t/reporter.t
 t/regenstuff.t
+t/skip_config.t
 t/skip_filter.t
 t/smoked_config.t
 t/smoker.t
 t/syncer_copy.t
 t/syncer_ftp.t
+t/syncer_ftpclient.t
 t/syncer_link.t
 t/syncer_rsync.t
 t/syncer_snap.t
@@ -62,14 +63,21 @@ t/sysinfo.t
 t/tree.t
 t/ts_config.t
 t/util_times.t
+t/vms_rl.t
 t/win32/Makefile
 t/win32/makefile.mk
 t/ftppub/bugtst01.out
 t/ftppub/bugtst02.out
 t/ftppub/bugtst03.out
+t/ftppub/perl-current/MANIFEST
+t/ftppub/perl-current/patchlevel.h
+t/ftppub/perl-current/patchme.txt
+t/ftppub/perl-current/win32/Makefile
+t/ftppub/perl-current/win32/makefile.mk
 t/ftppub/perl-current-diffs/20000.gz
 t/ftppub/perl-current-diffs/20001.gz
 t/ftppub/perl-current-diffs/20003.gz
 t/ftppub/perl-current-diffs/20004.gz
 t/ftppub/snap/perl@19000.tgz
 t/ftppub/snap/perl@20000.tgz
+META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,11 +1,14 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: mailer.t 618 2004-02-22 15:33:30Z abeltje $
+# $Id: mailer.t 763 2004-10-17 16:28:54Z abeltje $
 
 use File::Spec;
-use FindBin;
-use lib File::Spec->catdir( $FindBin::Bin );
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
+
 use TestLib;
 
 use Test::More tests => 32;

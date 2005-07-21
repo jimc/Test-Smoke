@@ -3,7 +3,7 @@ use strict;
 $| = 1;
 # BEGIN { die "You must be on MSWin32 for this!\n" unless $^O eq 'MSWin32' }
 
-# $Id: W32Configure.pl 606 2004-02-21 12:41:22Z abeltje $
+# $Id: W32Configure.pl 809 2004-12-03 11:14:47Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.007';
 

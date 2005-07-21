@@ -1,19 +1,30 @@
 #! /usr/bin/perl -w
-# $Id: Makefile.PL 648 2004-03-12 08:43:35Z abeltje $
+# $Id: Makefile.PL 856 2005-05-01 20:40:30Z abeltje $
 use strict;
 use 5.004;
 use ExtUtils::MakeMaker;
 use Config;
 
-use FindBin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0 }
 use File::Spec::Functions qw( :DEFAULT rel2abs );
 use Cwd;
 use File::Path;
 
 # Some strange stuff happens when WriteMakefile() is called
 # on a non-clean distribution, cleanup before
-my $devnull = File::Spec->devnull;
-system "$Config{make} -i distclean >$devnull 2>&1";
+MAKE_DISTCLEAN: {
+    local *SAVEERR; open SAVEERR, ">&STDERR";
+    local *SAVEOUT; open SAVEOUT, ">&STDOUT";
+    close STDERR; close STDOUT;
+
+    my $opt = $^O eq 'VMS' ? '/IGNORE' : ' -i';
+    system "$Config{make}$opt distclean";
+
+    open STDOUT, ">&SAVEOUT"; close SAVEOUT;
+    open STDERR, ">&SAVEERR"; close SAVEERR;
+}
 
 my %install = ( );
 unless ( @ARGV ) {
@@ -33,8 +44,8 @@ unless ( @ARGV ) {
 }
 my @scripts = qw( synctree.pl patchtree.pl mailrpt.pl W32Configure.pl
                   configsmoke.pl smokeperl.pl runsmoke.pl
-                  archiverpt.pl smokestatus.pl );
--f catfile( $FindBin::Bin, '.patch' ) and push @scripts, '.patch';
+                  archiverpt.pl smokestatus.pl chkbcfg.pl );
+-f catfile( $findbin, '.patch' ) and push @scripts, '.patch';
 
 WriteMakefile(
     NAME	  => "Test-Smoke",
@@ -49,17 +60,23 @@ WriteMakefile(
 
     dist	  => { COMPRESS => "gzip -9f",
                        SUFFIX   => ".gz",
-                       PREOP    => "cpansign -s",
 		     },
     PREREQ_PM     => { 'File::Spec' => 0.82, 'Test::More' => 0},
-    PMLIBDIRS     => [ curdir() ],
+    PMLIBDIRS     => [ './' ],
     EXE_FILES     => \@scripts,
     %install
 );
 
 sub MY::libscan {
     my( $self, $path ) = @_;
-    return $path =~ m:\.svn\b|\bt\b|\bprivate\b: ? "" : $path;
+    my @nopaths = qw( .svn t private investigate );
+    my $patt = join '|', map {
+        /^\w/ and $_ = "\\b$_";
+        /\w$/ and $_ = "$_\\b";
+        $_;
+    } @nopaths;
+
+    return $path =~ m:$patt: ? "" : $path;
 }
 
 sub dir_prompt {

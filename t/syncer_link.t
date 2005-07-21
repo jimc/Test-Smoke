@@ -1,8 +1,9 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_link.t 598 2004-02-07 18:55:06Z abeltje $
+# $Id: syncer_link.t 829 2005-02-12 18:55:26Z abeltje $
 
+use Config;
 use File::Spec;
 use lib File::Spec->rel2abs( 't' );
 use TestLib;
@@ -10,8 +11,9 @@ use Test::More tests => 12;
 
 use_ok( 'Test::Smoke::Syncer' );
 
+my $verbose = $ENV{SMOKE_VERBOSE} ? $ENV{SMOKE_VERBOSE} : 0;
 {
-    my $syncer = Test::Smoke::Syncer->new( hardlink => { v => 0,
+    my $syncer = Test::Smoke::Syncer->new( hardlink => { v => $verbose,
         ddir => File::Spec->catdir(qw( t perl-current )),
         hdir => File::Spec->catdir(qw( t perl )),
     } );
@@ -20,9 +22,9 @@ use_ok( 'Test::Smoke::Syncer' );
     isa_ok( $syncer, 'Test::Smoke::Syncer::Hardlink' );
 }
 
-{ # check that is croak()s
+{ # check that it croak()s
 #line 100
-    my $syncer = eval { Test::Smoke::Syncer->new( hardlink => { v => 0,
+    my $syncer = eval { Test::Smoke::Syncer->new( hardlink => { v => $verbose,
         ddir => File::Spec->catdir(qw( t perl-current )),
     } ) };
 
@@ -35,7 +37,8 @@ SKIP: {
 # When found, t/ftppub/snap/perl@20000.tgz can be extracted
 # and used as a base for the hardlink sync
 
-    my $to_skip = 2;
+    my $to_skip = 4;
+    $Config{d_link} or skip "No links on $^O", $to_skip;
     my $tar = find_uncompress() or
         skip "Cannot find decompression stuff", $to_skip;
 
@@ -45,7 +48,7 @@ SKIP: {
 
     ok( -d File::Spec->catdir(qw( t perl )), "snapshot OK" );
 
-    my $syncer = Test::Smoke::Syncer->new( hardlink => { v=> 0,
+    my $syncer = Test::Smoke::Syncer->new( hardlink => { v=> $verbose,
         ddir => File::Spec->catdir(qw( t perl-current )),
         hdir => File::Spec->catdir(qw( t perl )),
     } );
@@ -74,7 +77,8 @@ SKIP: { # Check that the same works for {haslink} == 0
 # When found, t/ftppub/snap/perl@20000.tgz can be extracted
 # and used as a base for the hardlink sync
 
-    my $to_skip = 2;
+    my $to_skip = 3;
+    $Config{d_link} or skip "No links on $^O", $to_skip;
     my $tar = find_uncompress() or
         skip "Cannot find decompression stuff", $to_skip;
 
@@ -84,7 +88,7 @@ SKIP: { # Check that the same works for {haslink} == 0
 
     ok( -d File::Spec->catdir(qw( t perl )), "snapshot OK" );
 
-    my $syncer = Test::Smoke::Syncer->new( hardlink => { v=> 0,
+    my $syncer = Test::Smoke::Syncer->new( hardlink => { v=> $verbose,
         ddir    => File::Spec->catdir(qw( t perl-current )),
         hdir    => File::Spec->catdir(qw( t perl )),
         haslink => 0,

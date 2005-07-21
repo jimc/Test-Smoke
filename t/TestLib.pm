@@ -1,9 +1,9 @@
 package TestLib;
 use strict;
 
-# $Id: TestLib.pm 505 2003-12-21 11:48:43Z abeltje $
+# $Id: TestLib.pm 832 2005-02-12 19:52:03Z abeltje $
 use vars qw( $VERSION @EXPORT );
-$VERSION = '0.03';
+$VERSION = '0.05';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -32,8 +32,11 @@ What is in here?
 
 =cut
 
+use Config;
+use Carp;
 use File::Find;
-use File::Spec;
+use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs
+                              splitdir splitpath catpath);
 require File::Path;
 use Cwd;
 
@@ -48,6 +51,7 @@ Rreturns a full file-path (with extension) to it.
 sub whereis {
     my $prog = shift;
     return undef unless $prog; # you shouldn't call it '0'!
+    $^O eq 'VMS' and return vms_whereis( $prog );
 
     my $p_sep = $Config::Config{path_sep};
     my @path = split /\Q$p_sep\E/, $ENV{PATH};
@@ -63,6 +67,49 @@ sub whereis {
     return '';
 }
 
+=item vms_whereis( $prog )
+
+First look in the SYMBOLS to see if C<$prog> is there.
+Next look in the KFE-table C<INSTALL LIST> if it is there.
+As a last resort we can scan C<DCL$PATH> like we do on *nix/Win32
+
+=cut
+
+sub vms_whereis {
+    my $prog = shift;
+
+    # Check SYMBOLS
+    eval { require VMS::DCLsym };
+    if ( $@ ) {
+        carp "Oops, cannot load VMS::DCLsym: $@";
+    } else {
+        my $syms = VMS::DCLsym->new;
+        return $prog if scalar $syms->getsym( $prog );
+    }
+    # Check Known File Entry table (INSTALL LIST)
+    my $img_re = '^\s+([\w\$]+);\d+';
+    my %kfe = map {
+        my $img = /$img_re/ ? $1 : '';
+        ( uc $img => undef )
+    } grep /$img_re/ => qx/INSTALL LIST/;
+    return $prog if exists $kfe{ uc $prog };
+
+    my $dclp_env = 'DCL$PATH';
+    my $p_sep = $Config{path_sep} || '|';
+    my @path = split /$p_sep/, $ENV{ $dclp_env }||"";
+    my @pext = ( $Config{exe_ext} || $Config{_exe}, '.COM' );
+
+    foreach my $dir ( @path ) {
+        foreach my $ext ( @pext ) {
+            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
+            if ( -x $fname ) {
+                return $ext eq '.COM' ? "\@$fname" : "$fname";
+            }
+        }
+    }
+    return '';
+}
+
 =item manify_path( $path )
 
 Do a OS-specific split on the path, and join with '/' for MANIFEST
@@ -73,9 +120,14 @@ format.
 sub manify_path($) {
     my $path = shift or return;
     # There should be no volume on these file_paths
+    $path = File::Spec->canonpath( $path );
     my( undef, $dirs, $file ) = File::Spec->splitpath( $path );
+
     my @subdirs = grep $_ && length $_ => File::Spec->splitdir( $dirs );
+    $^O eq 'VMS' and $file =~ s/\.$//;
+
     push @subdirs, $file;
+
     return join '/', @subdirs;
 }
 
@@ -87,13 +139,16 @@ Returns a list of filenames (no directory-names) in C<$path>.
 
 sub get_dir($) {
     my( $path ) = @_;
+    my $cwd = cwd();
+    chdir $path or die "Cannot chdir($path): $!";
     my @files;
     find sub {
         -f or return;
-        my $name = File::Spec->abs2rel( $File::Find::name, $path );
-        push @files, $name;
-    }, $path;
+        my $cname = File::Spec->canonpath( $File::Find::name );
+        push @files, $cname;
+    }, '.';
 
+    chdir $cwd or die "Cannot chdir($cwd) back: $!";
     return @files;
 }
 
@@ -298,6 +353,8 @@ sub do_untargz {
         $archive->extract( @files );
 
     } else { # assume command
+        $^O eq 'VMS' and return vms_untargz( $untgz, $tgzfile );
+
         my $command = sprintf $untgz, $tgzfile;
         $command .= " $tgzfile" if $command eq $untgz;
 
@@ -308,6 +365,42 @@ sub do_untargz {
         };
     }
     return 1;
+}
+
+=item vms_untargz( $untargz, $tgzfile )
+
+Gunzip and extract the archive in C<$tgzfile>.
+
+=cut
+
+sub vms_untargz {
+    my( $cmd, $file ) = @_;
+    my( $vol, $path, $fname ) = splitpath( $file );
+    my @parts = split /[.@#]/, $fname;
+    if ( @parts > 1 ) {
+        my $ext = ( pop @parts ) || '';
+        $fname = join( "_", @parts ) . ".$ext";
+    }
+    $file = catpath( $vol, $path, $fname );
+
+    my( $gzip_cmd, $tar_cmd ) = split /\s*\|\s*/, $cmd;
+    my $gzip = $gzip_cmd =~ /^(\S+)/ ? $1 : 'GZIP';
+    my $tar  = $tar_cmd  =~ /^(\S+)/
+        ? $1 : (whereis( 'vmstar' ) || whereis( 'tar' ) );
+
+    local *TMPCOM;
+    open TMPCOM, "> TS-UNTGZ.COM" or return 0;
+    print TMPCOM <<EO_UNTGZ; close TMPCOM or return 0;
+\$ define/user sys\$output TS-UNTGZ.TAR
+\$ $gzip "-cd" $file
+\$ $tar "-xf" TS-UNTGZ.TAR
+\$ delete TS-UNTGZ.TAR;*
+EO_UNTGZ
+
+    my $ret = system "\@TS-UNTGZ.COM";
+    1 while unlink "TS-UNTGZ.COM";
+
+    return ! $ret;
 }
 
 1;

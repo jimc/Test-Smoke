@@ -1,13 +1,15 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: buildcfg.t 619 2004-02-23 23:03:38Z abeltje $
+# $Id: buildcfg.t 763 2004-10-17 16:28:54Z abeltje $
 
-use Test::More tests => 67;
+use Test::More tests => 81;
 my $verbose = 0;
 
-use FindBin;
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
 
 use_ok "Test::Smoke::BuildCFG";
@@ -238,6 +240,40 @@ OUT
     1 while unlink 'mktest.out';
 }
 
+# Test the interface to Test::Smoke::BuildCFG::Config
+{
+    my $cfgline = q[-Duseithreads -Dcc='gcc'];
+    my $bcfg = Test::Smoke::BuildCFG::new_configuration( $cfgline );
+    isa_ok $bcfg, 'Test::Smoke::BuildCFG::Config';
+
+    is "$bcfg", $cfgline, "stringify($cfgline)";
+    ok $bcfg->has_arg( "-Dcc='gcc'" ),    "has -Dcc='gcc'";
+    ok $bcfg->has_arg( "-Duseithreads" ), "has -Duseithreads";
+    ok $bcfg->has_arg( "-Dcc='gcc'", "-Duseithreads" ), "has both";
+    ok $bcfg->any_arg( "-Dcc='gcc'", "-Duseithreads" ), "has either";
+    ok $bcfg->args_eq( $cfgline ), "args_eq()";
+
+    is $bcfg->rm_arg( "-Dcc='gcc'" ), "-Duseithreads", "rm_arg()";
+    is "$bcfg", "-Duseithreads", "stringify()";
+}
+
+{
+    my $bcfg = Test::Smoke::BuildCFG::new_configuration( "" );
+    isa_ok $bcfg, "Test::Smoke::BuildCFG::Config";
+    is "$bcfg", "", "stringify empty";
+
+    ok !$bcfg->has_arg( '-Duseithreads' ), "hasnt_arg(-Duseithreads)";
+}
+
+{
+    my $cfg = q/-Dusedevel -Dprefix="sys$login:[perl59x]"/;
+    my $bcfg = Test::Smoke::BuildCFG::new_configuration( $cfg );
+    isa_ok $bcfg, 'Test::Smoke::BuildCFG::Config';
+
+    is $bcfg->vms,
+       q/-"Dusedevel" -"Dprefix=sys$login:[perl59x]"/,
+       "check vms cmdline";
+}
 
 package Test::BCFGTester;
 use strict;

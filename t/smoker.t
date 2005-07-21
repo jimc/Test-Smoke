@@ -2,7 +2,7 @@
 use strict;
 use Data::Dumper;
 
-# $Id: smoker.t 647 2004-03-11 10:06:20Z abeltje $
+# $Id: smoker.t 828 2005-02-12 18:48:37Z abeltje $
 use File::Spec::Functions qw( :DEFAULT devnull abs2rel rel2abs );
 use Cwd;
 
@@ -16,6 +16,7 @@ my $debug = exists $ENV{SMOKE_DEBUG} && $ENV{SMOKE_DEBUG};
         v => 0,
         ddir => 'perl-current',
         defaultenv => 1,
+        testmake   => 'make',
     );
 
     local *LOG;
@@ -59,7 +60,8 @@ my $debug = exists $ENV{SMOKE_DEBUG} && $ENV{SMOKE_DEBUG};
     my %expect;
     my $test_base = catdir( cwd, 't' );
     foreach my $test ( keys %raw ) {
-        my $test_name = rel2abs( $test, $test_base );
+        my $cname = canonpath( $test );
+        my $test_name = rel2abs( $cname, $test_base );
 
         my $test_path = abs2rel( $test_name, $test_base );
         $test_path =~ tr!\\!/! if $^O eq 'MSWin32';

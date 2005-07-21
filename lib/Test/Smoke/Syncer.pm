@@ -1,9 +1,9 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 598 2004-02-07 18:55:06Z abeltje $
+# $Id: Syncer.pm 845 2005-04-24 16:29:11Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.010';
+$VERSION = '0.016';
 
 use Config;
 use Cwd;
@@ -48,17 +48,29 @@ my %CONFIG = (
 
 # these settings have to do with synctype==hardlink
     df_hdir    => undef,
-    df_haslink => $Config{d_link} eq 'define',
+    df_haslink => ($Config{d_link}||'') eq 'define',
 
     hardlink   => [qw( hdir haslink )],
 
+# these have to do 'forest'
     df_fsync   => 'rsync',
     df_mdir    => undef,
     df_fdir    => undef,
+
     forest     => [qw( fsync mdir fdir )],
 
+# these settings have to do with synctype==ftp
+    df_ftphost => 'ftp.linux.activestate.com',
+    df_ftpusr  => 'anonymous',
+    df_ftppwd  => 'smokers@perl.org',
+    df_ftpsdir => '/pub/staff/gsar/APC/perl-current',
+    df_ftpcdir => '/pub/staff/gsar/APC/perl-current-diffs',
+
+    ftp        => [qw( ftphost ftpusr ftppwd ftpsdir ftpcdir )],
+
 # misc.
-    valid_type => { rsync => 1, snapshot => 1, copy => 1, hardlink => 1 },
+    valid_type => { rsync => 1, snapshot => 1,
+                    copy  => 1, hardlink => 1, ftp => 1 },
 );
 
 {
@@ -159,15 +171,19 @@ sub new {
         my $value = exists $args{$_} ? $args{ $_ } : $CONFIG{ "df_$_" };
         ( $_ => $value )
     } ( v => ddir => @{ $CONFIG{ $sync_type } } );
+    if ( ! File::Spec->file_name_is_absolute( $fields{ddir} ) ) {
+        $fields{ddir} = File::Spec->catdir( cwd(), $fields{ddir} );
+    }
     $fields{ddir} = File::Spec->rel2abs( $fields{ddir} );
 
     DO_NEW: {
-        local $_ = $sync_type;
+        local *_; $_ = $sync_type;
 
         /^rsync$/    && return Test::Smoke::Syncer::Rsync->new( %fields );
         /^snapshot$/ && return Test::Smoke::Syncer::Snapshot->new( %fields );
         /^copy$/     && return Test::Smoke::Syncer::Copy->new( %fields );
         /^hardlink$/ && return Test::Smoke::Syncer::Hardlink->new( %fields );
+        /^ftp$/      && return Test::Smoke::Syncer::FTP->new( %fields );
         /^forest$/   && return Test::Smoke::Syncer::Forest->new( %fields );
 
         require Carp;
@@ -254,6 +270,11 @@ sub _relocate_tree {
 
     # Failing that: Copy-By-File :-(
     if ( ! $ok && -d $source_dir ) {
+        my $cwd = cwd();
+        chdir $source_dir or do {
+            print "Cannot chdir($source_dir): $!\n";
+            return 0;
+        };
         require File::Find;
 	File::Find::finddepth( sub {
 
@@ -263,7 +284,8 @@ sub _relocate_tree {
 
             $self->{v} > 1 and print "move $_ $dest\n";
 	    File::Copy::move( $_, $dest );
-        }, $source_dir );
+        }, "./" );
+        chdir $cwd or print "Cannot chdir($cwd) back: $!\n";
 	File::Path::rmtree( $source_dir, $self->{v} > 1 );
         $ok = ! -d $source_dir;
     }
@@ -344,21 +366,8 @@ from the F<patchlevel.h> file in the distribution.
 sub version_from_patchlevel_h {
     my $self = shift;
 
-    my $file = File::Spec->catfile( $self->{ddir}, 'patchlevel.h' );
-
-    my( $revision, $version, $subversion ) = qw( 5 ? ? );
-    local *PATCHLEVEL;
-    if ( open PATCHLEVEL, "< $file" ) {
-        my $patchlevel = do { local $/; <PATCHLEVEL> };
-        close PATCHLEVEL;
-        $revision   = $patchlevel =~ /^#define PERL_REVISION\s+(\d+)/m 
-                    ? $1 : '?';
-        $version    = $patchlevel =~ /^#define PERL_VERSION\s+(\d+)/m
-                    ? $1 : '?';
-        $subversion = $patchlevel =~ /^#define PERL_SUBVERSION\s+(\d+)/m 
-                    ? $1 : '?';
-    }
-    return "$revision.$version.$subversion";
+    require Test::Smoke::Util;
+    return Test::Smoke::Util::version_from_patchelevel( $self->{ddir} );
 }
  
 =item $syncer->clean_from_directory( $source_dir[, @leave_these] )
@@ -651,16 +660,18 @@ sub __find_snap_name {
     my( $ftp, $snapext, $verbose ) = @_;
     $snapext ||= 'tgz';
     $verbose ||= 0;
+    $verbose > 1 and print "Looking for /$snapext\$/\n";
 
     my @list = $ftp->ls();
 
     my $snap_name = ( map $_->[0], sort { $a->[1] <=> $b->[1] } map {
-        $verbose and print "Kept: $_\n";
-        [ $_, /^perl\@(\d+)/ ]
+        my( $p_level ) = /^perl[@#_](\d+)/;
+        $verbose > 1 and print "Kept: $_ ($p_level)\n";
+        [ $_, $p_level ]
     } grep {
-    	/^perl\@\d+/ &&
+    	/^perl[@#_]\d+/ &&
     	/$snapext$/ 
-    } map { $verbose > 1 and print "Found: $_\n"; $_ } @list )[-1];
+    } map { $verbose > 1 and print "Found snapname: $_\n"; $_ } @list )[-1];
 
     return $snap_name;
 }
@@ -765,17 +776,21 @@ sub _extract_with_external {
 
     my @dirs_pre = __get_directory_names();
 
-    my $command = sprintf $self->{tar}, $self->{snapshot};
-    $command .= " $self->{snapshot}" if $command eq $self->{tar};
-
-    $self->{v} and print "$command ";
-    if ( system $command ) {
-        my $error = $? >> 8;
-        require Carp;
-        Carp::carp "Error in command: $error";
-        return undef;
-    };
-    $self->{v} and print "OK\n";
+    if ( $^O ne 'VMS' ) {
+        my $command = sprintf $self->{tar}, $self->{snapshot};
+        $command .= " $self->{snapshot}" if $command eq $self->{tar};
+    
+        $self->{v} and print "$command ";
+        if ( system $command ) {
+            my $error = $? >> 8;
+            require Carp;
+            Carp::carp "Error in command: $error";
+            return undef;
+        };
+        $self->{v} and print "OK\n";
+    } else {
+        __vms_untargz( $self->{tar}, $self->{snapshot}, $self->{v} );
+    }
 
     # Yes another process can also create directories here!
     # Be careful.
@@ -787,6 +802,37 @@ sub _extract_with_external {
     $base_dir ||= 'perl';
 
     return File::Spec->canonpath( File::Spec->catdir( cwd(), $base_dir ) );
+}
+
+=item __vms_untargz( $untargz, $tgzfile, $verbose )
+
+Gunzip and extract the archive in C<$tgzfile> using a small DCL script
+
+=cut
+
+sub __vms_untargz {
+    my( $cmd, $file, $verbose ) = @_;
+    my( $gzip_cmd, $tar_cmd ) = split /\s*\|\s*/, $cmd;
+    my $gzip = $gzip_cmd =~ /^(\S+)/ ? $1 : 'GZIP';
+    my $tar  = $tar_cmd  =~ /^(\S+)/
+        ? $1 : (whereis( 'vmstar' ) || whereis( 'tar' ) );
+    my $tar_sw = $verbose ? '-xvf' : '-xf';
+
+    $verbose and print "Writing 'TS-UNTGZ.COM'";
+    local *TMPCOM;
+    open TMPCOM, "> TS-UNTGZ.COM" or return 0;
+    print TMPCOM <<EO_UNTGZ; close TMPCOM or return 0;
+\$ define/user sys\$output TS-UNTGZ.TAR
+\$ $gzip "-cd" $file
+\$ $tar $tar_sw TS-UNTGZ.TAR
+\$ delete TS-UNTGZ.TAR;*
+EO_UNTGZ
+    $verbose and print " OK\n";
+
+    my $ret = system "\@TS-UNTGZ.COM";
+#    1 while unlink "TS-UNTGZ.COM";
+
+    return ! $ret;
 }
 
 =item $syncer->patch_a_snapshot( $patch_number )
@@ -873,6 +919,11 @@ sub _get_patches {
         push @patch_list, $local_patch if $l_file;
     }
     $ftp->quit;
+
+    @patch_list = map $_->[0] => sort { $a->[1] <=> $b->[1] } map {
+        my( $patch_num ) = /(\d+).gz$/;
+        [ $_, $patch_num ];
+    } @patch_list;
 
     return @patch_list;
 }
@@ -1006,7 +1057,7 @@ sub __get_directory_names {
 
     local *DIR;
     opendir DIR, $dir or return ();
-    my @dirs = grep -d File::Spec->catdir( $dir, $_ ) => readdir DIR;
+    my @dirs = grep -d File::Spec->catfile( $dir, $_ ) => readdir DIR;
     closedir DIR;
 
     return @dirs;
@@ -1150,6 +1201,103 @@ sub sync {
 }
 
 =back
+
+=head1 Test::Smoke::Syncer::FTP
+
+This handles syncing by getting the source-tree from ActiveState's APC
+repository. It uses the C<Test::Smoke::FTPClient> that implements a
+mirror function.
+
+=cut
+
+package Test::Smoke::Syncer::FTP;
+
+@Test::Smoke::Syncer::FTP::ISA = qw( Test::Smoke::Syncer );
+
+use File::Spec::Functions;
+
+=head2 Test::Smoke::Syncer::FTP->new( %args )
+
+Known args for this class:
+
+    * ftphost (ftp.linux.activestate.com)
+    * ftpusr  (anonymous)
+    * ftppwd  (smokers@perl.org)
+    * ftpsdir (/pub/staff/gsar/APC/perl-????)
+    * ftpcdir (/pub/staff/gsar/APC/perl-????-diffs)
+
+    * ddir
+    * v
+
+=cut
+
+sub new {
+    my $class = shift;
+
+    return bless { @_ }, $class;
+}
+
+=head2 $syncer->sync()
+
+This does the actual syncing:
+
+    * Check {ftpcdir} for the latest changenumber
+    * Mirror 
+
+=cut
+
+sub sync {
+    my $self = shift;
+
+    require Test::Smoke::FTPClient;
+
+    my $fc = Test::Smoke::FTPClient->new( $self->{ftphost}, {
+        v       => $self->{v},
+        passive => $self->{ftppassive},
+        fuser   => $self->{ftpusr},
+        fpwd    => $self->{ftppwd},
+    } );
+
+    $fc->connect;
+
+    $fc->mirror( @{ $self }{qw( ftpsdir ddir )}, 1 ) or return;
+
+    $self->{client} = $fc;
+    $self->create_dot_patch;
+}
+
+=head2 $syncer->create_dat_patch
+
+This needs to go to the *-diffs directory on APC and find the patch
+whith the highest number, that should be our current patchlevel.
+
+=cut
+
+sub create_dot_patch {
+    my $self = shift;
+    my $ftp = $self->{client}->{client};
+
+    $ftp->cwd( $self->{ftpcdir} );
+    my $plevel = (sort { $b <=> $a } map {
+        s/\.gz$//; $_
+    } grep /\d+\.gz/ => $ftp->ls)[0];
+
+    my $dotpatch = catfile( $self->{ddir}, '.patch' );
+    local *DOTPATH;
+    if ( open DOTPATCH, "> $dotpatch" ) {
+        print DOTPATCH $plevel;
+        close DOTPATCH or do {
+            require Carp;
+            Carp::carp( "Error writing '$dotpatch': $!" );
+        };
+    } else {
+        require Carp;
+        Carp::carp( "Error creating '$dotpatch': $!" );
+    }
+    return $plevel;
+}
+
+1;
 
 =head1 Test::Smoke::Syncer::Forest
 

@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 515 2004-01-04 14:06:56Z abeltje $
+# $Id: syncer_ftp.t 829 2005-02-12 18:55:26Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot
@@ -14,8 +14,10 @@ use strict;
 # we can concentrate on doing the untargz and patch stuff
 #
 #####
-use FindBin;
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
 use File::Spec;
 
@@ -28,6 +30,9 @@ BEGIN {
                              "snapshots without it!!!" );
     plan tests => 7;
 }
+
+my $verbose = $ENV{SMOKE_VERBOSE} || 0;
+$verbose and diag "SMOKE_VERBOSE = $verbose";
 
 # Can we get away with redefining the Net::FTP stuff?
 
@@ -90,7 +95,7 @@ SKIP: { # Here we try for 'Archive::Tar'/'Compress::Zlib'
     eval { require Compress::Zlib; };
     $@ and skip "Can't load 'Compress::Zlib'", 3;
 
-    my $syncer = Test::Smoke::Syncer->new( snapshot => { v => 0,
+    my $syncer = Test::Smoke::Syncer->new( snapshot => { v => $verbose,
         ddir     => File::Spec->catdir( 't', 'perl-current' ),
         sdir     => '/t/snap',
         tar      => 'Archive::Tar',
@@ -125,7 +130,7 @@ SKIP: { # Here we try for gzip/tar
     $gzip = whereis( 'gunzip' ) unless $gzip;
     $gzip = whereis( 'zcat' ) unless $gzip;
 
-    my $syncer = Test::Smoke::Syncer->new( snapshot => { v => 0,
+    my $syncer = Test::Smoke::Syncer->new( snapshot => { v => $verbose,
         ddir     => File::Spec->catdir( 't', 'perl-current' ),
         sdir     => '/t/snap',
         tar      => $unpack,

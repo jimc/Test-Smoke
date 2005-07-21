@@ -1,15 +1,16 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: smoked_config.t 712 2004-07-23 10:49:04Z abeltje $
+# $Id: smoked_config.t 845 2005-04-24 16:29:11Z abeltje $
 
 use File::Spec;
-use FindBin;
-use lib $FindBin::Bin;
-
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
 
-use Test::More tests => 20;
+use Test::More tests => 38;
 BEGIN { use_ok( 'Test::Smoke::Util', 'get_smoked_Config' ) }
 
 # make it work for all
@@ -24,12 +25,53 @@ cf_email='abeltje\@cpan.org'
 version='$version'
 !END!
 
+my( $Config_heavy, $Config_pm, $Config_sh, $patchlevel_h );
 SKIP: {
+    my $cfg_nm = 'Config_heavy.pl';
     my $to_skip = 5;
-    my $libpath = File::Spec->catdir( $FindBin::Bin, 'lib' );
+    my $libpath = File::Spec->catdir( $findbin, 'lib' );
     -d $libpath or mkpath( $libpath )  or 
         skip "Can't create '$libpath': $!", $to_skip;
-    my $Config_pm = File::Spec->catfile( $libpath, 'Config.pm' );
+    $Config_heavy = File::Spec->catfile( $libpath, $cfg_nm );
+
+    local *CONFIGPM;
+    open CONFIGPM, "> $Config_heavy" or 
+        skip "Can't create '$Config_heavy': $!", $to_skip;
+
+    print CONFIGPM <<EOCONFIG;
+package Config;
+
+# blah blah
+local \*_ = \\my \$a;
+\$_ = \<\<'!END!';
+$config_sh
+!END!
+
+# more stuff
+1;
+EOCONFIG
+    close CONFIGPM or skip "Error '$Config_heavy': $!", $to_skip;
+
+    my %Config = get_smoked_Config( $findbin,
+                                    qw( archname cf_email version
+                                        osname osvers ));
+
+    ok( -e $Config_heavy, "Config from: $Config_heavy" );
+    is( $Config{archname}, $arch, "Architecture $arch" );
+    is( $Config{cf_email}, 'abeltje@cpan.org', 'cf_email' );
+    is( $Config{osname}, $osname, "OS name: $osname" );
+    is( $Config{osvers}, $osvers, "OS version: $osvers" );
+    is( $Config{version}, $version, "Perl version: $version" );
+
+    1 while unlink $Config_heavy;
+}
+
+SKIP: {
+    my $to_skip = 5;
+    my $libpath = File::Spec->catdir( $findbin, 'lib' );
+    -d $libpath or mkpath( $libpath )  or 
+        skip "Can't create '$libpath': $!", $to_skip;
+    $Config_pm = File::Spec->catfile( $libpath, 'Config.pm' );
 
     local *CONFIGPM;
     open CONFIGPM, "> $Config_pm" or 
@@ -48,10 +90,11 @@ $config_sh
 EOCONFIG
     close CONFIGPM or skip "Error '$Config_pm': $!", $to_skip;
 
-    my %Config = get_smoked_Config( $FindBin::Bin,
+    my %Config = get_smoked_Config( $findbin,
                                     qw( archname cf_email version
                                         osname osvers ));
 
+    ok( -e $Config_pm, "Config from: $Config_pm" );
     is( $Config{archname}, $arch, "Architecture $arch" );
     is( $Config{cf_email}, 'abeltje@cpan.org', 'cf_email' );
     is( $Config{osname}, $osname, "OS name: $osname" );
@@ -63,8 +106,8 @@ EOCONFIG
 
 SKIP: { # get info from config.sh
     my $to_skip = 5;
-    my $libpath = File::Spec->catdir( $FindBin::Bin );
-    my $Config_sh = File::Spec->catfile( $libpath, 'config.sh' );
+    my $libpath = File::Spec->catdir( $findbin );
+    $Config_sh = File::Spec->catfile( $libpath, 'config.sh' );
 
     local *CONFIGSH;
     open CONFIGSH, "> $Config_sh" or 
@@ -84,10 +127,11 @@ $config_sh
 EOCONFIG
     close CONFIGSH or skip "Error '$Config_sh': $!", $to_skip;
 
-    my %Config = get_smoked_Config( $FindBin::Bin,
+    my %Config = get_smoked_Config( $findbin,
                                     qw( archname cf_email version
                                         osname osvers ));
 
+    ok( -e $Config_sh, "Config from: $Config_sh" );
     is( $Config{archname}, $arch, "Architecture $arch" );
     is( $Config{cf_email}, 'abeltje@cpan.org', 'cf_email' );
     is( $Config{osname}, $osname, "OS name: $osname" );
@@ -98,22 +142,92 @@ EOCONFIG
 }
 
 {
-    my %Config = get_smoked_Config( $FindBin::Bin,
+    my %Config = get_smoked_Config( $findbin,
                                     qw( archname cf_email version
                                         osname osvers ));
 
+    my $no_files = 1;
+    $no_files &&= ! -e $_ for grep defined $_
+        => ( $Config_heavy, $Config_pm, $Config_sh );
+    ok( $no_files, "Config from: fallback" ); 
     is( $Config{archname}, $arch, "Architecture $arch" );
     is( $Config{osname}, $osname, "OS name: $osname" );
     is( $Config{osvers}, $osvers, "OS version: $osvers" );
     is( $Config{version}, '5.?.?', "Perl version: $Config{version}" );
 }
 
+$patchlevel_h = File::Spec->catfile( $findbin, 'patchlevel.h' );
+SKIP: {
+    my $to_skip = 4;
+
+    local *PL_H;
+    open PL_H, "> $patchlevel_h" or 
+        skip "Can't create '$Config_pm': $!", $to_skip;
+
+    print PL_H <<EOPL;
+#ifndef __PATCHLEVEL_H_INCLUDED__
+#define PATCHLEVEL 5
+#undef SUBVERSION     /* OS/390 has a SUBVERSION in a system header */
+#define SUBVERSION 4
+EOPL
+
+    close PL_H or skip "Error '$patchlevel_h': $!", $to_skip;
+
+    my %Config = get_smoked_Config( $findbin,
+                                    qw( archname cf_email version
+                                        osname osvers ));
+    is( $Config{archname}, $arch, "Architecture $arch" );
+    is( $Config{osname}, $osname, "OS name: $osname" );
+    is( $Config{osvers}, $osvers, "OS version: $osvers" );
+    is( $Config{version}, '5.00504', "Perl version: $Config{version}" );
+
+    1 while unlink $patchlevel_h;
+}
+
+SKIP: {
+    my $to_skip = 4;
+
+    local *PL_H;
+    open PL_H, "> $patchlevel_h" or 
+        skip "Can't create '$Config_pm': $!", $to_skip;
+
+    print PL_H <<EOPL;
+/*    patchlevel.h
+ *
+ *    Copyright (C) 1993, 1995, 1996, 1997, 1998, 1999,
+ *    2000, 2001, 2002, 2003, 2004, by Larry Wall and others
+ *
+ *    You may distribute under the terms of either the GNU General Public
+ *    License or the Artistic License, as specified in the README file.
+ *
+ */
+
+#ifndef __PATCHLEVEL_H_INCLUDED__
+
+/* do not adjust the whitespace! Configure expects the numbers to be
+ * exactly on the third column */
+
+#define PERL_REVISION	5		/* age */
+#define PERL_VERSION	8		/* epoch */
+#define PERL_SUBVERSION	6		/* generation */
+
+EOPL
+
+    close PL_H or skip "Error '$patchlevel_h': $!", $to_skip;
+
+    my %Config = get_smoked_Config( $findbin,
+                                    qw( archname cf_email version
+                                        osname osvers ));
+    is( $Config{archname}, $arch, "Architecture $arch" );
+    is( $Config{osname}, $osname, "OS name: $osname" );
+    is( $Config{osvers}, $osvers, "OS version: $osvers" );
+    is( $Config{version}, '5.8.6', "Perl version: $Config{version}" );
+
+    1 while unlink $patchlevel_h;
+}
+
 SKIP: {
     my $to_skip = 5;
-    my $libpath = File::Spec->catdir( $FindBin::Bin, 'lib' );
-    -d $libpath or mkpath( $libpath )  or 
-        skip "Can't create '$libpath': $!", $to_skip;
-    my $Config_pm = File::Spec->catfile( $libpath, 'Config.pm' );
 
     local *CONFIGPM;
     open CONFIGPM, "> $Config_pm" or 
@@ -135,10 +249,11 @@ our \$Config_SH : unique = \$_;
 EOCONFIG
     close CONFIGPM or skip "Error '$Config_pm': $!", $to_skip;
 
-    my %Config = get_smoked_Config( $FindBin::Bin,
+    my %Config = get_smoked_Config( $findbin,
                                     qw( archname cf_email version
                                         osname osvers ));
 
+    ok( -e $Config_pm, "Config from: $Config_pm" );
     is( $Config{archname}, $arch, "Architecture $arch" );
     is( $Config{cf_email}, 'abeltje@cpan.org', 'cf_email' );
     is( $Config{osname}, $osname, "OS name: $osname" );
@@ -148,7 +263,6 @@ EOCONFIG
     1 while unlink $Config_pm;
 }
 
-
 END {
-    rmtree( File::Spec->catdir( $FindBin::Bin, 'lib' ) )
+    rmtree( File::Spec->catdir( $findbin, 'lib' ) )
 }

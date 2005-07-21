@@ -1,12 +1,12 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 715 2004-07-24 16:10:00Z abeltje $
+# $Id: SysInfo.pm 860 2005-05-28 00:27:23Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
-$VERSION = '0.014';
+$VERSION = '0.025';
 
 use base 'Exporter';
-@EXPORT_OK = qw( &sysinfo );
+@EXPORT_OK = qw( &sysinfo &tsuname );
 
 =head1 NAME
 
@@ -29,6 +29,10 @@ or
     use Test::Smoke::SysInfo qw( sysinfo );
     prinft "[%s]\n", sysinfo();
 
+or
+
+    $ perl -MTest::Smoke::SysInfo=tsuname -le print+tsuname
+
 =head1 DESCRIPTION
 
 Sometimes one wants a more eleborate description of the system one is
@@ -36,9 +40,7 @@ smoking.
 
 =head1 METHODS
 
-=over 4
-
-=item Test::Smoke::SysInfo->new( )
+=head2 Test::Smoke::SysInfo->new( )
 
 Dispatch to one of the OS-specific subs.
 
@@ -48,24 +50,26 @@ sub new {
     my $proto = shift;
     my $class = ref $proto ? ref $proto : $proto;
 
-    CASE: {
-        local $_ = $^O;
+    my $chk_os;
+    for $chk_os ( $^O ) {
 
-        /aix/i        && return bless AIX(),     $class;
+        $chk_os =~ /aix/i        && return bless AIX(),     $class;
 
-        /darwin|bsd/i && return bless BSD(),     $class;
+        $chk_os =~ /darwin|bsd/i && return bless BSD(),     $class;
 
-        /hp-?ux/i     && return bless HPUX(),    $class;
+        $chk_os =~ /hp-?ux/i     && return bless HPUX(),    $class;
 
-        /linux/i      && return bless Linux(),   $class;
+        $chk_os =~ /linux/i      && return bless Linux(),   $class;
 
-        /irix/i       && return bless IRIX(),    $class;
+        $chk_os =~ /irix/i       && return bless IRIX(),    $class;
 
-        /solaris|sunos|osf/i 
-                      && return bless Solaris(), $class;
+        $chk_os =~ /solaris|sunos|osf/i 
+                                 && return bless Solaris(), $class;
 
-        /cygwin|mswin32|windows/i
-                      && return bless Windows(), $class;
+        $chk_os =~ /cygwin|mswin32|windows/i
+                                 && return bless Windows(), $class;
+
+        $chk_os =~ /VMS/         && return bless VMS(),     $class;
     }
     return bless Generic(), $class;
 }
@@ -81,7 +85,7 @@ sub AUTOLOAD {
     return $self->{ "_$method" } if exists $info{ "$method" };
 }
 
-=item __get_os( )
+=head2 __get_os( )
 
 This is the short info string about the Operating System.
 
@@ -91,10 +95,10 @@ sub __get_os {
     require POSIX;
     my $os = join " - ", (POSIX::uname())[0,2];
     $os =~ s/(\S+)/\L$1/;
-    MOREOS: {
-        local $_ = $^O;
+    my $chk_os;
+    for $chk_os ( $^O ) {
 
-        /aix/i             && do {
+        $chk_os =~ /aix/i && do {
             chomp( $os = `oslevel -r` );
             if ( $os =~ m/^(\d+)-(\d+)$/ ) {
                 $os = ( join ".", split //, $1 ) . "/ML$2";
@@ -114,41 +118,49 @@ sub __get_os {
                 $os .= "/$ml";
             }
             $os =~ s/^/AIX - /;
-            last MOREOS;
+            last;
         };
-        /irix/i            && do {
+        $chk_os =~ /irix/i && do {
             chomp( my $osvers = `uname -R` );
             my( $osn, $osv ) = split ' ', $os;
             $osvers =~ s/^$osv\s+(?=$osv)//;
             $os = "$osn - $osvers";
-            last MOREOS;
+            last;
         };
-        /linux/i           && do {
+        $chk_os =~ /linux/i && do {
             my $dist_re = '[-_](?:release|version)\b';
             my( $distro ) = grep /$dist_re/ => glob( '/etc/*' );
             last MOREOS unless $distro;
             $distro =~ s|^/etc/||;
             $distro =~ s/$dist_re//i;
             $os .= " [$distro]" if $distro;
-            last MOREOS;
+            last;
         };
-        /solaris|sunos/i   && do {
-            require Config;
-            $os = join " - ", $Config::Config{osname},
-                              $Config::Config{osvers};
+        $chk_os =~ /solaris|sunos/i && do {
+            my( $osn, $osv ) = (POSIX::uname())[0,2];
+            $osv > 5 and do {
+                $osn = 'Solaris';
+                $osv = '2.' . (split /\./, $osv, 2)[1];
+            };
+            $os = join " - ", $osn, $osv;
+            last;
         };
-        /windows|mswin32/i && do {
+        $chk_os =~ /windows|mswin32/i && do {
             eval { require Win32 };
             $@ and last MOREOS;
             $os = "$^O - " . join " ", Win32::GetOSName();
             $os =~ s/Service\s+Pack\s+/SP/;
-            last MOREOS;
+            last;
+        };
+        $chk_os =~ /vms/i && do {
+            $os = join " - ", (POSIX::uname())[0,3];
+            $os =~ s/(\S+)/\L$1/;
         };
     }
     return $os;
 }
 
-=item __get_cpu_type( )
+=head2 __get_cpu_type( )
 
 This is the short info string about the cpu-type. The L<POSIX> module
 should provide one (portably) with C<POSIX::uname()>.
@@ -160,7 +172,7 @@ sub __get_cpu_type {
     return (POSIX::uname())[4];
 }
 
-=item __get_cpu( )
+=head2 __get_cpu( )
 
 We do not have a portable way to get this information, so assign
 C<_cpu_type> to it.
@@ -169,7 +181,7 @@ C<_cpu_type> to it.
 
 sub __get_cpu { return __get_cpu_type() }
 
-=item __get_hostname( )
+=head2 __get_hostname( )
 
 Get the hostname from C<POSIX::uname()>.
 
@@ -182,7 +194,7 @@ sub __get_hostname {
 
 sub __get_ncpu { return '' }
 
-=item Generic( )
+=head2 Generic( )
 
 Get the information from C<POSIX::uname()>
 
@@ -200,7 +212,7 @@ sub Generic {
 
 }
 
-=item AIX( )
+=head2 AIX( )
 
 Use the L<lsdev> program to find information.
 
@@ -213,8 +225,8 @@ sub AIX {
     my( $info ) = grep /^\S+/ => @lsdev;
     ( $info ) = $info =~ /^(\S+)/;
     $info .= " -a 'state type'";
-    my( $cpu ) = grep /^enable:[^:\s]+/ => `lsattr -E -O -l $info`;
-    ( $cpu ) = $cpu =~ /^enable:([^:\s]+)/;
+    my( $cpu ) = grep /\benable:[^:\s]+/ => `lsattr -E -O -l $info`;
+    ( $cpu ) = $cpu =~ /\benable:([^:\s]+)/;
     $cpu =~ s/\bPowerPC(?=\b|_)/PPC/i;
 
     ( my $cpu_type = $cpu ) =~ s/_.*//;
@@ -236,7 +248,7 @@ sub AIX {
     };
 }
 
-=item HPUX( )
+=head2 HPUX( )
 
 Use the L<ioscan> program to find information.
 
@@ -249,8 +261,9 @@ sub HPUX {
     unless ( $ncpu ) {	# not root?
         local *SYSLOG;
         if ( open SYSLOG, "< /var/adm/syslog/syslog.log" ) {
-            while ( <SYSLOG> ) {
-                m/\bprocessor$/ and $ncpu++;
+            my $line;
+            while ( $line = <SYSLOG> ) {
+                $line =~ m/\bprocessor$/ and $ncpu++;
             }
         }
     }
@@ -269,10 +282,11 @@ sub HPUX {
     close LST;
 
     if (@cpu == 0 && open LST, "echo 'sc product cpu;il' | /usr/sbin/cstm |") {
-        while (<$lst>) {
-            s/^\s*(PA)\s*(\d+)\s+CPU Module.*/$m 1.1 $1$2/ or next;
-            $2 =~ m/^8/ and s/ 1.1 / 2.0 /;
-            push @cpu, $_;
+        my $line;
+        while ( $line = <LST> ) {
+            $line =~ s/^\s*(PA)\s*(\d+)\s+CPU Module.*/$m 1.1 $1$2/ or next;
+            $2 =~ m/^8/ and $line =~ s/ 1.1 / 2.0 /;
+            push @cpu, $line;
         }
     }
     $hpux->{_os} =~ s/ B\.(\d+)/ $1/;
@@ -292,7 +306,7 @@ sub HPUX {
     return $hpux;
 }
 
-=item BSD( )
+=head2 BSD( )
 
 Use the L<sysctl> program to find information.
 
@@ -303,7 +317,7 @@ sub BSD {
 
     my $sysctl_cmd = -x '/sbin/sysctl' ? '/sbin/sysctl' : 'sysctl';
 
-    my %extra = ( cpufrequency => undef );
+    my %extra = ( cpufrequency => undef, cpuspeed => undef );
     my @e_args = map {
         /^hw\.(\w+)\s*[:=]/; $1
     } grep /^hw\.(\w+)/ && exists $extra{ $1 } => `$sysctl_cmd -a hw`; 
@@ -312,10 +326,15 @@ sub BSD {
         chomp( $sysctl{ $name } = `$sysctl_cmd hw.$name` );
         $sysctl{ $name } =~ s/^hw\.$name\s*[:=]\s*//;
     }
+    $sysctl{machine} and $sysctl{machine} =~ s/Power Macintosh/macppc/;
 
     my $cpu = $sysctl{model};
-    exists $sysctl{cpufrequency}
-        and $cpu .= sprintf " (%.0f MHz)", $sysctl{cpufrequency}/1_000_000;
+
+    if ( exists $sysctl{cpuspeed} ) {
+        $cpu .= sprintf " (%.0f MHz)", $sysctl{cpuspeed};
+    } elsif ( exists $sysctl{cpufrequency} ) {
+        $cpu .= sprintf " (%.0f MHz)", $sysctl{cpufrequency}/1_000_000;
+    }
 
     return {
         _cpu_type => $sysctl{machine} || __get_cpu_type(),
@@ -326,7 +345,7 @@ sub BSD {
     };
 }
 
-=item IRIX( )
+=head2 IRIX( )
 
 Use the L<hinv> program to get the system information.
 
@@ -351,7 +370,7 @@ sub IRIX {
 
 }
 
-=item __from_proc_cpuinfo( $key, $lines )
+=head2 __from_proc_cpuinfo( $key, $lines )
 
 Helper function to get information from F</proc/cpuinfo>
 
@@ -365,7 +384,7 @@ sub __from_proc_cpuinfo {
     return $value;
 }
 
-=item Linux( )
+=head2 Linux( )
 
 Use the C</proc/cpuinfo> preudofile to get the system information.
 
@@ -405,7 +424,7 @@ sub Linux {
     };
 }
 
-=item Linux_sparc( )
+=head2 Linux_sparc( )
 
 Linux on sparc architecture seems too different from intel
 
@@ -440,7 +459,7 @@ sub Linux_sparc {
     };
 }
 
-=item Linux_ppc( )
+=head2 Linux_ppc( )
 
 Linux on ppc architecture seems too different from intel
 
@@ -473,7 +492,7 @@ sub Linux_ppc {
     };
 }
 
-=item Solaris( )
+=head2 Solaris( )
 
 Use the L<psrinfo> program to get the system information.
 
@@ -481,13 +500,36 @@ Use the L<psrinfo> program to get the system information.
 
 sub Solaris {
 
-    my( $psrinfo ) = grep /the .* operates .* mhz/ix => `psrinfo -v`;
-    my( $type, $speed ) = $psrinfo =~ /the (\w+) processor.*at (\d+) mhz/i;
-    $type =~ s/(v9)$/ $1 ? "-LP64" : "-LP32"/e;
-    my( $cpu_line ) = grep /\s+$speed\s+MHz\s+/i => `prtdiag`;
-    ( my $cpu = ( split " ", $cpu_line )[4] ) =~ s/.*,//;
-    $cpu .= " (${speed}MHz)";
-    my $ncpu = grep /on-line/ => `psrinfo`;
+    local $ENV{PATH} = "/usr/sbin:$ENV{PATH}";
+
+    my @psrinfo = `psrinfo -v`;
+    my( $psrinfo ) = grep /the .* operates .* [gm]hz/ix => @psrinfo;
+    my( $type, $speed, $magnitude ) =
+        $psrinfo =~ /the (.+) processor.*at (.+?)\s*([GM]hz)/i;
+
+    $type =~ s/(v9)$/ $1 ? "64" : ""/e;
+
+    my $cpu = __get_cpu();
+    if ( -d "/usr/platform" ) { # Solaris but not OSF/1.
+        chomp( my $platform = `uname -i` );
+        my $pfpath = "/usr/platform/$platform/sbin/prtdiag";
+        if ( -x "$pfpath" ) { # Not on Solaris-x86
+            my $prtdiag = `$pfpath`;
+            ( $cpu ) = $prtdiag =~ /^System .+\(([^\s\)]+)/;
+            unless ( $cpu ) {
+                my($cpu_line) = grep /\s+on-?line\s+/i => split /\n/, $prtdiag;
+                ( $cpu = ( split " ", $cpu_line )[4] ) =~ s/.*,//;
+            }
+            $cpu .= " ($speed$magnitude)";
+        } else {
+            $cpu .= " ($speed$magnitude)";
+        }
+    } elsif (-x "/usr/sbin/sizer") { # OSF/1.
+        $cpu = $type;
+        chomp( $type = `sizer -implver` );
+    }
+
+    my $ncpu = grep /on-?line/ => `psrinfo`;
 
     return {
         _cpu_type => $type,
@@ -498,7 +540,7 @@ sub Solaris {
     };
 }
 
-=item Windows( )
+=head2 Windows( )
 
 Use the C<%ENV> hash to find information. Fall back on the *::Generic
 values if these values have been unset or are unavailable (sorry I do
@@ -540,7 +582,36 @@ sub Windows {
     };
 }
 
-=item sysinfo( )
+=head2 VMS()
+
+Use some VMS specific stuff to get system information. These were
+suggested by Craig Berry.
+
+=cut
+
+sub VMS {
+    my $vms = Generic();
+
+#    my $myname = $vms->{_host};
+#    my @cpu_brief = `SHOW CPU/BRIEF`;
+#    my( $sysline ) = grep /$myname,(?:\s+a)?\s+/i => @cpu_brief;
+#    my( $cpu ) = $sysline =~ /$myname,(?:\s+a)?\s+(.+)/i;
+#    my $ncpu = grep /^CPU \d+/ && /\bstate\b/i && /\bRUN\b/i => @cpu_brief;
+
+    my %map = ( 
+        cpu      => 'HW_NAME',
+        cpu_type => 'ARCH_NAME',
+        ncpu     => 'ACTIVECPU_CNT'
+    );
+    for my $key ( keys %map ) {
+        my $cmd_out = `write sys\$output f\$getsyi("$map{$key}")`;
+        chomp( $vms->{ "_$key" } = $cmd_out );
+    }
+
+    return $vms;
+}
+
+=head2 sysinfo( )
 
 C<sysinfo()> returns a string with C<host>, C<os> and C<cpu_type>.
 
@@ -554,9 +625,38 @@ sub sysinfo {
     return join " ", @{ $si }{ map "_$_" => @fields };
 }
 
-1;
+=head2 tsuname( @args )
 
-=back
+This class gathers most of the C<uname(1)> info, make a comparable
+version. Takes almost the same arguments:
+
+    a for all (can be omitted)
+    n for nodename
+    s for os name and version
+    m for cpu name
+    c for cpu count
+    p for cpu_type
+
+=cut
+
+sub tsuname {
+    my @args = map split() => @_;
+
+    my @sw = qw( n s m c p );
+    my %sw = ( n => '_host', s => '_os',
+               m => '_cpu', c => '_ncpu', p => '_cpu_type' );
+
+    @args = grep exists $sw{ $_ } => @args;
+    @args or @args = ( 'a' );
+    grep( /a/ => @args ) and @args = @sw;
+    my %show = map +( $_ => undef ) => grep exists $sw{ $_ } => @args;
+    @args = grep exists $show{ $_ } => @sw;
+
+    my $si = Test::Smoke::SysInfo->new;
+    return join " ", @{ $si }{ @sw{ @args } };
+}
+
+1;
 
 =head1 SEE ALSO
 

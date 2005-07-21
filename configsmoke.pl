@@ -2,19 +2,22 @@
 use strict;
 
 use Config;
+use Carp;
 use Cwd;
 use File::Spec;
 use File::Path;
 use File::Copy;
 use Data::Dumper;
-use FindBin;
-use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
-use lib $FindBin::Bin;
+use File::Basename;
+my $findbin;
+BEGIN { $findbin = dirname $0 }
+use lib File::Spec->catdir( $findbin, 'lib' );
+use lib $findbin;
 use Test::Smoke::Util qw( do_pod2usage );
 
-# $Id: configsmoke.pl 705 2004-05-04 20:08:07Z abeltje $
+# $Id: configsmoke.pl 872 2005-07-21 16:53:21Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.042';
+$VERSION = '0.049';
 
 use Getopt::Long;
 my %options = ( 
@@ -96,6 +99,7 @@ Current options:
 =cut
 
 sub is_win32() { $^O eq 'MSWin32' }
+sub is_vms()   { $^O eq 'VMS'     }
 
 my %config = ( perl_version => $conf->{perl_version} || '5.9.x' );
 
@@ -104,6 +108,7 @@ my @mailers = sort keys %mailers;
 my @syncers = get_avail_sync();
 my $syncmsg = join "\n", @{ { 
     rsync    => "\trsync - Use the rsync(1) program [preferred]",
+    ftp      => "\tftp - Use Net::FTP to sync from APC [!slow!]",
     copy     => "\tcopy - Use File::Copy to copy from a local directory",
     hardlink => "\thardlink - Copy from a local directory using link()",
     snapshot => "\tsnapshot - Get a snapshot using Net::FTP (or LWP::Simple)",
@@ -111,6 +116,12 @@ my $syncmsg = join "\n", @{ {
 my @untars = get_avail_tar();
 my $untarmsg = join "", map "\n\t$_" => @untars;
 
+my %vdirs = map {
+    my $vdir = $_;
+    is_vms and $vdir =~ tr/.//d;
+    ( $_ => $vdir )
+} qw( 5.5.x 5.6.2 5.8.x );
+ 
 my %versions = (
     '5.5.x' => { source => 'ftp.linux.activestate.com::perl-5.005xx',
                  server => 'ftp.funet.fi',
@@ -118,9 +129,8 @@ my %versions = (
                  sfile  => '',
                  pdir   => '/pub/staff/gsar/APC/perl-5.005xx-diffs',
                  cfg    => 'perl55x.cfg',
-                 ddir   => File::Spec->rel2abs( 
-                               File::Spec->catdir( File::Spec->updir,
-                                                   'perl-5.5.x' ) ),
+                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                               "perl-$vdirs{'5.5.x'}" ),
                  text   => 'Perl 5.005 MAINT',
                  is56x  => 1},
     '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
@@ -128,9 +138,14 @@ my %versions = (
                  sdir   => '/snap',
                  sfile  => 'perl562-21463.tar.gz',
                  pdir   => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
-                 ddir   => File::Spec->rel2abs( 
-                               File::Spec->catdir( File::Spec->updir,
-                                                   'perl-5.6.2' ) ),
+                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                               "perl-$vdirs{'5.6.2'}" ),
+                 ftphost => 'ftp.linux.activestate.com',
+                 ftpusr  => 'anonymous',
+                 ftppwd  => 'smokers@perl.org',
+                 ftpsdir => '/pub/staff/gsar/APC/perl-5.6.2',
+                 ftpcdir => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
+                 
                  cfg    => 'perl562.cfg',
                  text   => 'Perl 5.6.2-to-be',
                  is56x  => 1 },
@@ -139,24 +154,34 @@ my %versions = (
                  sdir   => '/pub/languages/perl/snap/5.8.x',
                  sfile  => '',
                  pdir   => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
-                 ddir   => File::Spec->rel2abs( 
-                               File::Spec->catdir( File::Spec->updir,
-                                                   'perl-5.8.x' ) ),
+                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                               "perl-$vdirs{'5.8.x'}" ),
+                 ftphost => 'ftp.linux.activestate.com',
+                 ftpusr  => 'anonymous',
+                 ftppwd  => 'smokers@perl.org',
+                 ftpsdir => '/pub/staff/gsar/APC/perl-5.8.x',
+                 ftpcdir => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
+                 
                  text   => 'Perl 5.8 MAINT',
-                 cfg    => ( $^O eq 'MSWin32' 
-                        ? 'w32current.cfg' :'perl58x.cfg' ),
+                 cfg    => ( is_win32 ? 'w32current.cfg'
+                           : is_vms ? 'vmsperl.cfg' : 'perl58x.cfg' ),
                  is56x  => 0 },
     '5.9.x' => { source => 'ftp.linux.activestate.com::perl-current',
                  server => 'ftp.funet.fi',
                  sdir   => '/pub/languages/perl/snap/5.9.x',
                  sfile  => '',
                  pdir   => '/pub/staff/gsar/APC/perl-current-diffs',
-                 ddir   => File::Spec->rel2abs( 
-                               File::Spec->catdir( File::Spec->updir,
-                                                   'perl-current' ) ),
+                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                               'perl-current' ),
+                 ftphost => 'ftp.linux.activestate.com',
+                 ftpusr  => 'anonymous',
+                 ftppwd  => 'smokers@perl.org',
+                 ftpsdir => '/pub/staff/gsar/APC/perl-current',
+                 ftpcdir => '/pub/staff/gsar/APC/perl-current-diffs',
+                 
                  text   => 'Perl 5.10 to-be',
-                 cfg    => ( $^O eq 'MSWin32' 
-                        ? 'w32current.cfg' :'perlcurrent.cfg' ),
+                 cfg    => ( is_win32 ? 'w32current.cfg'
+                           : is_vms ? 'vmsperl.cfg' : 'perlcurrent.cfg' ),
                  is56x  => 0 },
 );
 my @pversions = sort keys %versions;
@@ -183,8 +208,8 @@ my %opt = (
         msg => "Where would you like the new source-tree?
 \tThis directory is also used as the build directory.",
         alt => [ ],
-        dft => File::Spec->rel2abs( File::Spec->catdir( File::Spec->updir,
-                                                        'perl-current' ) ),
+        dft => File::Spec->catdir( File::Spec->rel2abs( File::Spec->updir ),
+                                   'perl-current' ),
         chk => '.+',
     },
     use_old => {
@@ -197,8 +222,9 @@ my %opt = (
     cfg => {
         msg => 'Which build-configuration file would you like to use?',
         alt => [ ],
-        dft => File::Spec->rel2abs( is_win32
-                                    ? 'w32current.cfg' : 'perlcurrent.cfg' ),
+        dft => File::Spec->rel2abs(
+                ( is_win32 ? 'w32current.cfg'
+                : is_vms ? 'vmsperl.cfg' : 'perlcurrent.cfg' ) ),
     },
     change_cfg => {
         msg => undef, # Set later...
@@ -238,8 +264,8 @@ my %opt = (
     forest_hdir => {
         msg => 'Where would you like the intermediate source-tree?',
         alt => [ ],
-        dft => File::Spec->rel2abs( File::Spec->catdir( File::Spec->updir,
-                                                        'perl-inter' ) ),
+        dft => File::Spec->catdir( File::Spec->rel2abs( File::Spec->updir ),
+                                   'perl-inter' ),
         chk => '.+',
     },
     fsync => { 
@@ -260,7 +286,7 @@ my %opt = (
     rsync => {
         msg => 'Which rsync program should be used?',
         alt => [ ],
-        dft => whereis( 'rsync' ),
+        dft => ( whereis( 'rsync' ) || '' ),
     },
     opts => {
         msg => 'Which arguments should be used for rsync?',
@@ -292,7 +318,7 @@ my %opt = (
         msg => "How should the snapshots be extracted?
 Examples:$untarmsg",
         alt => [ ],
-        dft => (get_avail_tar())[0],
+        dft => ( (get_avail_tar())[0] || '' ),
     },
 
     snapext => {
@@ -322,7 +348,7 @@ Examples:$untarmsg",
     unzip => {
         msg => 'How should the patches be unzipped?',
         alt => [ ],
-        dft => whereis( 'gzip' ) . " -cd",
+        dft => ( whereis( 'gzip' ) . " -cd" ),
     },
 
     cleanup => {
@@ -346,10 +372,40 @@ Examples:$untarmsg",
         chk => '.+',
     },
 
+    ftphost => {
+        msg => 'From which server should the source-tree be FTPed',
+        alt => [ ],
+        dft => 'ftp.linux.activestate.com',
+        chk => '.+',
+    },
+
+    ftpusr  => {
+       msg => undef, #no choise
+       alt => [ ],
+       dft => 'anonymous',
+    },
+    ftppwd  => {
+       msg => '',
+       alt => [ ],
+       dft => 'smokers@perl.org',
+    },
+    ftpsdir => {
+       msg => 'Base directory for mirror on FTP server',
+       alt => [ ],
+       dft => '/pub/staff/gsar/APC/perl-current',
+       chk => '.+',
+    },
+    ftpcdir => {
+        msg => 'Base directory for patches on FTP server',
+        alt => [ ],
+        dft => '/pub/staff/gsar/APC/perl-current-diffs',
+        chk => '.+',
+    },
+                 
     patchbin => {
         msg => undef,
         alt => [ ],
-        dft => find_a_patch(),
+        dft => ( find_a_patch() || '' ),
     },
 
     popts => {
@@ -380,7 +436,7 @@ EOT
 Specify a different make program for "make _test".
 EOT
         alt => [ ],
-        dft => $Config{make},
+        dft => ( $Config{make} ? $Config{make} : 'make' ),
     },
 
     # mail stuff
@@ -487,6 +543,13 @@ Which directory should be used for the archives?
 EOT
         alt => [ ],
         dft => "",
+    },
+    # Some ENV stuff
+    perl5lib => {
+        msg => "What value should be used for PERL5LIB in the jcl wrapper?
+\t(Make empty, with single space, to not set it.)",
+        alt => [ ],
+        dft => (exists $ENV{PERL5LIB} ? $ENV{PERL5LIB} : ''),
     },
     # Schedule stuff
     docron => {
@@ -625,7 +688,7 @@ you will need to confirm your choice.
 =cut
 
 {
-    # Hack -des to keep the safeguards
+    # Hack -des (--usedft) to keep the safeguards
     local $options{usedft} = $options{usedft};
     BUILDDIR: {
         $arg = 'ddir';
@@ -739,9 +802,9 @@ my $want_forest = prompt_yn( $arg );
 FOREST: {
     last FOREST unless $want_forest;
 
-    $config{mdir} = prompt_dir( 'forest_mdir' );
+    $config{mdir} = prompt_dir( 'forest_mdir', 'mdir' );
 
-    $config{fdir} = prompt_dir( 'forest_hdir' );
+    $config{fdir} = prompt_dir( 'forest_hdir', 'fdir' );
 
     $config{sync_type} = 'forest';
 }
@@ -799,7 +862,7 @@ $arg = $want_forest ? 'fsync' : 'sync_type';
 $config{ $arg } = lc prompt( $arg );
 
 SYNCER: {
-    local $_ = $config{ $arg};
+    local *_; $_ = $config{ $arg};
     /^rsync$/ && do {
         $arg = 'source';
         $config{ $arg } = prompt( $arg );
@@ -809,6 +872,15 @@ SYNCER: {
 
         $arg = 'opts';
         $config{ $arg } = prompt( $arg );
+
+        last SYNCER;
+    };
+
+    /^ftp$/  && do {
+        for $arg (qw( ftphost ftpusr ftpsdir ftpcdir )) {
+            $config{ $arg } = prompt( $arg );
+	}
+        $config{ftppwd} = $conf->{ftppwd} || $opt{ftppwd}{dft};
 
         last SYNCER;
     };
@@ -1059,6 +1131,7 @@ EO_MSG
         ? "Which make should be used" : undef;
 
     $config{w32make} = prompt( 'w32make' );
+    $config{testmake} = $config{testmake};
 
     $config{w32args} = [ 
         "--win32-cctype" => $config{w32cc},
@@ -1066,6 +1139,28 @@ EO_MSG
         "osvers=$osvers", 
         $compilers{ $config{w32cc} }->{ccversarg},
     ];
+}
+
+=item vmsmake
+
+Get the make program to use for VMS (MMS or MMK). Start with the one
+this perl was build with.
+
+=cut
+
+VMSMAKE: {
+    is_vms or last VMSMAKE;
+
+    my %vmsmakers = get_avail_vms_make();
+
+    $arg = 'vmsmake';
+    $opt{ $arg } = {
+        msg => "Wich maker should be used?",
+        alt => [ sort keys %vmsmakers ],
+        dft => ( $Config{make} || (sort keys %vmsmakers)[0] ),
+    };
+    $config{ $arg } = prompt( $arg );
+    $config{testmake} = $config{ $arg }
 }
 
 =item make finetuning
@@ -1082,7 +1177,7 @@ $arg = 'makeopt';
 $opt{ $arg }->{dft} = '-nologo' if is_win32 && $config{w32make} =~ /nmake/i;
 $config{ $arg } = prompt( $arg );
 
-unless ( is_win32 ) {
+unless ( is_win32 || is_vms ) {
     $arg = 'testmake';
     $config{ $arg } = prompt( $arg ) || 'make';
 }
@@ -1097,7 +1192,7 @@ C<renice> will add a line in the shell-script that starts the smoke.
 
 =cut
 
-unless ( is_win32 ) {
+unless ( is_win32 || is_vms ) {
     $arg = 'umask';
     $config{ $arg } = prompt( $arg );
 
@@ -1168,6 +1263,36 @@ $arg = 'adir';
 $config{ $arg } = prompt_dir( $arg );
 $config{lfile} = File::Spec->rel2abs( $options{log}, cwd );
 
+=item delay_report
+
+Some filesystems do not support opening an already opened file. This
+makes it hard to scan the logfile for compiler messages. We can delay
+the creation of the report and call F<mailrpt.pl> after
+F<smokeperl.pl>. MSWin32 and VMS might benefit.
+
+=cut
+
+$arg = 'delay_report';
+$config{ $arg } = $^O =~ /VMS/;
+
+=item ENV stuff
+
+If you have a value for PERL5LIB set in the config environment, you
+could have it transferred tho the jcl-wrapperscript. Do not bother
+asking if it is not there.
+
+=cut
+
+my $has_perl5lib = exists $ENV{PERL5LIB} && defined $ENV{PERL5LIB} &&
+                   length $ENV{PERL5LIB};
+
+P5LIB: {
+    $has_perl5lib or last P5LIB;
+    print "\nI see you have PERL5LIB set to: '$ENV{PERL5LIB}'";
+    $arg = 'perl5lib';
+    $config{ $arg } = prompt( $arg );
+}
+
 =item schedule stuff
 
 =over 4
@@ -1188,7 +1313,8 @@ as F<at.exe> has not got a way comment-out entries.
 =cut
 
 my( $cron, $has_crond,  $crontime );
-SCHEDULE: { 
+SCHEDULE: {
+    is_vms and last SCHEDULE;
     ( $cron, $has_crond ) = get_avail_scheduler();
 
     last SCHEDULE unless $cron;
@@ -1263,23 +1389,31 @@ SAVEALL: {
     save_config();
     if ( is_win32 ) {
         $jcl = write_bat();
+    } elsif ( is_vms ) {
+        $jcl = write_com();
     } else {
         $jcl = write_sh();
     }
 }
 
-print <<EOMSG;
+WRAPUP: {
+    local $" = "";
+    my $chkbcfg = File::Spec->catfile( $findbin, 'chkbcfg.pl' );
+    print <<EOMSG;
+Finished configuration:
 
-Run the perl core test smoke suite with:
+* Please check "$config{cfg}" for the
+  configurations you want to test:
+@{ [map "    $_" => qx( $^X $chkbcfg $config{cfg} )] }
+
+* Run the perl core test smoke suite with:
 \t$jcl
 
-Please check "$config{cfg}" 
-for the configurations you want to test.
-
-Have the appropriate amount of fun!
+* Have the appropriate amount of fun!
 
                                     The Test::Smoke team.
 EOMSG
+}
 
 =back
 
@@ -1325,7 +1459,8 @@ sub sort_configkeys {
 
         # Sync related
         qw( sync_type fsync rsync opts source tar server sdir sfile
-            patchup pserver pdir unzip patchbin cleanup cdir hdir pfile ),
+            patchup pserver pdir unzip patchbin cleanup cdir hdir pfile
+            ftphost ftpusr ftppwd ftpsdir ftpcdir ),
 
         # OS specific make related
         qw( w32args w32cc w32make ),
@@ -1341,6 +1476,9 @@ sub sort_configkeys {
 
         # make fine-tuning
         qw( makeopt testmake ),
+
+        # ENV stuff
+        qw( perl5lib delay_report ),
     );
 
     my $i = 0;
@@ -1363,9 +1501,15 @@ C<write_sh()> creates the shell-script.
 sub write_sh {
     my $cwd = cwd();
     my $jcl = "$options{jcl}.sh";
-    my $smokeperl = File::Spec->catfile( $FindBin::Bin, 'smokeperl.pl' );
+    my $smokeperl = File::Spec->catfile( $findbin, 'smokeperl.pl' );
     my $cronline = schedule_entry( File::Spec->catfile( $cwd, $jcl ), 
                                    $cron, $crontime );
+
+    my $p5lib = $config{perl5lib} ? <<EO_P5L : '';
+PERL5LIB=$config{perl5lib}
+export PERL5LIB
+EO_P5L
+
     my $handle_lock = $config{killtime} ? <<EO_CONT : <<EO_DIE;
     # Not sure about this, so I will keep the old behaviour 
     # smokeperl.pl will exit(42) on timeout
@@ -1399,7 +1543,8 @@ $handle_lock
 fi
 echo "\$CFGNAME" > "\$LOCKFILE"
 
-PATH=$FindBin::Bin:$ENV{PATH}
+$p5lib
+PATH=$findbin:$ENV{PATH}
 export PATH
 umask $config{umask}
 $^X $smokeperl -c "\$CFGNAME" \$continue \$\* > $options{log} 2>&1
@@ -1423,22 +1568,32 @@ because it uses commands that are not supported by B<COMMAND.COM>
 
 sub write_bat {
     my $cwd = File::Spec->canonpath( cwd() );
-    my $findbin_bin = File::Spec->canonpath( $FindBin::Bin );
+    my $findbin_bin = File::Spec->canonpath( $findbin );
 
     my $smokeperl  = File::Spec->catfile( $findbin_bin, 'smokeperl.pl' );
     my $archiverpt = File::Spec->catfile( $findbin_bin, 'archiverpt.pl' );
-    my $copycmd = $config{w32args}->[1] ne "BORLAND" ? "" : <<EOCOPYCMD;
+    my $mailrpt    = File::Spec->catfile( $findbin_bin, 'mailrpt.pl' );
+    my $copycmd = <<'EOCOPYCMD';
 
-REM I found hanging XCOPY while smoking with BORLAND
-set COPYCMD=/Y %COPYCMD%
+REM I found hanging XCOPY while smoking; uncommenting the next line might help
+REM set COPYCMD=/Y \%COPYCMD\%
 
 EOCOPYCMD
+    my $p5lib = $config{perl5lib} ? <<EO_P5L : '';
+
+set PERL5LIB=$config{perl5lib}
+EO_P5L
+
 
     my $jcl = "$options{jcl}.cmd";
     my $atline = schedule_entry( File::Spec->catfile( $cwd, $jcl ), 
                                  $cron, $crontime );
-    my $archive = $config{lfile} 
-        ? qq/$^X $archiverpt -c "\%CFGNAME\%"/ : "";
+
+    my $archive = qq/$^X $archiverpt -c "\%CFGNAME\%"/;
+    $config{lfile} or $archive =~ s/^/REM /;
+
+    my $report = qq/$^X $mailrpt -c "\%CFGNAME\%"/;
+    $config{delay_report} or $report =~ s/^/REM /;
 
     local *MYSMOKEBAT;
     open MYSMOKEBAT, "> $jcl" or
@@ -1452,6 +1607,7 @@ REM @{[ scalar localtime ]}
 REM NOTE: Changes made in this file will be \*lost\*
 REM       after rerunning $0
 $copycmd
+$p5lib
 REM $atline
 
 set WD=$cwd\\
@@ -1472,6 +1628,7 @@ if NOT EXIST \%LOCKFILE\% goto START_SMOKE
     set PATH=$findbin_bin;\%PATH\%
     $^X $smokeperl -c "\%CFGNAME\%" \%* > "\%WD\%\\$options{log}" 2>&1
     $archive
+    $report
     set PATH=\%OLD_PATH\%
 
 del \%LOCKFILE\%
@@ -1483,11 +1640,49 @@ EO_BAT
     return File::Spec->canonpath( File::Spec->rel2abs( $jcl ) );
 }
 
+=item write_com
+
+Write a simple DCL script that helps running the smoke suite.
+
+=cut
+
+sub write_com {
+    my $jcl = "$options{jcl}.com";
+    my $cwd = File::Spec->canonpath( cwd() );
+    my $p5lib_p = $config{perl5lib} ? ' '  : '!';
+    my $p5lib = "$p5lib_p DEFINE PERL5LIB $config{perl5lib}";
+    local *MYSMOKECOM;
+    open MYSMOKECOM, "> $jcl" or
+        die "Cannot write '$jcl': $!";
+    print MYSMOKECOM <<EO_COM;
+\$! $jcl - Run Perl5 core test smoke suite
+\$!
+\$! Written by $0 v$VERSION
+\$! @{[ scalar localtime ]}
+\$! NOTE: Changes made in this file will be \*lost\*
+\$!       after rerunning $0
+\$! Try:
+\$!       SUBMIT/NOPRINTER/NOTIFY $cwd$jcl
+\$!
+\$  SET DEFAULT $cwd
+\$$p5lib
+\$! DEFINE/USER sys\$output $options{log}
+\$! DEFINE/USER sys\$error $options{log}
+\$  MCR $^X ${findbin}smokeperl.pl "-c=$options{config}"
+EO_COM
+    close MYSMOKECOM or warn "Error writing '$jcl': $!";
+
+    print "Finished writing '$jcl'\n";
+
+    return '@' . File::Spec->canonpath( File::Spec->rel2abs( $jcl ) );
+}
+
 sub prompt {
     my( $message, $alt, $df_val, $chk, $nck ) = 
         @{ $opt{ $_[0] } }{qw( msg alt dft chk nck )};
 
     $df_val = $conf->{ $_[0] } if exists $conf->{ $_[0] };
+    $df_val = $conf->{ $_[1] } if $_[1] && exists $conf->{ $_[1] };
     unless ( defined $message ) {
         my $retval = defined $df_val ? $df_val : "undef";
         (caller 1)[3] or print "Got [$retval]\n";
@@ -1616,6 +1811,9 @@ sub prompt_yn {
 sub whereis {
     my( $prog, $find_all ) = @_;
     return '' unless $prog; # you shouldn't call it '0'!
+    is_vms and return vms_whereis( $prog, $find_all );
+
+    $ENV{PATH} or return wantarray ? ( ) : [ ];
 
     my $p_sep = $Config::Config{path_sep};
     my @path = split /\Q$p_sep\E/, $ENV{PATH};
@@ -1633,6 +1831,50 @@ sub whereis {
         }
     }
     return @fnames ? wantarray ? @fnames : \@fnames : '';
+}
+
+=item vms_whereis( $prog )
+
+First look in the SYMBOLS to see if C<$prog> is there.
+Next look in the KFE-table C<INSTALL LIST> if it is there.
+As a last resort we can scan C<DCL$PATH> like we do on *nix/Win32
+
+=cut
+
+sub vms_whereis {
+    my( $prog, $find_all ) = @_;
+
+    # Check SYMBOLS
+    eval { require VMS::DCLsym };
+    if ( $@ ) {
+        carp "Oops, cannot load VMS::DCLsym: $@";
+    } else {
+        VMS::DCLsym->import;
+        my $syms = VMS::DCLsym->new;
+        return $prog if scalar $syms->getsym( uc $prog );
+    }
+    # Check Known File Entry table (INSTALL LIST)
+    my $img_re = '^\s+([\w\$]+);\d+';
+    my %kfe = map {
+        my $img = /$img_re/ ? $1 : '';
+        ( uc $img => undef )
+    } grep /$img_re/ => qx/INSTALL LIST/;
+    return $prog if exists $kfe{ uc $prog };
+
+    my $dclp_env = 'DCL$PATH';
+    my @path = $ENV{ $dclp_env }
+        ?split /$Config{path_sep}/, $ENV{ $dclp_env } : ();
+    my @pext = ( $Config{exe_ext} || $Config{_exe}, '.COM' );
+
+    foreach my $dir ( @path ) {
+        foreach my $ext ( @pext ) {
+            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
+            if ( -x $fname ) {
+                return $ext eq '.COM' ? "\@$fname" : "$fname";
+            }
+        }
+    }
+    return '';
 }
 
 sub find_a_patch {
@@ -1672,6 +1914,9 @@ sub get_avail_sync {
     # (has_ftp && 5.9.x) || has_lwp
     unshift @synctype, 'snapshot' 
         if ( $has_ftp && $pversion eq '5.9.x' ) || $has_lwp;
+
+    unshift @synctype, 'ftp' if $has_ftp;
+
     unshift @synctype, 'rsync' if whereis( 'rsync' );
     return @synctype;
 }
@@ -1813,6 +2058,24 @@ sub get_avail_w32compilers {
     } grep length $map{ $_ }->{ccbin} => keys %map;
 }
 
+sub get_avail_vms_make {
+
+    return map +( $_ => undef ) => grep defined $_ && length( $_ ) 
+        => map vms_whereis( $_ ) => qw( MMK MMS );
+ 
+    local *QXERR; open *QXERR, ">&STDERR"; close STDERR;
+
+    my %makers = map {
+        my $maker = $_;
+        map +( $maker => /V([\d.-]+)/ ? $1 : '' )
+        => grep /\b$maker\b/ && /V[\d.-]+/ => qx($maker/IDENT)
+    } qw( MMK MMS );
+
+    open STDERR, ">&QXERR"; close QXERR;
+
+    return %makers;
+}
+
 sub get_Win_version {
     require Test::Smoke::SysInfo;
     ( my $win_version = Test::Smoke::SysInfo::__get_os() ) =~ s/^[^-]*- //;
@@ -1832,10 +2095,11 @@ sub default_buildcfg {
 
     $pversion =~ tr/.//d;
     $pversion eq '59x' and $pversion = 'current';
-    my $basename = $^O eq 'MSWin32'
-        ? "w32current.cfg" : "perl${pversion}.cfg";
+    my $basename = is_win32
+        ? "w32current.cfg"
+        : is_vms ? "vmsperl.cfg" : "perl${pversion}.cfg";
 
-    my $dftbcfg = File::Spec->catfile( $FindBin::Bin, $basename );
+    my $dftbcfg = File::Spec->catfile( $findbin, $basename );
     -f $dftbcfg 
         or die "You seem to have an incomplete Test::Smoke installation" . 
                "($dftbcfg is missing)!\n";
@@ -1953,7 +2217,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 705 2004-05-04 20:08:07Z abeltje $
+    $Id: configsmoke.pl 872 2005-07-21 16:53:21Z abeltje $
 
 =head1 COPYRIGHT
 

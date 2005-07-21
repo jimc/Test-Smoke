@@ -1,11 +1,11 @@
 #! perl -w
 use strict;
 
-# $Id: skip_filter.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: skip_filter.t 861 2005-06-22 19:26:06Z abeltje $
 
 use File::Spec;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 
 while ( <DATA> ) {
@@ -39,3 +39,5 @@ F 54 tests and 609 subtests skipped.
 P C:\usr\local\src\bleadperl\perl\miniperl.exe "-I..\..\lib" "-I..\..\lib" -MExtUtils::Command -e cp bin/piconv blib\script\piconv
 P C:\usr\local\src\bleadperl\perl\miniperl.exe "-I..\..\lib" "-I..\..\lib" -MExtUtils::Command -e cp bin/enc2xs blib\script\enc2xs
 P Creating library file: libExtTest.dll.a
+P not ok 43 # SKIP see perldelta583
+P base/cond...................................ok    0.060s

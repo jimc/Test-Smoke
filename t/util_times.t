@@ -1,13 +1,10 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: util_times.t 689 2004-04-30 13:55:36Z abeltje $
+# $Id: util_times.t 763 2004-10-17 16:28:54Z abeltje $
 
 use Test::More;
 my $verbose = 0;
-
-use FindBin;
-use lib $FindBin::Bin;
 
 my( @diffs, @fixed );
 BEGIN {

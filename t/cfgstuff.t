@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: cfgstuff.t 527 2004-01-09 01:41:40Z abeltje $
+# $Id: cfgstuff.t 809 2004-12-03 11:14:47Z abeltje $
 
 use File::Spec;
 

@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 716 2004-07-24 17:51:09Z abeltje $
+# $Id: Smoke.pm 873 2005-07-21 16:54:14Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.19';
+$VERSION  = '1.19_71';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -29,9 +29,8 @@ Test::Smoke - The Perl core test smoke suite
     use vars qw( $VERSION );
     $VERSION = Test::Smoke->VERSION;
 
-    read_config( $config_name ) or die Test::Smoke->config_error; 
-
-    run_smoke;
+    read_config( $config_name ) or warn Test::Smoke->config_error; 
+    
 
 =head1 DESCRIPTION
 
@@ -121,10 +120,10 @@ sub run_smoke {
 
     my $patch = Test::Smoke::Util::get_patch( $conf->{ddir} );
 
-    exists $Config{ldlibpthname} && $Config{ldlibpthname} and
-        $ENV{ $Config{ldlibpthname} } ||= '',
-        substr( $ENV{ $Config{ldlibpthname} }, 0, 0)  =
-            "$conf->{ddir}$Config{path_sep}";
+#    exists $Config{ldlibpthname} && $Config{ldlibpthname} and
+#        $ENV{ $Config{ldlibpthname} } ||= '',
+#        substr( $ENV{ $Config{ldlibpthname} }, 0, 0)  =
+#            "$conf->{ddir}$Config{path_sep}";
 
     my $logfile = File::Spec->catfile( $conf->{ddir}, 'mktest.out' );
     my $BuildCFG = $continue 
@@ -145,13 +144,13 @@ sub run_smoke {
     $conf->{v} && $conf->{defaultenv} and
         $smoker->tty( "Running smoke tests without \$ENV{PERLIO}\n" );
 
+    chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
     unless ( $continue ) {
-        $smoker->_make( "-i distclean 2>/dev/null" );
+        $smoker->make_distclean( );
         $smoker->ttylog( "Smoking patch $patch\n" ); 
         do_manifest_check( $conf->{ddir}, $smoker );
     }
 
-    chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
     foreach my $this_cfg ( $BuildCFG->configurations ) {
         $smoker->mark_out; $smoker->mark_in;
         if ( skip_config( $this_cfg ) ) {
@@ -175,8 +174,7 @@ sub run_smoke {
 
 =item __get_ts_patchlevel( )
 
-Read the contents of F<.patch> or use the subversion placeholder
-C<$Rev: 716 $>.
+Read the contents of F<.patch>.
 
 =cut
 
@@ -184,7 +182,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 716 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 873 $ =~ /(\d+)/;
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
@@ -199,11 +197,13 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 716 2004-07-24 17:51:09Z abeltje $
+$Id: Smoke.pm 873 2005-07-21 16:54:14Z abeltje $
 
 =head1 COPYRIGHT
 
-(c) 2003-2004, Abe Timmerman <abeltje@cpan.org> All rights reserved.
+(c) 2003, All rights reserved.
+
+  * Abe Timmerman <abeltje@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

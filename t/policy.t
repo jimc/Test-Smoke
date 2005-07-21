@@ -2,12 +2,14 @@
 use strict;
 $| = 1;
 
-# $Id: policy.t 505 2003-12-21 11:48:43Z abeltje $
+# $Id: policy.t 763 2004-10-17 16:28:54Z abeltje $
 # This file checks to see if the new Test::Smoke::Policy object
 # does the same as the old way Merijn originaly wrote
 
-use FindBin;
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
 use Test::Smoke::Util qw( get_config );
 use Data::Dumper;

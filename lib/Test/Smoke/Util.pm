@@ -1,29 +1,31 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 712 2004-07-23 10:49:04Z abeltje $
+# $Id: Util.pm 871 2005-07-21 16:26:52Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.27';
+$VERSION = '0.38';
 
 use base 'Exporter';
 @EXPORT = qw( 
-    &Configure_win32 
+    &Configure_win32
     &get_cfg_filename &get_config
-    &check_MANIFEST
     &get_patch
     &skip_config &skip_filter
 );
 
-@EXPORT_OK = qw( 
+@EXPORT_OK = qw(
+    &grepccmsg
     &get_ncpu &get_smoked_Config &parse_report_Config 
     &get_regen_headers &run_regen_headers
     &calc_timeout &time_in_hhmm
     &do_pod2usage
+    &set_vms_rooted_logical
 );
 
 use Text::ParseWords;
-use File::Spec;
+use File::Spec::Functions;
 use File::Find;
+use Cwd;
 
 =head1 NAME
 
@@ -166,6 +168,7 @@ sub Configure_win32 {
 	"-Duseperlio"		=> "USE_PERLIO",
 	"-Dusemultiplicity"	=> "USE_MULTI",
 	"-Duseimpsys"		=> "USE_IMP_SYS",
+	"-Uuseimpsys"		=> "USE_IMP_SYS",
         "-Dusemymalloc"         => "PERL_MALLOC",
         "-Duselargefiles"       => "USE_LARGE_FILES",
 	"-DDEBUGGING"		=> "USE_DEBUGGING",
@@ -212,26 +215,35 @@ sub Configure_win32 {
     my $def_re = '((?:(?:PERL|USE|IS)_\w+)|BCCOLD)';
     my @w32_opts = grep ! /^$def_re/, keys %opts;
     my $config_args = join " ", 
-        grep /^-D[a-z_]+/, quotewords( '\s+', 1, $command );
+        grep /^-[DU][a-z_]+/, quotewords( '\s+', 1, $command );
     push @args, "config_args=$config_args";
 
     my @buildopt;
     $command =~ m{^\s*\./Configure\s+(.*)} or die "unable to parse command";
-    foreach ( quotewords( '\s+', 1, $1) ) {
+    my $cmdln = $1;
+    foreach ( quotewords( '\s+', 1, $cmdln ) ) {
 	m/^-[des]{1,3}$/ and next;
 	m/^-Dusedevel$/  and next;
         if ( /^-Accflags=(['"]?)(.+)\1/ ) { #emacs' syntaxhighlite
            push @buildopt, $2;
            next;
         }
-        my( $option, $value ) = /^(-D\w+)(?:=(.+))?$/;
+        my( $option, $value ) = /^(-[DU]\w+)(?:=(.+))?$/;
 	die "invalid option '$_'" unless exists $opt_map{$option};
 	$opts{$opt_map{$option}} = $value ? $value : 1;
+        $option =~ /^-U/ and $opts{$opt_map{$option}} = 0;
     }
 
     # If you set one, we do all, so you can have fork()
-    if ( $opts{USE_MULTI} || $opts{USE_ITHREADS} || $opts{USE_IMP_SYS} ) {
-        $opts{USE_MULTI} = $opts{USE_ITHREADS} = $opts{USE_IMP_SYS} = 1;
+    # unless you set -Uuseimpsys
+    unless ( $cmdln =~ /-Uuseimpsys\b/ ) {
+        if ( $opts{USE_MULTI} || $opts{USE_ITHREADS} || $opts{USE_IMP_SYS} ) {
+            $opts{USE_MULTI} = $opts{USE_ITHREADS} = $opts{USE_IMP_SYS} = 1;
+        }
+    } else {
+        if ( $opts{USE_MULTI} || $opts{USE_ITHREADS} ) {
+            $opts{USE_MULTI} = $opts{USE_ITHREADS} = 1;
+        }
     }
 
     # If you -Dgcc_v3_2 you 'll *want* CCTYPE = GCC
@@ -293,6 +305,42 @@ sub Configure_win32 {
     return $out;
 } # Configure_win32
 
+=item set_vms_rooted_logical( $logical, $dir )
+
+This will set a VMS rooted logical like:
+
+    define/translation=concealed $logical $dir
+
+=cut
+
+sub set_vms_rooted_logical {
+    my( $logical, $dir ) = @_;
+    return unless $^O eq 'VMS';
+
+    my $cwd = cwd();
+    $dir ||= $cwd;
+
+    chdir $dir or die "Cannot chdir($dir): $!";
+
+    # On older systems we might exceed the 8-level directory depth limit
+    # imposed by RMS.  We get around this with a rooted logical, but we
+    # can't create logical names with attributes in Perl, so we do it
+    # in a DCL subprocess and put it in the job table so the parent sees it.
+
+    open TSBRL, '> tsbuildrl.com' or die "Error creating DCL-file; $!";
+
+    print TSBRL <<COMMAND;
+\$ $logical = F\$PARSE("SYS\$DISK:[]",,,,"NO_CONCEAL")-".][000000"-"]["-"].;"+".]"
+\$ DEFINE/JOB/NOLOG/TRANSLATION=CONCEALED $logical '$logical'
+COMMAND
+    close TSBRL;
+
+    my $result = system '@tsbuildrl.com';
+    1 while unlink 'tsbuildrl.com';
+    chdir $cwd;
+    return $result == 0;
+}
+
 =item get_cfg_filename( )
 
 C<get_cfg_filename()> tries to find a B<cfg file> and returns it.
@@ -312,6 +360,117 @@ sub get_cfg_filename {
     return $cfg_name if -f $cfg_name && -s _;
 
     return undef;
+}
+
+=item grepccmsg( $cc, $logfile, $verbose )
+
+This is a port of Jarkko Hietaniemi's grepccerr script.
+
+=cut
+
+sub grepccmsg {
+    my( $cc, $logfile, $verbose ) = @_;
+    defined $logfile or return;
+    $cc ||= 'gcc';
+    my %OS2PAT = (
+        'aix' => 
+            # "foo.c", line n.c: pppp-qqq (W) ...error description...
+            # "foo.c", line n.c: pppp-qqq (S) ...error description...
+            '(^".+?", line \d+\.\d+: \d+-\d+ \([WS]\) .+?$)',
+
+        'dec_osf' =>
+            # DEC OSF/1, Digital UNIX, Tru64 (notice also VMS)
+            # cc: Warning: foo.c, line nnn: ...error description...(error_tag)
+            #     ...error line...
+            # ------^
+            # cc: Error: foo.c, line nnn: ...error description... (error_tag)
+            #     ...error line...
+            # ------^
+            '(^cc: (?:Warning|Error): .+?^-*\^$)',
+
+       'hpux' =>
+            # cc: "foo.c"" line nnn: warning ppp: ...error description...
+            # cc: "foo.c"" line nnn: error ppp: ...error description...
+            '(^cc: ".+?", line \d+: (?:warning|error) \d+: .+?$)',
+
+        'irix' =>
+            # cc-pppp cc: WARNING File = foo.c, Line = nnnn
+            # ...error description...
+            # 
+            # ...error line...
+            #   ^
+            # cc-pppp cc: ERROR File = foo.c, Line = nnnn
+            # ...error description...
+            # 
+            # ...error line...
+            #   ^
+            '^(cc-\d+ cc: (?:WARNING|ERROR) File = .+?, ' .
+            'Line = \d+.+?^\s*\^$)',
+
+        'solaris' =>
+            # "foo.c", line nnn: warning: ...error description...
+            # "foo.c", line nnn: warning: ...:
+            #         ...error description...
+            # "foo.c", line nnn: syntax error ...
+            '(^".+?", line \d+: ' .
+            '(?:warning: (?:(?:.+?:$)?.+?$)|syntax error.+?$))',
+
+        'vms' => # same compiler as Tru64, different message syntax
+            #     ...error line...
+            # ......^
+            # %CC-W-MESSAGEID, ...error description...
+            # at line number nnn in file foo.c
+            '(^\n.+?\n^\.+?\^\n^\%CC-(?:I|W|E|F)-\w+, ' .
+            '.+?\nat line number \d+ in file \S+?$)',
+
+        'gcc' =>
+            # foo.c: In function `foo':
+            # foo.c:nnn: warning: ...
+            # foo.c: In function `foo':
+            # foo.c:nnn:ppp: warning: ...
+                # Sometimes also the column is mentioned.
+            # foo.c: In function `foo':
+            # foo.c:nnn: error: ...
+            '(^(?-s:.+?):(?: In function .+?:$|\d+(?:\:\d+)?: ' .
+            '(?:warning|error): .+?$))',
+
+        'mswin32' => # MSVC(?:60)*
+            # foo.c : error LNKnnn: error description
+            # full\path\to\fooc.c : fatal error LNKnnn: error description
+            # foo.c(nnn) : warning Cnnn: warning description
+            '(^(?!NMAKE)(?-s:.+?) : (?-s:.+?)\d+: .+?$)',
+
+    );
+    exists $OS2PAT{ lc $cc } or $cc = 'gcc';
+    my $pat = $OS2PAT{ lc $cc };
+
+    my( $indx, %error ) = ( 1 );
+    my $smokelog = '';
+    if ( open my $logfh, "< $logfile" ) {
+        $verbose and print "Reading logfile '$logfile'\n";
+        local $/;
+        $smokelog = <$logfh>;
+        close $logfh;
+        $verbose and print "Pattern($cc): /$pat/\n";
+    } else {
+        $verbose and print "Skipping '$logfile' '$!'\n";
+        $error{ "Couldn't examine '$logfile' for compiler warnings." } = 1;
+    }
+
+    $error{ $1 } ||= $indx++ while $smokelog =~ /$pat/smg;
+
+    # I need to think about this IRIX/$Config{cc} thing
+#    if ($cc eq 'irix') {
+#        if ($Config{cc} =~ /-n32|-64/) {
+#    	     delete @error{ grep { /cc-(?:1009|1110|1047) / } keys %error };
+#        }
+#    }
+
+    my @errors = map {
+        chomp; $_;
+    } sort { $error{ $a } <=> $error{ $b } } keys %error;
+
+    return wantarray ? @errors : \@errors;
 }
 
 =item get_config( $filename )
@@ -405,40 +564,6 @@ sub get_config {
     return @cnf_stack;
 }
 
-=item check_MANIFEST( $path )
-
-Read C<MANIFEST> from C<$path> and check against the actual directory
-contents.
-
-C<check_MANIFEST()> returns a hashref all keys are suspicious files, 
-their value tells wether it should not be there (false) or is missing (true).
-
-=cut
-
-sub check_MANIFEST {
-    my( $path ) = @_;
-    my $mani_name = File::Spec->catfile( $path, 'MANIFEST' );
-    my %MANIFEST;
-    if (open MANIFEST, "< $mani_name") {
-        # We've done no tests yet, and we've started after the rsync --delete
-        # Now check if I'm in sync
-        %MANIFEST = ( ".patch" => 1, map { s/\s.*//s; $_ => 1 } <MANIFEST>);
-        find (sub {
-            -d and return;
-            m/^mktest\.(log|out)$/ and return;
-            my $f = $File::Find::name;
-            $f =~ s:^\Q$path\E/?::;
-            if (exists $MANIFEST{$f}) {
-                delete $MANIFEST{$f};
-                return;
-            }
-            $MANIFEST{$f} = 0;
-        }, $path);
-    }
-    close MANIFEST;
-    return \%MANIFEST;
-}
-
 =item get_patch( [$ddir] )
 
 Try to find the patchlevel, look for B<.patch> or try to get it from
@@ -498,6 +623,15 @@ sub version_from_patchlevel_h {
     if ( open PATCHLEVEL, "< $file" ) {
         my $patchlevel = do { local $/; <PATCHLEVEL> };
         close PATCHLEVEL;
+
+        if ( $patchlevel =~ /^#define PATCHLEVEL\s+(\d+)/m ) {
+            # Also support perl < 5.6
+            $version = sprintf "%03u", $1;
+            $subversion = $patchlevel =~ /^#define SUBVERSION\s+(\d+)/m
+                ? sprintf "%02u", $1 : '??';
+            return "$revision.$version$subversion";
+        }
+
         $revision   = $patchlevel =~ /^#define PERL_REVISION\s+(\d+)/m 
                     ? $1 : '?';
         $version    = $patchlevel =~ /^#define PERL_VERSION\s+(\d+)/m
@@ -588,6 +722,12 @@ sub get_ncpu {
             last OS_CHECK;
         };
 
+        /vms/i && do {
+            my @output = grep /CPU \d+ is in RUN state/ => `show cpu/active`;
+            $cpus = @output ? scalar @output : '';
+            last OS_CHECK;
+        };
+
         $cpus = "";
         require Carp;
         Carp::carp "get_ncpu: unknown operationg system";
@@ -611,10 +751,11 @@ sub get_smoked_Config {
     my( $dir, @fields ) = @_;
     my %Config = map { ( lc $_ => undef ) } @fields;
 
-    my $perl_Config_pm = File::Spec->catfile ($dir, "lib", "Config.pm");
-    my $perl_config_sh = File::Spec->catfile( $dir, 'config.sh' );
+    my $perl_Config_heavy = catfile ($dir, "lib", "Config_heavy.pl");
+    my $perl_Config_pm    = catfile ($dir, "lib", "Config.pm");
+    my $perl_config_sh    = catfile( $dir, 'config.sh' );
     local *CONF;
-    if ( open CONF, "< $perl_Config_pm" ) {
+    if ( open CONF, "< $perl_Config_heavy" ) {
 
         while (<CONF>) {
             if ( m/^(?:
@@ -630,6 +771,24 @@ sub get_smoked_Config {
         close CONF;
     }
     my %conf2 = map {
+        ( $_ => undef )
+    } grep !defined $Config{ $_ } => keys %Config;
+    if ( open CONF, "< $perl_Config_pm" ) {
+
+        while (<CONF>) {
+            if ( m/^(?:
+                       (?:our|my)\ \$[cC]onfig_[sS][hH].*
+                    |
+                       \$_
+                    )\ =\ <<'!END!';/x..m/^!END!/){
+                m/!END!(?:';)?$/      and next;
+                m/^([^=]+)='([^']*)'/ or next;
+                exists $conf2{lc $1} and $Config{lc $1} = $2;
+            }
+        }
+        close CONF;
+    }
+    %conf2 = map {
         ( $_ => undef )
     } grep !defined $Config{ $_ } => keys %Config;
     if ( open CONF, "< $perl_config_sh" ) {
@@ -653,6 +812,8 @@ sub get_smoked_Config {
             if exists $conf2{version};
     }
 
+    # There should be no under-bars in perl versions!
+    exists $Config{version} and $Config{version} =~ s/_/./g;
     return %Config;
 }
 
@@ -845,7 +1006,13 @@ sub skip_config {
     my( $config ) = @_;
 
     my $skip = $config->has_arg(qw( -Uuseperlio -Dusethreads )) ||
-               $config->has_arg(qw( -Uuseperlio -Duseithreads ));
+               $config->has_arg(qw( -Uuseperlio -Duseithreads )) ||
+               ( $^O eq 'MSWin32' && 
+               (( $config->has_arg(qw( -Duseithreads -Dusemymalloc )) &&
+                !$config->has_arg( '-Uuseimpsys' ) ) ||
+               ( $config->has_arg(qw( -Dusethreads -Dusemymalloc )) &&
+                !$config->has_arg( '-Uuseimpsys' ) ))
+               );
     return $skip;
 }
 
@@ -880,6 +1047,7 @@ sub skip_filter {
 #    m,^\s+$testdir/, ||
     m,^sh mv-if-diff\b, ||
     m,File \S+ not changed, ||
+    m,^(not\s+)?ok\s+\d+\s+[-#]\s+(?i:skip\S*[: ]),i ||
     # cygwin
     m,^dllwrap: no export definition file provided, ||
     m,^dllwrap: creating one. but that may not be what you want, ||
@@ -894,6 +1062,7 @@ sub skip_filter {
     m,^(   )?### , ||
     # Clean up Win32's output
     m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok$, ||
+    m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok\s+\d+(\.\d+)?s$, ||
     m,^(?:\.\.[/\\])?[\w/\\-]+\.*ok\,\s+\d+/\d+\s+skipped:, ||
     m,^(?:\.\.[/\\])?[\w/\\-]+\.*skipped[: ], ||
     m,^\t?x?copy , ||

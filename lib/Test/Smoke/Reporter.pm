@@ -1,9 +1,9 @@
 package Test::Smoke::Reporter;
 use strict;
 
-# $Id: Reporter.pm 713 2004-07-23 13:08:49Z abeltje $
+# $Id: Reporter.pm 870 2005-07-21 16:11:53Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.016';
+$VERSION = '0.022';
 
 use Cwd;
 use File::Spec::Functions;
@@ -11,13 +11,14 @@ require File::Path;
 use Text::ParseWords;
 require Test::Smoke;
 use Test::Smoke::SysInfo;
-use Test::Smoke::Util qw( get_smoked_Config time_in_hhmm );
+use Test::Smoke::Util qw( grepccmsg get_smoked_Config time_in_hhmm );
 
 my %CONFIG = (
     df_ddir       => curdir(),
     df_outfile    => 'mktest.out',
     df_rptfile    => 'mktest.rpt',
     df_cfg        => undef,
+    df_lfile      => undef,
     df_showcfg    => 0,
 
     df_locale     => undef,
@@ -239,7 +240,8 @@ sub _parse {
             s/-Dusedevel(\s+|$)//;
             s/\s*-des//;
             $statarg = $_;
-            $debug = s/-DDEBUGGING\s*// ? "D" : "N";
+            $debug = s/-D(DEBUGGING|usevmsdebug)\s*// ? "D" : "N";
+            $debug eq 'D' and $rpt{dbughow} = "-D$1";
             s/\s+$//;
 
             $cfgarg = $_ || "";
@@ -348,10 +350,11 @@ sub _post_process {
     my %count = ( O => 0, F => 0, X => 0, M => 0, 
                   m => 0, c => 0, o => 0, t => 0 );
     my( %failures, %order ); my $ord = 1;
+    my $debugging = $rpt->{dbughow} || '-DDEBUGGING';
     foreach my $config ( @{ $rpt->{cfglist} } ) {
         foreach my $dbinfo (qw( N D )) {
             my $cfg = $config;
-            ( $cfg =  $cfg ? "-DDEBUGGING $cfg" : "-DDEBUGGING" )
+            ( $cfg =  $cfg ? "$debugging $cfg" : $debugging )
                 if $dbinfo eq "D";
             $self->{v} and print "Processing [$cfg]\n";
             my $status = $self->{_rpt}{ $config }{ $dbinfo };
@@ -378,11 +381,11 @@ sub _post_process {
                     $status->{ $tstenv } = $failed =~ /^Inconsistent/
                         ? "X" : "F";
                 }
+                $self->{v} > 1 and print "\t[$showenv]: $status->{$tstenv}\n";
                 if ( $tstenv eq 'minitest' ) {
                     $status->{stdio} = "M";
                     delete $status->{minitest};
                 }
-                $self->{v} > 1 and print "\t[$showenv]: $status->{$tstenv}\n";
             }
             unless ( $self->{defaultenv} ) {
                 exists $status->{perlio} or $status->{perlio} = '-';
@@ -399,8 +402,9 @@ sub _post_process {
     my @failures = map {
         { tests => $_,
           cfgs  => [ map {
+              my $cfg_clean = __rm_common_args( $_->{cfg}, \%common_args );
               my $env = join "/", @{ $_->{env} };
-              "[$env] $_->{cfg}";
+              "[$env] $cfg_clean";
         } @{ $failures{ $_ } }],
       }
     } sort { $order{$a} <=> $order{ $b} } keys %failures;
@@ -421,6 +425,21 @@ sub _post_process {
     $self->{_tstenv} = [ reverse sort keys %bldenv2 ];
 }
 
+=item __rm_common_args( $cfg, \%common )
+
+Removes the the arguments stored as keys in C<%common> from C<$cfg>.
+
+=cut
+
+sub __rm_common_args {
+    my( $cfg, $common ) = @_;
+
+    require Test::Smoke::BuildCFG;
+    my $bcfg = Test::Smoke::BuildCFG::new_configuration( $cfg );
+
+    return $bcfg->rm_arg( keys %$common );
+}
+
 =item $reporter->write_to_file( [$name] )
 
 Write the C<< $self->report >> to file. If name is ommitted it will
@@ -430,6 +449,7 @@ use C<< catfile( $self->{ddir}, $self->{rptfile} ) >>.
 
 sub write_to_file {
     my $self = shift;
+    return unless defined $self->{_outfile};
     my( $name ) = @_ || ( catfile $self->{ddir}, $self->{rptfile} );
 
     $self->{v} and print "Writing report to '$name':";
@@ -457,14 +477,19 @@ Return a string with the full report
 
 sub report {
     my $self = shift;
+    return unless defined $self->{_outfile};
+
     my $report = $self->preamble;
 
     $report .= $self->summary . "\n";
     $report .= $self->letter_legend . "\n";
     $report .= $self->smoke_matrix . $self->bldenv_legend;
 
-    $report .= "\nFailures:\n" . $self->failures if $self->has_test_failures;
+    $report .= "\nFailures: (common-args) $self->{_rpt}{common_args}\n"
+            .  $self->failures if $self->has_test_failures;
     $report .= "\n" . $self->mani_fail           if $self->has_mani_failures;
+
+    $report .= $self->ccmessages;
 
     if ( $self->{showcfg} && $self->{cfg} && $self->has_test_failures ) {
         require Test::Smoke::BuildCFG;
@@ -492,8 +517,34 @@ sub ccinfo {
         $cinfo = "? ";
         my $ccvers = $Config{gccversion} || $Config{ccversion} || '';
         $cinfo .= ( $Config{cc} || 'unknown cc' ) . " version $ccvers";
+        $self->{_ccinfo} = ($Config{cc} || 'cc') . " version $ccvers";
     }
     return $cinfo;
+}
+
+=item $reporter->ccmessages( )
+
+Use a port of Jarkko's F<grepccerr> script to report the compiler messages.
+
+=cut
+
+sub ccmessages {
+    my $self = shift;
+    my $ccinfo = $self->{_rpt}{cinfo} || $self->{_ccinfo};
+    $ccinfo =~ s/^(.+)\s+version\s+.+/$1/;
+
+    $^O =~ /^(?:linux|.*bsd.*|darwin)/ and $ccinfo = 'gcc';
+    my $cc = $ccinfo eq 'gcc' ? 'gcc' : $^O;
+
+    $self->{v} and print "Looking for cc messages: '$cc'\n";
+    my $errors = grepccmsg( $cc, $self->{lfile}, $self->{v} ) || [ ];
+
+    local $" = "\n";
+    return @$errors ? <<EOERRORS : "";
+
+Compiler messages($cc):
+@$errors
+EOERRORS
 }
 
 =item $reporter->preamble( )
@@ -637,21 +688,23 @@ sub bldenv_legend {
     my $locale = $self->{_locale};
     $self->{defaultenv} = ( @{ $self->{_tstenv} } == 1 )
         unless defined $self->{defaultenv};
+    my $debugging = $self->{_rpt}{dbughow} || '-DDEBUGGING';
+
     return  $locale ? <<EOL : $self->{defaultenv} ? <<EOS : <<EOE;
-| | | | | +- LC_ALL = $locale -DDEBUGGING
-| | | | +--- PERLIO = perlio -DDEBUGGING
-| | | +----- PERLIO = stdio  -DDEBUGGING
+| | | | | +- LC_ALL = $locale $debugging
+| | | | +--- PERLIO = perlio $debugging
+| | | +----- PERLIO = stdio  $debugging
 | | +------- LC_ALL = $locale
 | +--------- PERLIO = perlio
 +----------- PERLIO = stdio
 
 EOL
-| +--------- -DDEBUGGING
+| +--------- $debugging
 +----------- no debugging
 
 EOS
-| | | +----- PERLIO = perlio -DDEBUGGING
-| | +------- PERLIO = stdio  -DDEBUGGING
+| | | +----- PERLIO = perlio $debugging
+| | +------- PERLIO = stdio  $debugging
 | +--------- PERLIO = perlio
 +----------- PERLIO = stdio
 
@@ -677,10 +730,11 @@ __EOL__
 
 sub signature {
     my $this_pver = $^V ? sprintf "%vd", $^V : $];
+    my $build_info = "$Test::Smoke::VERSION build $Test::Smoke::REVISION";
     return <<__EOS__
 
 -- 
-Report by Test::Smoke v$Test::Smoke::VERSION\#$Test::Smoke::REVISION running on perl $this_pver
+Report by Test::Smoke v$build_info running on perl $this_pver
 (Reporter v$VERSION / Smoker v$Test::Smoke::Smoker::VERSION)
 __EOS__
 }

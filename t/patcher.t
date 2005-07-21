@@ -1,11 +1,13 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher.t 555 2004-01-12 22:12:33Z abeltje $
+# $Id: patcher.t 763 2004-10-17 16:28:54Z abeltje $
 
 use File::Spec;
-use FindBin;
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib $findbin;
 use TestLib;
 use Cwd;
 
