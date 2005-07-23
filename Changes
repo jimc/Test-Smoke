@@ -10,6 +10,27 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[   877] By: abeltje                          on 2005-07-23 13:37:18 +0200
+        Log: * Prepare new snapshot: 1.19_72
+        Url: http://source.Test-Smoke.org/svn/Test-Smoke
+           ! /Test-Smoke/lib/Test/Smoke.pm
+___________________________________________________________________________
+[   876] By: abeltje                          on 2005-07-21 20:37:50 +0200
+        Log: * [CHANGE]
+	       + Add gccmsg.* to the distro
+	       * make t/reporter.t work with these new files
+        Url: http://source.Test-Smoke.org/svn/Test-Smoke
+           - /Test-Smoke/t/darwin.log, /Test-Smoke/t/darwin.out
+           ! /Test-Smoke/MANIFEST, /Test-Smoke/t/reporter.t
+          !> /Test-Smoke/t/gccmsg.log =(/Test-Smoke/t/darwin.log:846),
+	     /Test-Smoke/t/gccmsg.out =(/Test-Smoke/t/darwin.out:848)
+___________________________________________________________________________
+[   874] By: abeltje                          on 2005-07-21 19:01:47 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.Test-Smoke.org/svn/Test-Smoke
+           ! /Test-Smoke/Changes
+___________________________________________________________________________
 [   873] By: abeltje                          on 2005-07-21 18:54:14 +0200
         Log: * Prepare for a snapshot
         Url: http://source.Test-Smoke.org/svn/Test-Smoke

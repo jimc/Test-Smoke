@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 857 2005-05-01 20:48:21Z abeltje $
+MANIFEST	$Id: MANIFEST 876 2005-07-21 18:37:50Z abeltje $
 README
 ReleaseNotes
 Changes
@@ -64,6 +64,8 @@ t/tree.t
 t/ts_config.t
 t/util_times.t
 t/vms_rl.t
+t/gccmsg.log
+t/gccmsg.out
 t/win32/Makefile
 t/win32/makefile.mk
 t/ftppub/bugtst01.out
