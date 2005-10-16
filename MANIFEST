@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 876 2005-07-21 18:37:50Z abeltje $
+MANIFEST	$Id: MANIFEST 901 2005-09-08 23:01:37Z abeltje $
 README
 ReleaseNotes
 Changes
@@ -43,8 +43,10 @@ t/for_dmake.t
 t/for_nmake.t
 t/get_cpus.t
 t/get_patch.t
+t/lpatches.t
 t/mailer.t
 t/patcher.t
+t/patcher_forest.t
 t/parse_report.t
 t/policy.t
 t/reporter.t
@@ -80,6 +82,7 @@ t/ftppub/perl-current-diffs/20000.gz
 t/ftppub/perl-current-diffs/20001.gz
 t/ftppub/perl-current-diffs/20003.gz
 t/ftppub/perl-current-diffs/20004.gz
+t/ftppub/perl-current-diffs/20005.gz
 t/ftppub/snap/perl@19000.tgz
 t/ftppub/snap/perl@20000.tgz
 META.yml                                 Module meta-data (added by MakeMaker)

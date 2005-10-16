@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: mailer.t 763 2004-10-17 16:28:54Z abeltje $
+# $Id: mailer.t 887 2005-07-30 15:27:01Z abeltje $
 
 use File::Spec;
 my $findbin;
@@ -158,8 +158,9 @@ SKIP: {
 }
 
 SKIP: {
-    local $ENV{PATH} = "$ENV{PATH}:/usr/sbin";
     my $mhowto = 'sendmail';
+    $^O eq 'VMS' and skip "Do not try '$mhowto' on $^O", 5;
+    local $ENV{PATH} = "$ENV{PATH}:/usr/sbin";
     my $bin = whereis( $mhowto ) or skip "No '$mhowto' found", 5;
     write_report( $eg_config ) or skip "Cannot write report", 5;
 

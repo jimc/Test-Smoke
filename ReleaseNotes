@@ -35,11 +35,30 @@ A lot of filename/directoryname issues with VMS were resolved.
 A new way to get testresults directly from "make test_harness" was
 introduced to help VMS (and perhaps Win32).
 
+=item 5
+
+Jarkko Hietaniemi supplied a way to add C compiler messages to the
+smoke report.
+
+=item 6
+
+Patches applied through the pfile mechanism now support a third
+argument that represents a patch description. This (optional)
+description is also added to F<patchlevel.h>.
+
+Added a new "Locally applied patches:" section to the smoke report.
+
+=item 7
+
+The longtime TODO item of patching with forest setup has been
+resolved. For this type of setup, first the intermediate tree is
+patched and then the build tree is resynced from that.
+
 =back
 
 =head1 REVISION
 
-$Id: ReleaseNotes 779 2004-10-31 13:21:57Z abeltje $
+$Id: ReleaseNotes 907 2005-09-10 10:46:17Z abeltje $
 
 =head1 COPYRIGHT
 

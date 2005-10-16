@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher.t 763 2004-10-17 16:28:54Z abeltje $
+# $Id: patcher.t 901 2005-09-08 23:01:37Z abeltje $
 
 use File::Spec;
 my $findbin;
@@ -11,7 +11,7 @@ use lib $findbin;
 use TestLib;
 use Cwd;
 
-use Test::More tests => 32;
+use Test::More tests => 35;
 BEGIN { use_ok( 'Test::Smoke::Patcher' ) };
 my $verbose = exists $ENV{SMOKE_VERBOSE} ? $ENV{SMOKE_VERBOSE} : 0;
 
@@ -21,7 +21,7 @@ my $verbose = exists $ENV{SMOKE_VERBOSE} ? $ENV{SMOKE_VERBOSE} : 0;
     my $fs_tdir = File::Spec->rel2abs( $tdir );
     my $patcher = Test::Smoke::Patcher->new( single => { ddir  => $tdir } );
     isa_ok( $patcher, 'Test::Smoke::Patcher' );
-    is( $patcher->{ddir}, $fs_tdir, "destination dir ($fs_tdir)" );
+    is( $patcher->{pdir}, $fs_tdir, "destination dir ($fs_tdir)" );
 
     # Check that the default values are returned
     for my $attr (qw( pfile patchbin popts v )) {
@@ -100,7 +100,7 @@ SKIP: { # test Test::Smoke::Patcher->patch_single()
 }
 
 SKIP: { # Test multi mode
-    my $to_skip = 9;
+    my $to_skip = 12;
 
     skip "No patch program or test-patch found", $to_skip
         unless $patch && -e $testpatch;
@@ -153,6 +153,15 @@ EOPINFO
     $newfile = get_file(qw( t perl patchme.txt ));
     unlike( $newfile, '/^VERSION == 20001$/m', "Conent OK" );
     1 while unlink $pinfo;
+
+    my $descr = '[PATCH] just testing comments';
+    eval { $patcher->patch_single( $relpatch, '', $descr ) };
+    ok ! $@, "Patch applied($descr) $@";
+    $newfile = get_file(qw( t perl patchme.txt ));
+    like( $newfile, '/^VERSION == 20001$/m', "Conent OK" );
+    my $plevel = get_file(qw( t perl patchlevel.h ));
+    like $plevel, qq{/^\\s*,"\Q$descr\E"/m},
+         "Description added to patchlevel.h";
 }
 
 {
@@ -167,6 +176,8 @@ EOPINFO
 }
 
 END {
-    rmtree( File::Spec->catdir(qw( t perl )) );
-    1 while unlink $testpatch;
+    unless ( $ENV{SMOKE_DEBUG} ) {
+        rmtree( File::Spec->catdir(qw( t perl )) );
+        1 while unlink $testpatch;
+    }
 }

@@ -1,9 +1,9 @@
 package Test::Smoke::Patcher;
 use strict;
 
-# $Id: Patcher.pm 515 2004-01-04 14:06:56Z abeltje $
+# $Id: Patcher.pm 907 2005-09-10 10:46:17Z abeltje $
 use vars qw( $VERSION @EXPORT );
-$VERSION = '0.005';
+$VERSION = '0.009';
 
 use base 'Exporter';
 use File::Spec;
@@ -17,10 +17,11 @@ sub TRY_REGEN_HEADERS() { 1 }
 
 my %CONFIG = (
     df_ddir     => File::Spec->rel2abs( cwd ),
+    df_fdir     => undef,
     df_pfile    => undef,
     df_patchbin => 'patch',
     df_popts    => '',       # '-p1' is added in call_patch()
-    df_flags    => 0,
+    df_flags    => 1,
     df_oldpatch => 0,
     df_v        => 0,
 
@@ -125,6 +126,7 @@ C<new()> crates the object. Valid types are B<single> and B<multi>.
 Valid keys for C<%args>:
 
     * ddir:     the build directory
+    * fdir:     the intermediate forest dir (preferred)
     * pfile:    path to either the patch (single) or a textfile (multi)
     * popts:    options to pass to 'patch' (-p1)
     * patchbin: full path to the patch binary (patch)
@@ -140,7 +142,7 @@ sub new {
     unless ( $type && exists $CONFIG{valid_type}->{ $type } ) {
         defined $type or $type = 'undef';
         require Carp;
-        Carp::croak "Invalid Patcher-type: '$type'";
+        Carp::croak( "Invalid Patcher-type: '$type'" );
     }
 
     my %args_raw = @_ ? UNIVERSAL::isa( $_[0], 'HASH' ) ? %{ $_[0] } : @_ : ();
@@ -153,8 +155,10 @@ sub new {
     my %fields = map {
         my $value = exists $args{$_} ? $args{ $_ } : $CONFIG{ "df_$_" };
         ( $_ => $value )
-    } ( v => ddir => @{ $CONFIG{ $type } } );
-    $fields{ddir} = File::Spec->rel2abs( $fields{ddir} );
+    } ( v => ddir => fdir => @{ $CONFIG{ $type } } );
+    $fields{pdir} = File::Spec->rel2abs( 
+        defined $fields{fdir} ? $fields{fdir} : $fields{ddir}
+    );
     $fields{ptype} = $type;
 
     bless { %fields }, $class;
@@ -200,8 +204,20 @@ sub patch {
     my $self = shift;
 
     my $method = "patch_$self->{ptype}";
-    $self->$method( @_ );
-    $self->perl_regen_headers;
+    my $ret = $self->$method( @_ );
+    $ret &&= $self->perl_regen_headers;
+
+    if ( $self->{fdir} ) { # This is a forest setup, re-sync
+        require Test::Smoke::Syncer;
+        my %options = (
+            hdir => $self->{fdir},
+            ddir => $self->{ddir},
+            v    => $self->{v},
+        );
+        my $resync = Test::Smoke::Syncer->new( hardlink => %options );
+        $resync->sync;
+    }
+    return $ret;
 }
 
 =item perl_regen_headers( )
@@ -212,27 +228,31 @@ Try to run F<regen_headers.pl> if the flag is set.
 
 sub perl_regen_headers {
     my $self = shift;
-    return unless $self->{flags} & TRY_REGEN_HEADERS;
+    return 1 unless $self->{flags} & TRY_REGEN_HEADERS;
 
-    my $regen_headers = get_regen_headers( $self->{ddir} );
-    SKIP: if ( $regen_headers ) {
+    my $regen_headers = get_regen_headers( $self->{pdir} );
+    if ( $regen_headers ) {
         my $cwd = cwd;
-        chdir $self->{ddir} or last SKIP;
+        chdir $self->{pdir} or return;
         local *RUN_REGEN;
         if ( open RUN_REGEN, "$regen_headers |" ) {
+            $self->{v} and print "Started [$regen_headers]\n";
             while ( <RUN_REGEN> ) {
                 $self->{v} and print;
             }
             close RUN_REGEN or do {
                 require Carp;
-                Carp::carp "Error while running [$regen_headers]";
+                Carp::carp( "Error while running [$regen_headers]" );
+                return;
             };
         } else {
             require Carp;
-            Carp::carp "Could not fork [$regen_headers]";
+            Carp::carp( "Could not fork [$regen_headers]" );
+            return;
         }
         chdir $cwd;
     }
+    return 1;
 }
 
 =item $patcher->patch_single( )
@@ -263,12 +283,12 @@ sub patch_single {
         $self->{pfinfo} ||= 'file content';
     } else {
         my $full_name = File::Spec->file_name_is_absolute( $pfile ) 
-            ? $pfile : File::Spec->rel2abs( $pfile, $self->{ddir} );
+            ? $pfile : File::Spec->rel2abs( $pfile, $self->{pdir} );
 
         $self->{pfinfo} = $full_name;
         open PATCH, "< $full_name" or do {
             require Carp;
-            Carp::croak "Cannot open '$full_name': $!";
+            Carp::croak( "Cannot open '$full_name': $!" );
         };
         $content = do { local $/; <PATCH> };
         close PATCH;
@@ -306,11 +326,11 @@ sub patch_multi {
         $self->{pfinfo} ||= 'file content';
     } else {
         my $full_name = File::Spec->file_name_is_absolute( $pfile ) 
-            ? $pfile : File::Spec->rel2abs( $pfile, $self->{ddir} );
+            ? $pfile : File::Spec->rel2abs( $pfile, $self->{pdir} );
         $self->{pfinfo} = $full_name;
         open PATCHES, "< $full_name" or do {
             require Carp;
-            Carp::croak "Cannot open '$self->{pfile}': $!";
+            Carp::croak( "Cannot open '$self->{pfile}': $!" );
         };
         chomp( @patches = <PATCHES> );
         close PATCHES;
@@ -318,16 +338,19 @@ sub patch_multi {
 
     $self->{v} > 1 and print "Get patchinfo from $self->{pfinfo}\n";
 
+    my $ok = 1;
     foreach my $patch ( @patches ) {
         next if $patch =~ /^\s*[#]/;
         next if $patch =~ /^\s*$/;
-        my( $filename, $switches ) = split /\s*;\s*/, $patch, 2;
-        eval { $self->patch_single( $filename, $switches ) };
+        my( $filename, $switches, $descr ) = split /\s*;\s*/, $patch, 3;
+        eval { $self->patch_single( $filename, $switches, $descr ) };
         if ( $@ ) {
             require Carp;
-            Carp::carp "[$filename] $@";
+            Carp::carp( "[$filename] $@" );
+            $ok = 0;
         }
     }
+    return $ok;
 }
 
 =item $self->_make_opts( $switches )
@@ -359,7 +382,7 @@ C<< $$ref_to_content >> to it. It will Carp::croak() on any error!
 =cut
 
 sub call_patch {
-    my( $self, $ref_to_content, $switches ) = @_;
+    my( $self, $ref_to_content, $switches, $descr ) = @_;
 
     local *PATCHBIN;
 
@@ -368,9 +391,9 @@ sub call_patch {
     my $redir = $self->{v} ? "" : ">" . File::Spec->devnull . " 2>&1";
 
     my $cwd = cwd();
-    chdir $self->{ddir} or do {
+    chdir $self->{pdir} or do {
         require Carp;
-        Carp::croak "Cannot chdir($self->{ddir}): $!";
+        Carp::croak( "Cannot chdir($self->{pdir}): $!" );
     };
 
     # patch is verbose enough if $self->{v} == 1
@@ -382,15 +405,22 @@ sub call_patch {
         print PATCHBIN $$ref_to_content;
         close PATCHBIN or do {
             require Carp;
-            Carp::croak "Error while patching from '$self->{pfinfo}': $!";
+            Carp::croak( "Error while patching from '$self->{pfinfo}': $!" );
         };
     } else {
         require Carp;
-        Carp::croak "Cannot fork ($self->{patchbin}): $!";
+        Carp::croak( "Cannot fork ($self->{patchbin}): $!" );
     }
+
+    # Add a line to patchlevel.h if $descr
+    if ( defined $descr ) {
+        require Test::Smoke::Util;
+        Test::Smoke::Util::set_local_patch( $self->{pdir}, $descr );
+    }
+
     chdir $cwd or do {
         require Carp;
-        Carp::croak "Cannot chdir($cwd) back: $!";
+        Carp::croak( "Cannot chdir($cwd) back: $!" );
     };
 }
 

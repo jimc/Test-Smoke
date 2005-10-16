@@ -2,7 +2,7 @@
 use strict;
 use Data::Dumper;
 
-# $Id: syncer_ftpclient.t 820 2005-02-11 07:58:20Z abeltje $
+# $Id: syncer_ftpclient.t 901 2005-09-08 23:01:37Z abeltje $
 ##### syncer_ftpclient.t
 #
 # Here we try to test the actual syncing process from ftp
@@ -161,7 +161,7 @@ require_ok 'Test::Smoke::SourceTree';
 
     my $plevel = $sync->sync;
 
-    is $plevel, '20004', "Patchlevel ok";
+    is $plevel, '20005', "Patchlevel ok";
 
     {
         my $tree = Test::Smoke::SourceTree->new( $stree );
@@ -179,7 +179,7 @@ require_ok 'Test::Smoke::SourceTree';
 
     ok -f $newfile, "extra file($newfile)";
     $plevel = $sync->sync;
-    is $plevel, '20004', "Patchlevel ok (resync)";
+    is $plevel, '20005', "Patchlevel ok (resync)";
 
     {
         my $tree = Test::Smoke::SourceTree->new( $stree );

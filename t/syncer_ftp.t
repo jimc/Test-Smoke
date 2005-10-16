@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 829 2005-02-12 18:55:26Z abeltje $
+# $Id: syncer_ftp.t 901 2005-09-08 23:01:37Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot
@@ -113,7 +113,7 @@ SKIP: { # Here we try for 'Archive::Tar'/'Compress::Zlib'
     skip "Cannot find a 'patch' program", 1 unless $patch;
     my $plevel2 = $syncer->patch_a_snapshot( $plevel );
 
-    is( $plevel2, 20004, "A patched snapshot $plevel2 by $syncer->{unzip}" );
+    is( $plevel2, 20005, "A patched snapshot $plevel2 by $syncer->{unzip}" );
 
 }
 
@@ -150,7 +150,7 @@ SKIP: { # Here we try for gzip/tar
 
     my $plevel2 = $syncer->patch_a_snapshot( $plevel );
 
-    is( $plevel2, 20004, "A patched snapshot $plevel2 by $syncer->{unzip}" );
+    is( $plevel2, 20005, "A patched snapshot $plevel2 by $syncer->{unzip}" );
 
 }
 

@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 871 2005-07-21 16:26:52Z abeltje $
+# $Id: Util.pm 906 2005-09-09 16:26:12Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.38';
+$VERSION = '0.45';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -14,7 +14,7 @@ use base 'Exporter';
 );
 
 @EXPORT_OK = qw(
-    &grepccmsg
+    &grepccmsg &get_local_patches &set_local_patch
     &get_ncpu &get_smoked_Config &parse_report_Config 
     &get_regen_headers &run_regen_headers
     &calc_timeout &time_in_hhmm
@@ -320,6 +320,10 @@ sub set_vms_rooted_logical {
     my $cwd = cwd();
     $dir ||= $cwd;
 
+    -d $dir or do {
+        require File::Path;
+        File::Path::mkpath( $dir );
+    };
     chdir $dir or die "Cannot chdir($dir): $!";
 
     # On older systems we might exceed the 8-level directory depth limit
@@ -440,17 +444,22 @@ sub grepccmsg {
             # foo.c(nnn) : warning Cnnn: warning description
             '(^(?!NMAKE)(?-s:.+?) : (?-s:.+?)\d+: .+?$)',
 
+        'bcc32' => # BORLAND 5.5 on MSWin32
+            # Warning Wnnn filename line: warning description
+            # Error Ennn:: error description
+            '(^(?:(?:Warning W\d+ .+? \d+)|(?:Error E\d+)): .+?$)',
     );
     exists $OS2PAT{ lc $cc } or $cc = 'gcc';
     my $pat = $OS2PAT{ lc $cc };
 
     my( $indx, %error ) = ( 1 );
     my $smokelog = '';
-    if ( open my $logfh, "< $logfile" ) {
+    local *LOGFH;
+    if ( open LOGFH, "< $logfile" ) {
         $verbose and print "Reading logfile '$logfile'\n";
         local $/;
-        $smokelog = <$logfh>;
-        close $logfh;
+        $smokelog = <LOGFH>;
+        close LOGFH;
         $verbose and print "Pattern($cc): /$pat/\n";
     } else {
         $verbose and print "Skipping '$logfile' '$!'\n";
@@ -471,6 +480,87 @@ sub grepccmsg {
     } sort { $error{ $a } <=> $error{ $b } } keys %error;
 
     return wantarray ? @errors : \@errors;
+}
+
+=item get_local_patches( $ddir )
+
+C<get_local_patches()> reads F<patchlevel.h> to scan for the locally
+applied patches array.
+
+=cut
+
+sub get_local_patches {
+    my( $ddir, $verbose ) = @_;
+    $ddir = shift || cwd();
+    my $plevel = catfile( $ddir, 'patchlevel.h' );
+
+    my @lpatches = ( );
+    local *PLEVEL;
+    $verbose and print "Locally applied patches from '$plevel':";
+    unless ( open PLEVEL, "< $plevel" ) {
+        $verbose and print " error: $!";
+        return @lpatches;
+    }
+    $verbose and print " open ok\n";
+    my $seen;
+    while ( <PLEVEL> ) {
+        $seen && /^\s*,"(.+)"/ and push @lpatches, $1;
+        /^\s*static.+?local_patches\[\]/ and $seen++;
+    }
+    close PLEVEL;
+    $verbose and do { local $"=';'; print "Patches: '@lpatches'\n" };
+    return @lpatches;
+}
+
+=item set_local_patch( $ddir, @descr )
+
+Copy the code from F<patchlevel.h>. Older (pre 5.8.1) perls do not
+have it and it doesn't work on MSWin32.
+
+=cut
+
+sub set_local_patch {
+    my( $ddir, @descr ) = @_;
+
+    my $plh = catfile( $ddir, 'patchlevel.h' );
+    my $pln = catfile( $ddir, 'patchlevel.new' );
+    my $plb = catfile( $ddir, 'patchlevel.bak' );
+    local( *PLIN, *PLOUT );
+    open PLIN,  "< $plh" or return 0;
+    open PLOUT, "> $pln" or return 0;
+    my $seen=0;
+    while ( <PLIN> ) {
+        if ( /\t,NULL/ and $seen ) {
+            while ( my $c = shift @descr ) {
+                print PLOUT qq{\t,"$c"\n};
+           }
+        }
+        $seen++ if /local_patches\[\]/;
+        print PLOUT;
+    }
+    close PLIN;
+    close PLOUT or return 0;
+
+    -e $plb and 1 while unlink $plb;
+    my $errno = "$!";
+    if ( -e $plb ) {
+        require Carp;
+        Carp::carp( "Could not unlink $plb : $errno" );
+        return 0;
+    }
+
+    unless ( rename $plh, $plb ) {
+        require Carp;
+        Carp::carp( "Could not rename $plh to $plb : $!" );
+        return 0;
+    }
+    unless ( rename $pln, $plh ) {
+        require Carp;
+        carp( "Could not rename '$pln' to '$plh' : $!" );
+        return 0;
+    }
+
+    return 1;
 }
 
 =item get_config( $filename )
@@ -730,7 +820,7 @@ sub get_ncpu {
 
         $cpus = "";
         require Carp;
-        Carp::carp "get_ncpu: unknown operationg system";
+        Carp::carp( "get_ncpu: unknown operationg system" );
     }
 
     return $cpus ? sprintf( "%s cpu%s", $cpus, $cpus ne "1" ? 's' : '' ) : "";

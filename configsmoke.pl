@@ -14,10 +14,11 @@ BEGIN { $findbin = dirname $0 }
 use lib File::Spec->catdir( $findbin, 'lib' );
 use lib $findbin;
 use Test::Smoke::Util qw( do_pod2usage );
+use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 872 2005-07-21 16:53:21Z abeltje $
+# $Id: configsmoke.pl 910 2005-09-10 12:23:12Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.049';
+$VERSION = '0.054';
 
 use Getopt::Long;
 my %options = ( 
@@ -120,8 +121,8 @@ my %vdirs = map {
     my $vdir = $_;
     is_vms and $vdir =~ tr/.//d;
     ( $_ => $vdir )
-} qw( 5.5.x 5.6.2 5.8.x );
- 
+} qw( 5.5.x 5.8.x ); # unsupported: 5.6.2
+
 my %versions = (
     '5.5.x' => { source => 'ftp.linux.activestate.com::perl-5.005xx',
                  server => 'ftp.funet.fi',
@@ -133,22 +134,24 @@ my %versions = (
                                                "perl-$vdirs{'5.5.x'}" ),
                  text   => 'Perl 5.005 MAINT',
                  is56x  => 1},
-    '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
-                 server => 'http://rgarciasuarez.free.fr',
-                 sdir   => '/snap',
-                 sfile  => 'perl562-21463.tar.gz',
-                 pdir   => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
-                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
-                                               "perl-$vdirs{'5.6.2'}" ),
-                 ftphost => 'ftp.linux.activestate.com',
-                 ftpusr  => 'anonymous',
-                 ftppwd  => 'smokers@perl.org',
-                 ftpsdir => '/pub/staff/gsar/APC/perl-5.6.2',
-                 ftpcdir => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
-                 
-                 cfg    => 'perl562.cfg',
-                 text   => 'Perl 5.6.2-to-be',
-                 is56x  => 1 },
+
+#    '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
+#                 server => 'http://rgarciasuarez.free.fr',
+#                 sdir   => '/snap',
+#                 sfile  => 'perl562-21463.tar.gz',
+#                 pdir   => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
+#                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+#                                               "perl-$vdirs{'5.6.2'}" ),
+#                 ftphost => 'ftp.linux.activestate.com',
+#                 ftpusr  => 'anonymous',
+#                 ftppwd  => 'smokers@perl.org',
+#                 ftpsdir => '/pub/staff/gsar/APC/perl-5.6.2',
+#                 ftpcdir => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
+#
+#                 text   => 'Perl 5.6.2 (final?)',
+#                 cfg    => 'perl562.cfg',
+#                 is56x  => 1 },
+
     '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
                  server => 'ftp.funet.fi',
                  sdir   => '/pub/languages/perl/snap/5.8.x',
@@ -161,11 +164,12 @@ my %versions = (
                  ftppwd  => 'smokers@perl.org',
                  ftpsdir => '/pub/staff/gsar/APC/perl-5.8.x',
                  ftpcdir => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
-                 
+
                  text   => 'Perl 5.8 MAINT',
                  cfg    => ( is_win32 ? 'w32current.cfg'
                            : is_vms ? 'vmsperl.cfg' : 'perl58x.cfg' ),
                  is56x  => 0 },
+
     '5.9.x' => { source => 'ftp.linux.activestate.com::perl-current',
                  server => 'ftp.funet.fi',
                  sdir   => '/pub/languages/perl/snap/5.9.x',
@@ -178,7 +182,7 @@ my %versions = (
                  ftppwd  => 'smokers@perl.org',
                  ftpsdir => '/pub/staff/gsar/APC/perl-current',
                  ftpcdir => '/pub/staff/gsar/APC/perl-current-diffs',
-                 
+
                  text   => 'Perl 5.10 to-be',
                  cfg    => ( is_win32 ? 'w32current.cfg'
                            : is_vms ? 'vmsperl.cfg' : 'perlcurrent.cfg' ),
@@ -249,7 +253,7 @@ my %opt = (
     },
     # syncing the source-tree
     want_forest => {
-        msg => "Would you like the 'Nick Clark' master sync trees?
+        msg => "Would you like the 'Nick Clark' master sync trees (forest)?
 \tPlease see 'perldoc $0' for an explanation.",
         alt => [qw( N y )],
         dft => 'n',
@@ -401,7 +405,7 @@ Examples:$untarmsg",
         dft => '/pub/staff/gsar/APC/perl-current-diffs',
         chk => '.+',
     },
-                 
+
     patchbin => {
         msg => undef,
         alt => [ ],
@@ -567,7 +571,7 @@ EOT
 
 print <<EOMSG;
 
-Welcome to the Perl core smoke test suite. 
+Welcome to the Perl core smoke test suite.
 
 You will be asked some questions in order to configure this test suite.
 Please make sure to read the documentation "perldoc configsmoke.pl"
@@ -606,11 +610,11 @@ F<smokecurrent.sh>. Again the default prefix can be overridden by specifying
 the C<< -j <prefix> >> or C<< -p <prefix> >> switch.
 
 All output (stdout, stderr) from F<smokeperl.pl> and its sub-processes
-is redirected to a logfile called F<smokecurrent.log> by the small jcl. 
+is redirected to a logfile called F<smokecurrent.log> by the small jcl.
 (Use C<< -l <prefix> >> or C<< -p <prefix> >> to override).
 
 There are two additional configuration default files
-F<smoke562_dfconfig> and F<smoke58x_dfconfig> to help you configure 
+F<smoke562_dfconfig> and F<smoke58x_dfconfig> to help you configure
 B<Test::Smoke> for these two maintenance branches of the source-tree.
 
 To create a configuration for the perl 5.8.x branch:
@@ -657,10 +661,9 @@ Here is a description of the configuration sections.
 
 =item perl_version
 
-C<perl_version> sets a number of default_values. 
-This makes the F<smoke5?x_dfconfig> files almost obsolete, 
-although they still provide a nice way to set the prefix
-and set the perl_version.
+C<perl_version> sets a number of default_values.  This makes the
+F<smoke5?x_dfconfig> files almost obsolete, although they still
+provide a nice way to set the prefix and set the perl_version.
 
 =cut
 
@@ -705,7 +708,7 @@ you will need to confirm your choice.
             print "The current directory *cannot* be used for smoke testing\n";
             redo BUILDDIR;
         }
-    
+
         $config{ $arg } = File::Spec->canonpath( $config{ $arg } );
         my $manifest  = File::Spec->catfile( $config{ $arg }, 'MANIFEST' );
         my $dot_patch = File::Spec->catfile( $config{ $arg }, '.patch' );
@@ -738,8 +741,12 @@ There are several build-cfg files provided with the distribution:
 
 =back
 
+=begin unsupported
+
 Note: 5.6.2 on MSWin32 is not yet provided, but commenting out the
 B<-Duselargefiles> section from F<w32current.cfg> should be enough.
+
+=end unsupported
 
 =cut
 
@@ -949,6 +956,8 @@ reversing an already applied patch. The file format is simple:
 
 =item * optionally followed by ';' and options to pass to patch
 
+=item * optionally followed by ';' and a description for the patch
+
 =back
 
 If the file does not exist yet, a skeleton version will be created
@@ -978,7 +987,8 @@ PATCHER: {
         print PATCHES <<EOMSG;
 # Put one filename of a patch on a line, optional args for patch
 # follow the filename separated by a semi-colon (;) [-p1] is default
-# /path/to/patchfile.patch;-p0 -R
+# optionally followed by another ';' and description (added to patchlevel.h)
+# /path/to/patchfile.patch;-p0 -R;Description for this patch
 # Empty lines and lines starting with '#' are ignored
 # File paths are relative to '$config{ddir}' if not absolute
 EOMSG
@@ -1268,7 +1278,7 @@ $config{lfile} = File::Spec->rel2abs( $options{log}, cwd );
 Some filesystems do not support opening an already opened file. This
 makes it hard to scan the logfile for compiler messages. We can delay
 the creation of the report and call F<mailrpt.pl> after
-F<smokeperl.pl>. MSWin32 and VMS might benefit.
+F<smokeperl.pl>. VMS might benefit.
 
 =cut
 
@@ -2035,8 +2045,7 @@ sub get_avail_w32compilers {
     if ( $map{ $CC }->{ccbin} = whereis( $map{ $CC }->{ccname} ) ) {
         # No, bcc32 doesn't support --version (One can but try)
         my $output = `"$map{ $CC }->{ccbin}" --version 2>&1`;
-        my $ccvers = $output =~ /(\d+.*)/ ? $1 : '?';
-        $ccvers =~ s/\s+copyright.*//i;
+        my $ccvers = $output =~ /([\d.]+)/ ? $1 : '?';
         $map{ $CC }->{ccversarg} = "ccversion=$ccvers";
         $map{ $CC }->{CCTYPE} = 'BORLAND';
     }
@@ -2129,30 +2138,41 @@ sub check_buildcfg {
 
     my ($rev, @vparts ) = $config{perl_version} =~ /^(\d)(?:\.(\d+))+/;
     my $pversion = sprintf "%d.%03d%02d", $rev, @vparts, 0;
-    print "Checking '$file_name' ($pversion/$^O)\n";
+
+    my $uname_s = Test::Smoke::SysInfo::tsuname( 's' );
+    my( $os, $osver ) = split /\s+-\s+/, $uname_s;
+    $osver = sprintf "%d.%03d", split m/\D+/, $osver, 3;
+
+    print "Checking '$file_name'\n     for $pversion on $uname_s\n";
+
     my @no_option = $pversion >= 5.009 ? ( '-Uuseperlio' ) : ( );
     OSCHECK: {
-        local $_ = $^O;
-        /darwin|bsd/i && do { 
+        $os =~ /darwin/ && $osver >= 8 and do {
+            push @no_option, qw( -Duselongdouble -Dusemorebits );
+            last OSCHECK;
+        };
+
+        $os =~ /darwin|bsd/i && do { 
             push @no_option, qw( -Duselongdouble -Dusemorebits -Duse64bitall );
         };
 
-	/linux/i && do {
+	$os =~ /linux/i && do {
             push @no_option, qw( -Duse64bitall );
         };
 
-        /mswin32/i && do {
+        $os =~ /mswin32/i && do {
             push @no_option, qw( -Duselargefiles ) if $config{is56x};
         };
 
-        /cygwin/i && do {
+        $os =~ /cygwin/i && do {
             push @no_option, qw( -Duse64bitall -Duselongdouble -Dusemorebits );
         };
-
-        foreach my $option ( @no_option ) {
-            !/^#/ && /\Q$option\E/ && s/^/#/ for @bcfg;
-        }
     }
+
+    foreach my $option ( @no_option ) {
+        !/^#/ && /\Q$option\E/ && s/^/#/ for @bcfg;
+    }
+
     my $newcfg = join "", grep !/^#/ => @bcfg;
     return if $oldcfg eq $newcfg;
 
@@ -2186,11 +2206,11 @@ sub finish_cfgcheck {
     my $msg = "";
     if ( $overwrite ) {
         my $backup = "$fname.bak";
-        -f $backup and chmod( 0775, $backup ) and unlink $backup;
+        -f $backup and chmod( 0775, $backup ) and 1 while unlink $backup;
         rename $fname, $backup or 
             warn "Cannot rename '$fname' to '$backup': $!";
     } else {
-        $fname = "$options{prefix}.cfg";
+        $fname = "$options{prefix}.cfg.save";
         $msg = " (in case you want it later)";
     }
     # change the filemode (make install used to make perlcurrent.cfg readonly)
@@ -2217,7 +2237,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 872 2005-07-21 16:53:21Z abeltje $
+    $Id: configsmoke.pl 910 2005-09-10 12:23:12Z abeltje $
 
 =head1 COPYRIGHT
 

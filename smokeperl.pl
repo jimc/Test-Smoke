@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 867 2005-07-21 14:04:44Z abeltje $
+# $Id: smokeperl.pl 902 2005-09-08 23:10:28Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -188,9 +188,6 @@ sub patchtree {
         last PATCHAPERL unless exists $conf->{patch_type} && 
                                $conf->{patch_type} eq 'multi' && 
                                $conf->{pfile};
-        if ( $^O eq 'MSWin32' ) {
-            Test::Smoke::Patcher->config( flags => TRY_REGEN_HEADERS );
-        }
         my $patcher = Test::Smoke::Patcher->new( $conf->{patch_type}, $conf );
         eval { $patcher->patch };
     }
@@ -280,7 +277,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 867 2005-07-21 14:04:44Z abeltje $
+$Id: smokeperl.pl 902 2005-09-08 23:10:28Z abeltje $
 
 =head1 COPYRIGHT
 
