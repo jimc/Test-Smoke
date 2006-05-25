@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_ftp.t 901 2005-09-08 23:01:37Z abeltje $
+# $Id: syncer_ftp.t 920 2005-12-18 10:34:58Z abeltje $
 ##### syncer_ftp.t
 #
 # Here we try to test the actual syncing process from a snapshot
@@ -100,6 +100,7 @@ SKIP: { # Here we try for 'Archive::Tar'/'Compress::Zlib'
         sdir     => '/t/snap',
         tar      => 'Archive::Tar',
         unzip    => 'Compress::Zlib',
+        snapext  => 'tgz',
         cleanup  => 3,
         patchbin => $patch,
     } );
@@ -135,6 +136,7 @@ SKIP: { # Here we try for gzip/tar
         sdir     => '/t/snap',
         tar      => $unpack,
         unzip    => $gzip,
+        snapext  => 'tgz',
         cleanup  => 3,
         patchbin => $patch,
     } );

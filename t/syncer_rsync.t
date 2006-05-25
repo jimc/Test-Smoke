@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_rsync.t 235 2003-07-15 14:24:23Z abeltje $
+# $Id: syncer_rsync.t 920 2005-12-18 10:34:58Z abeltje $
 
 use Data::Dumper;
 use File::Spec;
@@ -11,7 +11,7 @@ use_ok( 'Test::Smoke::Syncer' );
 
 my %df_rsync = (
     rsync => 'rsync',
-    source => 'ftp.linux.activestate.com::perl-current',
+    source => 'public.activestate.com::perl-current',
     opts   => '-az --delete',
     ddir   => File::Spec->rel2abs( 'perl-current', File::Spec->curdir ),
 );

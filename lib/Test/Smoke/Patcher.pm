@@ -1,9 +1,9 @@
 package Test::Smoke::Patcher;
 use strict;
 
-# $Id: Patcher.pm 907 2005-09-10 10:46:17Z abeltje $
+# $Id: Patcher.pm 921 2005-12-18 11:27:57Z abeltje $
 use vars qw( $VERSION @EXPORT );
-$VERSION = '0.009';
+$VERSION = '0.011';
 
 use base 'Exporter';
 use File::Spec;
@@ -231,23 +231,28 @@ sub perl_regen_headers {
     return 1 unless $self->{flags} & TRY_REGEN_HEADERS;
 
     my $regen_headers = get_regen_headers( $self->{pdir} );
-    if ( $regen_headers ) {
+    my $regen_perly = $self->{perly}
+        ? qq|$^X "| . File::Spec->catfile( $self->{pdir}, 'regen_perly.pl' ).
+          qq|"|
+        : "";
+    my @regens = grep $_ => ( $regen_headers, $regen_perly );
+    for my $regen ( @regens ) {
         my $cwd = cwd;
         chdir $self->{pdir} or return;
         local *RUN_REGEN;
-        if ( open RUN_REGEN, "$regen_headers |" ) {
-            $self->{v} and print "Started [$regen_headers]\n";
+        if ( open RUN_REGEN, "$regen |" ) {
+            $self->{v} and print "Started [$regen]\n";
             while ( <RUN_REGEN> ) {
                 $self->{v} and print;
             }
             close RUN_REGEN or do {
                 require Carp;
-                Carp::carp( "Error while running [$regen_headers]" );
+                Carp::carp( "Error while running [$regen]" );
                 return;
             };
         } else {
             require Carp;
-            Carp::carp( "Could not fork [$regen_headers]" );
+            Carp::carp( "Could not fork [$regen]" );
             return;
         }
         chdir $cwd;
@@ -294,7 +299,7 @@ sub patch_single {
         close PATCH;
     }
 
-    $self->{v} > 1 and print "Get patch from $self->{pfinfo}\n";
+    $self->{v} and print "Get patch from $self->{pfinfo}\n";
     $self->call_patch( \$content, @_ );
 }
 
@@ -336,13 +341,18 @@ sub patch_multi {
         close PATCHES;
     }
 
-    $self->{v} > 1 and print "Get patchinfo from $self->{pfinfo}\n";
+    $self->{v} and print "Get patchinfo from $self->{pfinfo}\n";
 
     my $ok = 1;
     foreach my $patch ( @patches ) {
         next if $patch =~ /^\s*[#]/;
         next if $patch =~ /^\s*$/;
+        if ( $patch =~ /^\s*!\s*perly$/ ) {
+            $self->{perly} = 1;
+            next;
+        }
         my( $filename, $switches, $descr ) = split /\s*;\s*/, $patch, 3;
+        $descr = $descr ? $descr . " ($filename)" : $filename;
         eval { $self->patch_single( $filename, $switches, $descr ) };
         if ( $@ ) {
             require Carp;

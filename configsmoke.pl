@@ -16,9 +16,9 @@ use lib $findbin;
 use Test::Smoke::Util qw( do_pod2usage );
 use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 910 2005-09-10 12:23:12Z abeltje $
+# $Id: configsmoke.pl 958 2006-05-07 15:53:57Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.054';
+$VERSION = '0.060';
 
 use Getopt::Long;
 my %options = ( 
@@ -124,64 +124,64 @@ my %vdirs = map {
 } qw( 5.5.x 5.8.x ); # unsupported: 5.6.2
 
 my %versions = (
-    '5.5.x' => { source => 'ftp.linux.activestate.com::perl-5.005xx',
-                 server => 'ftp.funet.fi',
-                 sdir   => '/pub/languages/perl/snap/5.5.x',
+    '5.5.x' => { source => 'public.activestate.com::perl-5.005xx',
+                 server => 'public.activestate.com',
+                 sdir   => '/pub/apc/perl-5.005xx-snap',
                  sfile  => '',
-                 pdir   => '/pub/staff/gsar/APC/perl-5.005xx-diffs',
+                 pdir   => '/pub/apc/perl-5.005xx-diffs',
                  cfg    => 'perl55x.cfg',
                  ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
                                                "perl-$vdirs{'5.5.x'}" ),
                  text   => 'Perl 5.005 MAINT',
                  is56x  => 1},
 
-#    '5.6.2' => { source => 'ftp.linux.activestate.com::perl-5.6.2',
-#                 server => 'http://rgarciasuarez.free.fr',
-#                 sdir   => '/snap',
-#                 sfile  => 'perl562-21463.tar.gz',
-#                 pdir   => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
+#    '5.6.2' => { source => 'public.activestate.com::perl-5.6.2',
+#                 server => 'public.activestate.com',
+#                 sdir   => '/pub/apc/perl-5.6.2-snap',
+#                 sfile  => 'perl-5.6.2-latest.tar.gz',
+#                 pdir   => '/pub/apc/perl-5.6.2-diffs',
 #                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
 #                                               "perl-$vdirs{'5.6.2'}" ),
-#                 ftphost => 'ftp.linux.activestate.com',
+#                 ftphost => 'public.activestate.com',
 #                 ftpusr  => 'anonymous',
 #                 ftppwd  => 'smokers@perl.org',
-#                 ftpsdir => '/pub/staff/gsar/APC/perl-5.6.2',
-#                 ftpcdir => '/pub/staff/gsar/APC/perl-5.6.2-diffs',
+#                 ftpsdir => '/pub/apc/perl-5.6.2',
+#                 ftpcdir => '/pub/apc/perl-5.6.2-diffs',
 #
 #                 text   => 'Perl 5.6.2 (final?)',
 #                 cfg    => 'perl562.cfg',
 #                 is56x  => 1 },
 
-    '5.8.x' => { source =>  'ftp.linux.activestate.com::perl-5.8.x',
-                 server => 'ftp.funet.fi',
-                 sdir   => '/pub/languages/perl/snap/5.8.x',
-                 sfile  => '',
-                 pdir   => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
+    '5.8.x' => { source =>  'public.activestate.com::perl-5.8.x',
+                 server => 'public.activestate.com',
+                 sdir   => '/pub/apc/perl-5.8.x-snap',
+                 sfile  => 'perl-5.8.x-latest.tar.gz',
+                 pdir   => '/pub/apc/perl-5.8.x-diffs',
                  ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
                                                "perl-$vdirs{'5.8.x'}" ),
-                 ftphost => 'ftp.linux.activestate.com',
+                 ftphost => 'public.activestate.com',
                  ftpusr  => 'anonymous',
                  ftppwd  => 'smokers@perl.org',
-                 ftpsdir => '/pub/staff/gsar/APC/perl-5.8.x',
-                 ftpcdir => '/pub/staff/gsar/APC/perl-5.8.x-diffs',
+                 ftpsdir => '/pub/apc/perl-5.8.x',
+                 ftpcdir => '/pub/apc/perl-5.8.x-diffs',
 
                  text   => 'Perl 5.8 MAINT',
                  cfg    => ( is_win32 ? 'w32current.cfg'
                            : is_vms ? 'vmsperl.cfg' : 'perl58x.cfg' ),
                  is56x  => 0 },
 
-    '5.9.x' => { source => 'ftp.linux.activestate.com::perl-current',
-                 server => 'ftp.funet.fi',
-                 sdir   => '/pub/languages/perl/snap/5.9.x',
-                 sfile  => '',
-                 pdir   => '/pub/staff/gsar/APC/perl-current-diffs',
+    '5.9.x' => { source => 'public.activestate.com::perl-current',
+                 server => 'public.activestate.com',
+                 sdir   => '/pub/apc/perl-current-snap',
+                 sfile  => 'perl-current-latest.tar.gz',
+                 pdir   => '/pub/apc/perl-current-diffs',
                  ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
                                                'perl-current' ),
-                 ftphost => 'ftp.linux.activestate.com',
+                 ftphost => 'public.activestate.com',
                  ftpusr  => 'anonymous',
                  ftppwd  => 'smokers@perl.org',
-                 ftpsdir => '/pub/staff/gsar/APC/perl-current',
-                 ftpcdir => '/pub/staff/gsar/APC/perl-current-diffs',
+                 ftpsdir => '/pub/apc/perl-current',
+                 ftpcdir => '/pub/apc/perl-current-diffs',
 
                  text   => 'Perl 5.10 to-be',
                  cfg    => ( is_win32 ? 'w32current.cfg'
@@ -482,6 +482,15 @@ EOMSG
        nck => '\bperl5-porters@perl.org\b',
     },
 
+    swbcc => {
+        msg => <<EOMSG,
+Specify the switch your mailx uses for Blind Carbon Copy (Bcc:) addresses.
+\tSome versions of mailx use '~b' and not '-b'.
+EOMSG
+        alt => [ ],
+        dft => ( $^O =~ /hpux|dec_osf/ ? '~b' : '-b' ),
+    },
+
     cc => {
        msg => <<EOMSG,
 * THIS FEATURE HAS CHANGED IN 1.19! *
@@ -491,6 +500,15 @@ EOMSG
        alt => [ ],
        dft => '',
        nck => '\bperl5-porters@perl.org\b',
+    },
+
+    swcc => {
+        msg => <<EOMSG,
+Specify the switch your mailx uses for Carbon Copy (Cc:) addresses.
+\tSome versions of mailx use '~c' and not '-c'.
+EOMSG
+        alt => [ ],
+        dft => ( $^O =~ /hpux|dec_osf/ ? '~c' : '-c' ),
     },
 
     ccp5p_onfail => {
@@ -695,6 +713,9 @@ you will need to confirm your choice.
     local $options{usedft} = $options{usedft};
     BUILDDIR: {
         $arg = 'ddir';
+        my $ddir = chk_dir( $conf->{$arg} || $config{$arg} )
+                || $opt{$arg}->{dft};
+        $conf->{$arg} = $config{$arg} = $ddir;
         $config{ $arg } = prompt_dir( $arg );
         $options{usedft} = $options{oldcfg};
         my $cwd = cwd;
@@ -990,7 +1011,10 @@ PATCHER: {
 # optionally followed by another ';' and description (added to patchlevel.h)
 # /path/to/patchfile.patch;-p0 -R;Description for this patch
 # Empty lines and lines starting with '#' are ignored
-# File paths are relative to '$config{ddir}' if not absolute
+# File paths are relative to '$config{ddir}'
+# If your patch requires 'regen_perly' you'll need Bison 2 and
+# uncomment the next line (keep the exclamation-point there):
+#!perly
 EOMSG
         close PATCHES or last PATCHER;
         print "Created skeleton '$config{$arg}'\n";
@@ -1077,9 +1101,16 @@ MAIL: {
     $config{ $arg } = prompt( $arg );
 
     MAILER: {
-        local $_ = $config{ 'mail_type' };
+        local $_ = $config{mail_type};
 
-        /^mailx?$/         && do { last MAILER };
+        /^mailx$/          && do {
+            if ( $config{bcc} ) {
+                $arg = 'swbcc';
+                $config{ $arg } = prompt( $arg );
+            }
+            last MAILER;
+        };
+        /^mail$/           && do { last MAILER };
         /^sendmail$/       && do {
             $arg = 'from';
             $config{ $arg } = prompt( $arg );
@@ -1099,6 +1130,12 @@ MAIL: {
 
     $arg = 'cc';
     $config{ $arg } = prompt( $arg );
+
+    if ( $config{mail_type} eq 'mailx' && 
+         ( $config{cc} || $config{ccp5p_onfail} ) ) {
+        $arg = 'swcc';
+        $config{ $arg } = prompt( $arg );
+    }
 }
 
 =item w32args
@@ -1479,7 +1516,8 @@ sub sort_configkeys {
         qw( force_c_locale locale defaultenv ),
 
         # Report related
-        qw( mail mail_type mserver from to ccp5p_onfail cc bcc ),
+        qw( mail mail_type mserver from to ccp5p_onfail
+            swcc cc swbcc bcc ),
 
         # Archive reports and logfile
         qw( adir lfile ),
@@ -1746,6 +1784,23 @@ sub prompt {
     return $retval;
 }
 
+sub chk_dir {
+    my( $dir ) = @_;
+    defined $dir or return;
+    my $cwd = cwd();
+    File::Path::mkpath( $dir, 1, 0755 ) unless -d $dir;
+ 
+    if ( ! chdir $dir  ) {
+        warn "Cannot chdir($dir): $!\n";
+        $dir = undef;
+    } else {
+        $dir = File::Spec->canonpath( cwd() );
+    }
+    chdir $cwd or die "Cannot chdir($cwd) back: $!";
+
+    return $dir;
+}
+
 sub prompt_dir {
 
     if ( exists $conf->{ $_[0] } && $conf->{ $_[0] } )  {
@@ -1769,11 +1824,7 @@ sub prompt_dir {
                        ( $ENV{HOME} || $ENV{LOGDIR} || 
                          "$ENV{HOMEDRIVE}$ENV{HOMEPATH}" )}ex;
 
-        my $cwd = cwd();
-        File::Path::mkpath( $dir, 1, 0755 ) unless -d $dir;
-        chdir $dir or warn "Cannot chdir($dir): $!\n" and redo GETDIR;
-        $dir = File::Spec->canonpath( cwd() );
-        chdir $cwd or die "Cannot chdir($cwd) back: $!";
+        defined( $dir = chk_dir( $dir ) ) or redo GETDIR;
 
         print "Got [$dir]\n";
         return $dir;
@@ -2141,7 +2192,11 @@ sub check_buildcfg {
 
     my $uname_s = Test::Smoke::SysInfo::tsuname( 's' );
     my( $os, $osver ) = split /\s+-\s+/, $uname_s;
-    $osver = sprintf "%d.%03d", split m/\D+/, $osver, 3;
+    # May assume much too much about OS version number formats.
+    my( $osvermaj, $osvermin ) = ($osver =~ /^.+?(\d+)\D+(\d+)/);
+    $osver = sprintf "%s", $osvermaj || '?'; 
+    defined $osvermin and $osver .= sprintf ".%03d", $osvermin;
+
 
     print "Checking '$file_name'\n     for $pversion on $uname_s\n";
 
@@ -2237,7 +2292,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 910 2005-09-10 12:23:12Z abeltje $
+    $Id: configsmoke.pl 958 2006-05-07 15:53:57Z abeltje $
 
 =head1 COPYRIGHT
 

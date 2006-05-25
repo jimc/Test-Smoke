@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 901 2005-09-08 23:01:37Z abeltje $
+MANIFEST	$Id: MANIFEST 974 2006-05-25 19:31:39Z abeltje $
 README
 ReleaseNotes
 Changes
@@ -16,11 +16,11 @@ perlcurrent.cfg
 vmsperl.cfg
 w32current.cfg
 smoke55x_dfconfig
-smoke562_dfconfig
 smoke58x_dfconfig
 smokeperl.pl
 smokestatus.pl
 synctree.pl
+sysinfo.pl
 W32Configure.pl
 lib/Mail/Sendmail.pm
 lib/Test/Smoke.pm
@@ -68,11 +68,17 @@ t/util_times.t
 t/vms_rl.t
 t/gccmsg.log
 t/gccmsg.out
+t/grepccmsg.t
+t/logs/hpux1020.log
+t/logs/hpux1111.log
+t/logs/solaris.log
+t/logs/w32bcc32.log
 t/win32/Makefile
 t/win32/makefile.mk
 t/ftppub/bugtst01.out
 t/ftppub/bugtst02.out
 t/ftppub/bugtst03.out
+t/ftppub/pl_with_pn.h
 t/ftppub/perl-current/MANIFEST
 t/ftppub/perl-current/patchlevel.h
 t/ftppub/perl-current/patchme.txt

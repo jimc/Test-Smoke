@@ -1,9 +1,9 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 911 2005-09-10 22:48:21Z abeltje $
+# $Id: SysInfo.pm 967 2006-05-25 19:09:07Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
-$VERSION = '0.027';
+$VERSION = '0.034';
 
 use base 'Exporter';
 @EXPORT_OK = qw( &sysinfo &tsuname );
@@ -18,7 +18,7 @@ Test::Smoke::SysInfo - OO interface to system specific information
 
     my $si = Test::Smoke::SysInfo->new;
 
-    printf "Hostname: %s\n, $si->host;
+    printf "Hostname: %s\n", $si->host;
     printf "Number of CPU's: %s\n", $si->ncpu;
     printf "Processor type: %s\n", $si->cpu_type;   # short
     printf "Processor description: %s\n", $si->cpu; # long
@@ -27,7 +27,7 @@ Test::Smoke::SysInfo - OO interface to system specific information
 or
 
     use Test::Smoke::SysInfo qw( sysinfo );
-    prinft "[%s]\n", sysinfo();
+    printf "[%s]\n", sysinfo();
 
 or
 
@@ -55,7 +55,9 @@ sub new {
 
         $chk_os =~ /aix/i        && return bless AIX(),     $class;
 
-        $chk_os =~ /darwin|bsd/i && return bless BSD(),     $class;
+        $chk_os =~ /bsd/i        && return bless BSD(),     $class;
+
+        $chk_os =~ /darwin/i     && return bless Darwin(),  $class;
 
         $chk_os =~ /hp-?ux/i     && return bless HPUX(),    $class;
 
@@ -136,9 +138,9 @@ sub __get_os {
             $os .= " [$distro]" if $distro;
             last;
         };
-        $chk_os =~ /solaris|sunos/i && do {
+        $chk_os =~ /solaris|sunos|osf/i && do {
             my( $osn, $osv ) = (POSIX::uname())[0,2];
-            $osv > 5 and do {
+            $chk_os =~ /solaris|sunos/i && $osv > 5 and do {
                 $osn = 'Solaris';
                 $osv = '2.' . (split /\./, $osv, 2)[1];
             };
@@ -257,7 +259,11 @@ Use the L<ioscan> program to find information.
 sub HPUX {
     my $hpux = Generic();
     local $ENV{PATH} = "/etc:$ENV{PATH}";
-    my $ncpu = grep /^processor/ => `ioscan -fnkC processor`;
+    my @mi;	# 11.23 has one command for all info
+    -x "/usr/contrib/bin/machinfo" and
+        chomp (@mi = `/usr/contrib/bin/machinfo`);
+    my $ncpu = (grep s/^\s*Number of CPUs\s+=\s+(\d+)/$1/, @mi)[0];
+    $ncpu or $ncpu = grep /^processor/ => `ioscan -fnkC processor`;
     unless ( $ncpu ) {	# not root?
         local *SYSLOG;
         if ( open SYSLOG, "< /var/adm/syslog/syslog.log" ) {
@@ -273,14 +279,15 @@ sub HPUX {
     chomp( my $model = `model` );
     ( my $m = $model ) =~ s:.*/::;
     local *LST;
-    open LST, "< /usr/sam/lib/mo/sched.models" and
+    @cpu = grep s/^\s*processor model:\s+\d+\s+(.*) processor/$1/, @mi;
+    if (@cpu == 0 && open LST, "< /usr/sam/lib/mo/sched.models") {
 	@cpu = grep m/$m/i, <LST>;
-    close LST;
-
-    @cpu == 0 && open LST, "< /opt/langtools/lib/sched.models" and
+	close LST;
+	}
+    if (@cpu == 0 && open LST, "< /opt/langtools/lib/sched.models") {
 	@cpu = grep m/$m/i, <LST>;
-    close LST;
-
+	close LST;
+	}
     if (@cpu == 0 && open LST, "echo 'sc product cpu;il' | /usr/sbin/cstm |") {
         my $line;
         while ( $line = <LST> ) {
@@ -297,10 +304,24 @@ sub HPUX {
        $k64 and $hpux->{_os} .= "/$k64";
     }
 
-    if ($cpu[0] =~ m/^\S+\s+(\d+\.\d+)\s+(\S+)/) {
+    my $arch;
+    if (($arch) = grep s/^\s*machine\s+=\s+(\S+)/$1/, @mi) {
+	my $cpu = $cpu[0];
+	@cpu = ();
+	my $speed = (grep s:^\s*Clock speed =\s+(\d+)\s*([MG])Hz:$1/$2:i, @mi)[0];
+	$speed =~ s:/(\w)::;
+	$1 eq "G" and $speed *= 1024;
+	$cpu .= "/$speed";
+
+	$hpux->{_cpu} = $cpu;
+	$hpux->{_cpu_type} = $arch;
+	}
+
+    if (@cpu && $cpu[0] =~ m/^\S+\s+(\d+\.\d+)\s+(\S+)/) {
         my( $arch, $cpu ) = ("PA-$1", $2);
         $hpux->{_cpu} = $cpu;
-        $hpux->{_cpu_type} = $os_r >= 11 && `getconf HW_32_64_CAPABLE` =~ m/^1/
+        $hpux->{_cpu_type} = $os_r >= 11 &&
+                             ( (0 + `getconf HW_32_64_CAPABLE`) & 1 )
             ? "$arch/64" : "$arch/32";
     }
     return $hpux;
@@ -337,11 +358,48 @@ sub BSD {
     }
 
     return {
-        _cpu_type => $sysctl{machine} || __get_cpu_type(),
+        _cpu_type => ($sysctl{machine} || __get_cpu_type()),
         _cpu      => $cpu || __get_cpu,
         _ncpu     => $sysctl{ncpu},
         _host     => __get_hostname(),
         _os       => __get_os(),
+    };
+}
+
+=head2 Darwin( )
+
+If the L<system_profiler> program is accessible (meaning that this is
+Mac OS X), use it to find information; otherwise treat as L</BSD>.
+
+This sub was donated by Dominic Dunlup.
+
+=cut
+
+sub Darwin {
+    my $system_profiler_output;
+    {
+	no warnings 'exec';	# Just in case warnings are turned on ...
+	$system_profiler_output =
+	    `/usr/sbin/system_profiler -detailLevel mini SPHardwareDataType`;
+    }
+    return BSD() unless $system_profiler_output;
+
+    my %system_profiler;
+    $system_profiler{$1} = $2
+	while $system_profiler_output =~ m/^\s*([\w ]+):\s+(.+)$/gm;
+
+    $system_profiler{'CPU Type'} =~ s/PowerPC\s*(\w+).*/macppc$1/;
+    $system_profiler{'CPU Speed'} =~ 
+	s/(\d+(?:\.\d+)?)\s*GHz/sprintf("%d MHz", $1 * 1000)/e;
+
+    my $model = $system_profiler{'Machine Name'} ||
+                $system_profiler{'Machine Model'};
+    return {
+        _cpu_type => ($system_profiler{'CPU Type'} || __get_cpu_type()),
+        _cpu      => ("$model ($system_profiler{'CPU Speed'})" || __get_cpu),
+        _ncpu     => $system_profiler{'Number Of CPUs'},
+        _host     => __get_hostname(),
+        _os       => __get_os() . " (Mac OS X)",
     };
 }
 
@@ -478,6 +536,11 @@ sub Linux_ppc {
         my %info = map {
             ( $_ => __from_proc_cpuinfo( $_, \@cpu_info ) );
         } @parts;
+        if ($info{detected} = __from_proc_cpuinfo( 'detected as', \@cpu_info )){
+            $info{detected} =~ s/.*(\b.+Mac G\d).*/$1/;
+            $info{machine} = $info{detected};
+        }
+        
         $cpu = sprintf "%s %s (%s)", map $info{ $_ } => @parts;
     } else {
         $cpu = __get_cpu();
@@ -495,6 +558,7 @@ sub Linux_ppc {
 =head2 Solaris( )
 
 Use the L<psrinfo> program to get the system information.
+Used also in Tru64 (osf).
 
 =cut
 
@@ -662,10 +726,10 @@ L<Test::Smoke::Smoker>, L<Test::Smoke::Reporter>
 
 =head1 COPYRIGHT
 
-(c) 2002-2003, Abe Timmerman <abeltje@cpan.org> All rights reserved.
+(c) 2002-2006, Abe Timmerman <abeltje@cpan.org> All rights reserved.
 
 With contributions from Jarkko Hietaniemi, Merijn Brand, Campo
-Weijerman, Alan Burlison, Allen Smith, Alain Barbet.
+Weijerman, Alan Burlison, Allen Smith, Alain Barbet, Dominic Dunlop.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

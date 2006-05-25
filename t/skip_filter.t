@@ -1,11 +1,11 @@
 #! perl -w
 use strict;
 
-# $Id: skip_filter.t 861 2005-06-22 19:26:06Z abeltje $
+# $Id: skip_filter.t 940 2006-04-21 16:22:08Z abeltje $
 
 use File::Spec;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 BEGIN { use_ok( 'Test::Smoke::Util' ); }
 
 while ( <DATA> ) {
@@ -41,3 +41,4 @@ P C:\usr\local\src\bleadperl\perl\miniperl.exe "-I..\..\lib" "-I..\..\lib" -MExt
 P Creating library file: libExtTest.dll.a
 P not ok 43 # SKIP see perldelta583
 P base/cond...................................ok    0.060s
+P base/cond...................................ok       60 ms
