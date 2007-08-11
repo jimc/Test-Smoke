@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher_forest.t 905 2005-09-09 00:25:41Z abeltje $
+# $Id: patcher_forest.t 1029 2007-04-01 13:57:13Z abeltje $
 
 use File::Spec::Functions;
 my $findbin;
@@ -11,7 +11,13 @@ use lib $findbin;
 use TestLib;
 use Cwd;
 
-use Test::More tests => 13;
+my $win32_fat;
+BEGIN { $win32_fat = $^O eq 'MSWin32' && Win32::FsType() ne 'NTFS' }
+
+use Test::More $win32_fat
+    ? ( skip_all => 'Win32 fat filesystem not supported' )
+    : ( tests => 13 );
+
 BEGIN {
     use_ok( 'Test::Smoke::Patcher' );
     use_ok( 'Test::Smoke::Syncer' );
@@ -53,19 +59,19 @@ SKIP: {
 
     my $syncer = Test::Smoke::Syncer->new( forest => %config );
     ok my $pl = $syncer->sync, "Forest planted" or
-        skip "No source forest", $to_skip -= 3;
+        skip "No source forest", $to_skip -= 4;
     is $pl, '20000', "patchlevel $pl";
     $has_forest = 1;
 
     local *PINFO;
     my $relpatch = catfile updir, '20005';
     open PINFO, "> " . catfile(qw( t 20005 )) or
-        skip "Cannot write patch: $!", $to_skip -= 4;
+        skip "Cannot write patch: $!", $to_skip -= 1;
     print PINFO $p_content;
     ok close PINFO, "patch written";
 
     my $pinfo = catfile( 't', 'test.patches' );
-    open PINFO, "> $pinfo" or skip "Cannot open '$pinfo': $!", $to_skip -= 6;
+    open PINFO, "> $pinfo" or skip "Cannot open '$pinfo': $!", $to_skip -= 2;
     select( (select(PINFO), $|++)[0] );
     print PINFO <<EOPINFO;
 $relpatch;-p1

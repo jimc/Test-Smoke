@@ -1,12 +1,15 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Test-Smoke
-version:      1.19_83
-version_from: lib/Test/Smoke.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                Test-Smoke
+version:             1.20
+abstract:            The Perl core test smoke suite
+license:             ~
+generated_by:        ExtUtils::MakeMaker version 6.32
+distribution_type:   module
+requires:     
     File::Spec:                    0.82
     Test::More:                    0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.26
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
+    version: 1.2
+author:
+    - H.Merijn Brand <h.m.brand@hccnet.nl>, Nicholas Clark <nick@plum.flirble.org> and Abe Timmerman <abeltje@cpan.org>

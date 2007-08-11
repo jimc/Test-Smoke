@@ -1,9 +1,9 @@
 package Test::Smoke::BuildCFG;
 use strict;
 
-# $Id: BuildCFG.pm 764 2004-10-17 18:25:28Z abeltje $
+# $Id: BuildCFG.pm 1037 2007-04-02 21:17:19Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.008';
+$VERSION = '0.009';
 
 use Cwd;
 use File::Spec;
@@ -195,7 +195,7 @@ sub _read {
                 $vmsg = $nameorref;
             } else {
                 require Carp;
-                Carp::carp "Cannot read buildconfigurations ($nameorref): $!";
+                Carp::carp("Cannot read buildconfigurations ($nameorref): $!");
                 $self->{_buildcfg} = $self->default_buildcfg();
                 $vmsg = "internal content";
             }
@@ -259,9 +259,9 @@ sub _parse {
             }
             if ( @targets > 1 ) {
                 require Carp;
-                Carp::carp "Multiple policy lines in one section:\n\t",
-                           join( "\n\t", @targets ),
-                           "\nWill use /$targets[0]/\n";
+                Carp::carp( "Multiple policy lines in one section:\n\t",
+                            join( "\n\t", @targets ),
+                            "\nWill use /$targets[0]/\n" );
             }
             push @{ $self->{_sections} }, 
                  { policy_target => $targets[0], 

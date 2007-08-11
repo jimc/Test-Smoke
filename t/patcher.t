@@ -1,13 +1,14 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher.t 921 2005-12-18 11:27:57Z abeltje $
+# $Id: patcher.t 983 2006-05-28 09:01:43Z abeltje $
 
 use File::Spec;
 my $findbin;
 use File::Basename;
 BEGIN { $findbin = dirname $0; }
 use lib $findbin;
+#use lib File::Spec->catdir( $findbin, File::Spec->updir, 'lib' );
 use TestLib;
 use Cwd;
 
@@ -187,9 +188,10 @@ EOF
     my $rhd = File::Spec->catfile( $ddir, 'regen.pl' );
     put_file( <<EOF, $rhd );
 #! perl -w
-use File::Spec::Functions;
+use File::Spec::Functions qw( :DEFAULT rel2abs );
 my \$lib;
-BEGIN { \$lib = updir }
+BEGIN { \$lib = rel2abs updir }
+use lib catdir \$lib, updir(), 'lib';
 use lib \$lib;
 use TestLib;
 my \$rhd = 'regen_pl.out';
@@ -201,9 +203,10 @@ EOF
 
     put_file( <<EOF, $rpy );
 #! perl -w
-use File::Spec::Functions;
+use File::Spec::Functions qw( :DEFAULT rel2abs );
 my \$lib;
-BEGIN { \$lib = updir }
+BEGIN { \$lib = rel2abs updir }
+use lib catdir \$lib, updir(), 'lib';
 use lib \$lib;
 use TestLib;
 my \@files = qw( @yfiles );

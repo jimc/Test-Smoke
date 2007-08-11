@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 980 2006-05-26 13:04:25Z abeltje $
+# $Id: Smoke.pm 1055 2007-08-11 11:32:32Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.19_83';
+$VERSION  = '1.20';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -154,6 +154,9 @@ sub run_smoke {
     $conf->{v} && $conf->{defaultenv} and
         $smoker->tty( "Running smoke tests without \$ENV{PERLIO}\n" );
 
+    $conf->{v} && $conf->{harnessonly} and
+        $smoker->tty( "Running smoke tests only with harness.\n" );
+
     chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
     unless ( $continue ) {
         $smoker->make_distclean( );
@@ -193,7 +196,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 980 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 1055 $ =~ /(\d+)/;
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
@@ -208,7 +211,7 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 980 2006-05-26 13:04:25Z abeltje $
+$Id: Smoke.pm 1055 2007-08-11 11:32:32Z abeltje $
 
 =head1 COPYRIGHT
 

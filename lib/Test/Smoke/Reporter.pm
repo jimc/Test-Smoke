@@ -1,9 +1,9 @@
 package Test::Smoke::Reporter;
 use strict;
 
-# $Id: Reporter.pm 894 2005-07-31 15:44:42Z abeltje $
+# $Id: Reporter.pm 1037 2007-04-02 21:17:19Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.026';
+$VERSION = '0.027';
 
 use Cwd;
 use File::Spec::Functions;
@@ -173,7 +173,7 @@ sub _read {
                 $vmsg = "from $nameorref";
             } else {
                 require Carp;
-                Carp::carp "Cannot read smokeresults ($nameorref): $!";
+                Carp::carp( "Cannot read smokeresults ($nameorref): $!" );
                 $self->{_outfile} = undef;
                 $vmsg = "did fail";
             }
@@ -457,13 +457,13 @@ sub write_to_file {
     local *RPT;
     open RPT, "> $name" or do {
         require Carp;
-        Carp::carp "Error creating '$name': $!";
+        Carp::carp( "Error creating '$name': $!" );
         return;
     };
     print RPT $self->report;
     close RPT or do {
         require Carp;
-        Carp::carp "Error writing to '$name': $!";
+        Carp::carp( "Error writing to '$name': $!" );
         return;
     };
     $self->{v} and print " OK\n";

@@ -1,9 +1,9 @@
 package Test::Smoke::Mailer;
 use strict;
 
-# $Id: Mailer.pm 924 2006-01-20 16:31:42Z abeltje $
+# $Id: Mailer.pm 1044 2007-04-06 22:01:03Z abeltje $
 use vars qw( $VERSION $P5P $NOCC_RE);
-$VERSION = '0.011';
+$VERSION = '0.014';
 
 use Test::Smoke::Util qw( parse_report_Config );
 
@@ -127,7 +127,7 @@ sub fetch_report {
         close REPORT;
     } else {
         require Carp;
-        Carp::croak "Cannot read '$report_file': $!";
+        Carp::croak( "Cannot read '$report_file': $!" );
     }
 
     my @config = parse_report_Config( $self->{body} );
@@ -402,6 +402,9 @@ sub mail {
     $message{from} = $self->{from} if $self->{from};
     $message{smtp} = $self->{mserver} if $self->{mserver};
 
+    $message{ 'Content-type' } = qq!text/plain; charset="UTF8"!
+        if exists $ENV{LANG} && $ENV{LANG} =~ /utf-?8$/i;
+
     $self->{v} > 1 and print "[Mail::Sendmail]\n";
     $self->{v} and print "Sending report to $self->{to} ";
 
@@ -472,9 +475,13 @@ sub mail {
     $message{Cc}   = $cc  if $cc;
     $message{Bcc}   = $self->{bcc} if $self->{bcc};
     $message{From} = $self->{from} if $self->{from};
-    MIME::Lite->send( smtp => $self->{mserver} ) if $self->{mserver};
+
+    MIME::Lite->send( smtp => $self->{mserver}, Debug => ( $self->{v} > 1 ) )
+        if $self->{mserver};
 
     my $ml_msg = MIME::Lite->new( %message );
+    $ml_msg->attr( 'content-type.charset' => 'UTF8' )
+        if exists $ENV{LANG} && $ENV{LANG} =~ /utf-?8$/i;
 
     $self->{v} > 1 and print "[MIME::Lite]\n";
     $self->{v} and print "Sending report to $self->{to} ";

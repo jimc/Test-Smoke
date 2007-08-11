@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 974 2006-05-25 19:31:39Z abeltje $
+MANIFEST	$Id: MANIFEST 1041 2007-04-06 11:59:32Z abeltje $
 README
 ReleaseNotes
 Changes
@@ -71,8 +71,10 @@ t/gccmsg.out
 t/grepccmsg.t
 t/logs/hpux1020.log
 t/logs/hpux1111.log
+t/logs/mingw.log
 t/logs/solaris.log
 t/logs/w32bcc32.log
+t/logs/gcc2722.log
 t/win32/Makefile
 t/win32/makefile.mk
 t/ftppub/bugtst01.out

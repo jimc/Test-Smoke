@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 968 2006-05-25 19:13:03Z abeltje $
-use vars qw( $VERSION @EXPORT @EXPORT_OK );
-$VERSION = '0.47';
+# $Id: Util.pm 1041 2007-04-06 11:59:32Z abeltje $
+use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
+$VERSION = '0.54';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -17,6 +17,7 @@ use base 'Exporter';
     &grepccmsg &get_local_patches &set_local_patch
     &get_ncpu &get_smoked_Config &parse_report_Config 
     &get_regen_headers &run_regen_headers
+    &whereis &clean_filename
     &calc_timeout &time_in_hhmm
     &do_pod2usage
     &set_vms_rooted_logical
@@ -26,6 +27,8 @@ use Text::ParseWords;
 use File::Spec::Functions;
 use File::Find;
 use Cwd;
+
+$NOCASE = $^O eq 'VMS';
 
 =head1 NAME
 
@@ -171,6 +174,7 @@ sub Configure_win32 {
 	"-Uuseimpsys"		=> "USE_IMP_SYS",
         "-Dusemymalloc"         => "PERL_MALLOC",
         "-Duselargefiles"       => "USE_LARGE_FILES",
+        "-Uuseshrplib"          => "BUILD_STATIC",
 	"-DDEBUGGING"		=> "USE_DEBUGGING",
         "-DINST_DRV"            => "INST_DRV",
         "-DINST_TOP"            => "INST_TOP",
@@ -197,6 +201,7 @@ sub Configure_win32 {
 	USE_PERLIO	=> 1, # useperlio should be the default!
         PERL_MALLOC     => 0,
         USE_LARGE_FILES => 0,
+        BUILD_STATIC    => 0,
 	USE_DEBUGGING	=> 0,
         INST_DRV        => undef,
         INST_TOP        => undef,
@@ -288,6 +293,11 @@ sub Configure_win32 {
             $_ = ($opts{$1} ? "" : "#") . $1 . $2 . "\n";
         } elsif (m/^\s*#?\s*(CFG\s*\*?=\s*Debug)$/) {
             $_ = ($opts{USE_DEBUGGING} ? "" : "#") . $1 . "\n";
+        } elsif (m/^\s*#?\s*(BUILD_STATIC)\s*=\s*(.*)$/) {
+            my( $macro, $mval ) = ( $1, $2 );
+            if ( $config_args =~ /-([UD])useshrplib\b/ ) {
+                $_ = ( $1 eq 'D' ? "#" : "" ) . "$macro = $mval\n";
+            }
         } else {
             foreach my $cfg_var ( grep defined $opts{ $_ }, @w32_opts ) {
                 if (  m/^\s*#?\s*($cfg_var\s*\*?=)\s*(.*)$/ ) {
@@ -435,8 +445,10 @@ sub grepccmsg {
                 # Sometimes also the column is mentioned.
             # foo.c: In function `foo':
             # foo.c:nnn: error: ...
-            '(^(?-s:.+?):(?: In function .+?:$|\d+(?:\:\d+)?: ' .
-            '(?:warning|error): .+?$))',
+            # foo.c(:nn)?: undefined reference to ...
+            '(^(?-s:.+?):(?: In function .+?:$|' .
+               '(?: undefined reference to .+?$)|' .
+               '\d+(?:\:\d+)?: ' . '(?:warning:|error:|invalid) .+?$))',
 
         'mswin32' => # MSVC(?:60)*
             # foo.c : error LNKnnn: error description
@@ -563,7 +575,7 @@ sub set_local_patch {
     }
     unless ( rename $pln, $plh ) {
         require Carp;
-        carp( "Could not rename '$pln' to '$plh' : $!" );
+        Carp::carp( "Could not rename '$pln' to '$plh' : $!" );
         return 0;
     }
 
@@ -994,6 +1006,98 @@ sub run_regen_headers {
         return;
     }
     return 1;
+}
+
+=item whereis( $prog )
+
+Try to find an executable instance of C<$prog> in $ENV{PATH}.
+
+Rreturns a full file-path (with extension) to it.
+
+=cut
+
+sub whereis {
+    my $prog = shift;
+    return undef unless $prog; # you shouldn't call it '0'!
+    $^O eq 'VMS' and return vms_whereis( $prog );
+
+    my $p_sep = $Config::Config{path_sep};
+    my @path = split /\Q$p_sep\E/, $ENV{PATH};
+    my @pext = split /\Q$p_sep\E/, $ENV{PATHEXT} || '';
+    unshift @pext, '';
+
+    foreach my $dir ( @path ) {
+        foreach my $ext ( @pext ) {
+            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
+            return $fname if -x $fname;
+        }
+    }
+    return '';
+}
+
+=item vms_whereis( $prog )
+
+First look in the SYMBOLS to see if C<$prog> is there.
+Next look in the KFE-table C<INSTALL LIST> if it is there.
+As a last resort we can scan C<DCL$PATH> like we do on *nix/Win32
+
+=cut
+
+sub vms_whereis {
+    my $prog = shift;
+
+    # Check SYMBOLS
+    eval { require VMS::DCLsym };
+    if ( $@ ) {
+        require Carp;
+        Carp::carp( "Oops, cannot load VMS::DCLsym: $@" );
+    } else {
+        my $syms = VMS::DCLsym->new;
+        return $prog if scalar $syms->getsym( $prog );
+    }
+    # Check Known File Entry table (INSTALL LIST)
+    my $img_re = '^\s+([\w\$]+);\d+';
+    my %kfe = map {
+        my $img = /$img_re/ ? $1 : '';
+        ( uc $img => undef )
+    } grep /$img_re/ => qx/INSTALL LIST/;
+    return $prog if exists $kfe{ uc $prog };
+
+    require Config;
+    my $dclp_env = 'DCL$PATH';
+    my $p_sep = $Config::Config{path_sep} || '|';
+    my @path = split /\Q$p_sep\E/, $ENV{ $dclp_env }||"";
+    my @pext = ( $Config::Config{exe_ext} || $Config::Config{_exe}, '.COM' );
+
+    foreach my $dir ( @path ) {
+        foreach my $ext ( @pext ) {
+            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
+            if ( -x $fname ) {
+                return $ext eq '.COM' ? "\@$fname" : "MCR $fname";
+            }
+        }
+    }
+    return '';
+}
+
+=item clean_filename( $fname )
+
+C<clean_filename()> basically returns a vmsify() type of filename for
+VMS, and returns an upcase filename for case-ignorant filesystems.
+
+=cut
+
+sub clean_filename {
+    my $fname = shift;
+
+    if ( $^O eq 'VMS' ) {
+        my @parts = split /[.@#]/, $fname;
+        if ( @parts > 1 ) {
+            my $ext = ( pop @parts ) || '';
+            $fname = join( "_", @parts ) . ".$ext";
+        }
+    }
+    return $NOCASE ? uc $fname : $fname;
 }
 
 =item calc_timeout( $killtime[, $from] )

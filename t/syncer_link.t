@@ -1,13 +1,19 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_link.t 829 2005-02-12 18:55:26Z abeltje $
+# $Id: syncer_link.t 1029 2007-04-01 13:57:13Z abeltje $
 
 use Config;
 use File::Spec;
 use lib File::Spec->rel2abs( 't' );
 use TestLib;
-use Test::More tests => 12;
+
+my $win32_fat;
+BEGIN { $win32_fat = $^O eq 'MSWin32' && Win32::FsType() ne 'NTFS' }
+
+use Test::More $win32_fat
+    ? ( skip_all => 'Win32 fat filesystem not supported' )
+    : ( tests => 12 );
 
 use_ok( 'Test::Smoke::Syncer' );
 

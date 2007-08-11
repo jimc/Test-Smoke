@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 902 2005-09-08 23:10:28Z abeltje $
+# $Id: smokeperl.pl 1052 2007-06-16 09:22:14Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -41,8 +41,9 @@ GetOptions( \%options,
     'archive!',
     'is56x',
     'defaultenv!',
-    'continue',
+    'continue!',
     'smartsmoke!',
+    'patchlevel=i',
     'snapshot|s=i',
     'killtime=s',
     'pfile=s',
@@ -80,10 +81,11 @@ It can take these options
   --[no]ccp5p_onfail       Do (not) send failure reports to perl5-porters
   --[no]delay_report       Do (not) create the report now
 
-  --continue               Try to continue an interrupted smoke
+  --[no]continue           Try to continue an interrupted smoke
   --is56x                  This is a perl-5.6.x smoke
   --defaultenv             Run a smoke in the default environment
   --[no]smartsmoke         Don't smoke unless patchlevel changed
+  --patchlevel <plevel>    Set old patchlevel for --smartsmoke --nofetch
   --snapshot <patchlevel>  Set a new patchlevel for snapshot smokes
   --killtime (+)hh::mm     (Re)set the guard-time for this smoke
 
@@ -145,8 +147,10 @@ chdir $cwd;
 archiverpt();
 
 sub synctree {
-    my $was_patchlevel = get_patch( $conf->{ddir} ) || -1;
-    my $now_patchlevel = $was_patchlevel;
+    my $now_patchlevel = get_patch( $conf->{ddir} ) || -1;
+    my $was_patchlevel = $options{smartsmoke} && $options{patchlevel}
+        ? $options{patchlevel}
+        : $now_patchlevel;
     FETCHTREE: {
         unless ( $options{fetch} && $options{run} ) {
             $conf->{v} and print "Skipping synctree\n";
@@ -277,7 +281,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 902 2005-09-08 23:10:28Z abeltje $
+$Id: smokeperl.pl 1052 2007-06-16 09:22:14Z abeltje $
 
 =head1 COPYRIGHT
 

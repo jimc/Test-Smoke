@@ -1,9 +1,9 @@
 package Test::Smoke::Policy;
 use strict;
 
-# $Id: Policy.pm 505 2003-12-21 11:48:43Z abeltje $
+# $Id: Policy.pm 1037 2007-04-02 21:17:19Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.003';
+$VERSION = '0.004';
 
 use File::Spec;
 
@@ -89,7 +89,7 @@ sub _do_subst {
                              {$1 . join " ", 
                                    grep $_ && length $_ => @$values}meg ) {
             require Carp;
-            Carp::carp "Policy target '$target' failed to match";
+            Carp::carp( "Policy target '$target' failed to match" );
         }
     }
     $self->{_new_policy} = $policy;
@@ -111,11 +111,11 @@ sub write {
         print POL $self->{_new_policy};
         close POL or do {
             require Carp;
-            Carp::carp "Error rewriting '$p_name': $!";
+            Carp::carp( "Error rewriting '$p_name': $!" );
         };
     } else {
         require Carp;
-        Carp::carp "Unable to rewrite '$p_name': $!";
+        Carp::carp( "Unable to rewrite '$p_name': $!" );
     }
 }
 

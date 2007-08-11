@@ -1,5 +1,5 @@
 #! /usr/bin/perl -w
-# $Id: Makefile.PL 856 2005-05-01 20:40:30Z abeltje $
+# $Id: Makefile.PL 1025 2007-03-09 14:02:19Z abeltje $
 use strict;
 use 5.004;
 use ExtUtils::MakeMaker;
@@ -26,6 +26,14 @@ MAKE_DISTCLEAN: {
     open STDERR, ">&SAVEERR"; close SAVEERR;
 }
 
+my $mmver = ExtUtils::MakeMaker->VERSION;
+
+my $iscript = 'INSTALLSITESCRIPT';
+unless ( eval "$mmver" >= eval "6.30_01" ) {
+    print "You are running MakeMaker v$mmver: fix INSTALLSCRIPT\n";
+    $iscript = 'INSTALLSCRIPT';
+}
+
 my %install = ( );
 unless ( @ARGV ) {
     my $dft_install = exists $ENV{SMOKE_INSTDIR} && $ENV{SMOKE_INSTDIR} ne ""
@@ -38,7 +46,7 @@ unless ( @ARGV ) {
         $dft_install
     );
 
-    %install = ( PREFIX => $install_dir, INSTALLSCRIPT => $install_dir,
+    %install = ( PREFIX => $install_dir, $iscript => $install_dir,
 #                 LIB   => File::Spec->catdir( $install_dir, 'lib' ) );
                  LIB   => $install_dir );
 }

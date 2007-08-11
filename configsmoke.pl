@@ -13,12 +13,12 @@ my $findbin;
 BEGIN { $findbin = dirname $0 }
 use lib File::Spec->catdir( $findbin, 'lib' );
 use lib $findbin;
-use Test::Smoke::Util qw( do_pod2usage );
+use Test::Smoke::Util qw( do_pod2usage whereis );
 use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 958 2006-05-07 15:53:57Z abeltje $
+# $Id: configsmoke.pl 1032 2007-04-01 20:09:02Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.060';
+$VERSION = '0.064';
 
 use Getopt::Long;
 my %options = ( 
@@ -124,16 +124,16 @@ my %vdirs = map {
 } qw( 5.5.x 5.8.x ); # unsupported: 5.6.2
 
 my %versions = (
-    '5.5.x' => { source => 'public.activestate.com::perl-5.005xx',
-                 server => 'public.activestate.com',
-                 sdir   => '/pub/apc/perl-5.005xx-snap',
-                 sfile  => '',
-                 pdir   => '/pub/apc/perl-5.005xx-diffs',
-                 cfg    => 'perl55x.cfg',
-                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
-                                               "perl-$vdirs{'5.5.x'}" ),
-                 text   => 'Perl 5.005 MAINT',
-                 is56x  => 1},
+#    '5.5.x' => { source => 'public.activestate.com::perl-5.005xx',
+#                 server => 'public.activestate.com',
+#                 sdir   => '/pub/apc/perl-5.005xx-snap',
+#                 sfile  => '',
+#                 pdir   => '/pub/apc/perl-5.005xx-diffs',
+#                 cfg    => 'perl55x.cfg',
+#                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+#                                               "perl-$vdirs{'5.5.x'}" ),
+#                 text   => 'Perl 5.005 MAINT',
+#                 is56x  => 1},
 
 #    '5.6.2' => { source => 'public.activestate.com::perl-5.6.2',
 #                 server => 'public.activestate.com',
@@ -442,6 +442,11 @@ EOT
         alt => [ ],
         dft => ( $Config{make} ? $Config{make} : 'make' ),
     },
+    harnessonly => {
+        msg => 'Use harness only (skip TEST)?',
+        alt => [qw( y N )],
+        dft => ( $^O =~ /VMS/i ? 'y' : 'n' ),
+    },
 
     # mail stuff
     mail => {
@@ -531,8 +536,8 @@ EOMSG
     },
     defaultenv => {
         msg => "Run the test-suite without \$ENV{PERLIO}?",
-        alt => [qw( N y )],
-        dft => 'n',
+        alt => ( is_win32 ? [qw( n Y )] : [qw( N y )] ),
+        dft => ( is_win32 ? 'y' : 'n' ),
     },
     locale => {
         msg => 'What locale should be used for extra testing ' .
@@ -724,6 +729,12 @@ you will need to confirm your choice.
             redo BUILDDIR;
         }
         my $bdir = $config{ $arg } = cwd;
+        if ( is_win32 && Win32::FsType() ne 'NTFS' ) {
+            print "*** WHOA THERE!!! ***\n";
+            print "\tYou are on MSWin32, ";
+            print "but do not use a NTFS filesystem to build perl.\n"
+        }
+
         chdir $cwd or die "Can't chdir($cwd) back: $!\n";
         if ( $cwd eq $bdir ) {
             print "The current directory *cannot* be used for smoke testing\n";
@@ -1045,6 +1056,10 @@ if ( $config{is56x} ) {
     $config{ $arg } = 1;
 } else {
     $config{ $arg } = prompt_yn( $arg );
+    if ( is_win32 && ! $config{ $arg } ) {
+        print "*** WHOA THERE!!! ***\n";
+        print "\tYou should not try to use PERLIIO=stdio on MSWin332!\n";
+    }
 }
 =item locale
 
@@ -1228,6 +1243,16 @@ unless ( is_win32 || is_vms ) {
     $arg = 'testmake';
     $config{ $arg } = prompt( $arg ) || 'make';
 }
+
+=item harnessonly
+
+C<harnessonly> indicates that C<make test> is replaced by C<make
+test_harness>.
+
+=cut
+
+$arg = 'harnessonly';
+$config{ $arg } = prompt_yn( $arg );
 
 =item umask
 
@@ -1523,7 +1548,7 @@ sub sort_configkeys {
         qw( adir lfile ),
 
         # make fine-tuning
-        qw( makeopt testmake ),
+        qw( makeopt testmake harnessonly ),
 
         # ENV stuff
         qw( perl5lib delay_report ),
@@ -1583,8 +1608,8 @@ EO_DIE
 # $cronline
 @{[ renice( $config{renice} ) ]}
 cd $cwd
-CFGNAME=$options{config}
-LOCKFILE=$options{prefix}.lck
+CFGNAME=\${CFGNAME:-$options{config}}
+LOCKFILE=\${LOCKFILE:-$options{prefix}.lck}
 continue=''
 if test -f "\$LOCKFILE" && test -s "\$LOCKFILE" ; then
 $handle_lock
@@ -1662,8 +1687,8 @@ set WD=$cwd\\
 rem Change drive-Letter
 for \%\%L in ( "\%WD\%" ) do \%\%~dL
 cd "\%WD\%"
-set CFGNAME=$options{config}
-set LOCKFILE=$options{prefix}.lck
+if "\%CFGNAME\%"  == "" set CFGNAME=$options{config}
+if "\%LOCKFILE\%" == "" set LOCKFILE=$options{prefix}.lck
 if NOT EXIST \%LOCKFILE\% goto START_SMOKE
     FIND "\%CFGNAME\%" \%LOCKFILE\% > NUL:
     if ERRORLEVEL 1 goto START_SMOKE
@@ -1869,75 +1894,6 @@ sub prompt_yn {
     return $retval;
 }
 
-sub whereis {
-    my( $prog, $find_all ) = @_;
-    return '' unless $prog; # you shouldn't call it '0'!
-    is_vms and return vms_whereis( $prog, $find_all );
-
-    $ENV{PATH} or return wantarray ? ( ) : [ ];
-
-    my $p_sep = $Config::Config{path_sep};
-    my @path = split /\Q$p_sep\E/, $ENV{PATH};
-    my @pext = split /\Q$p_sep\E/, $ENV{PATHEXT} || '';
-    unshift @pext, '';
-
-    my @fnames;
-    foreach my $dir ( @path ) {
-        foreach my $ext ( @pext ) {
-            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
-            if ( -x $fname ) {
-                return $fname unless $find_all;
-                push @fnames, $fname;
-            }
-        }
-    }
-    return @fnames ? wantarray ? @fnames : \@fnames : '';
-}
-
-=item vms_whereis( $prog )
-
-First look in the SYMBOLS to see if C<$prog> is there.
-Next look in the KFE-table C<INSTALL LIST> if it is there.
-As a last resort we can scan C<DCL$PATH> like we do on *nix/Win32
-
-=cut
-
-sub vms_whereis {
-    my( $prog, $find_all ) = @_;
-
-    # Check SYMBOLS
-    eval { require VMS::DCLsym };
-    if ( $@ ) {
-        carp "Oops, cannot load VMS::DCLsym: $@";
-    } else {
-        VMS::DCLsym->import;
-        my $syms = VMS::DCLsym->new;
-        return $prog if scalar $syms->getsym( uc $prog );
-    }
-    # Check Known File Entry table (INSTALL LIST)
-    my $img_re = '^\s+([\w\$]+);\d+';
-    my %kfe = map {
-        my $img = /$img_re/ ? $1 : '';
-        ( uc $img => undef )
-    } grep /$img_re/ => qx/INSTALL LIST/;
-    return $prog if exists $kfe{ uc $prog };
-
-    my $dclp_env = 'DCL$PATH';
-    my @path = $ENV{ $dclp_env }
-        ?split /$Config{path_sep}/, $ENV{ $dclp_env } : ();
-    my @pext = ( $Config{exe_ext} || $Config{_exe}, '.COM' );
-
-    foreach my $dir ( @path ) {
-        foreach my $ext ( @pext ) {
-            my $fname = File::Spec->catfile( $dir, "$prog$ext" );
-            if ( -x $fname ) {
-                return $ext eq '.COM' ? "\@$fname" : "$fname";
-            }
-        }
-    }
-    return '';
-}
-
 sub find_a_patch {
 
     my $patch_bin;
@@ -1987,7 +1943,7 @@ sub get_avail_tar {
     my $use_modules = 0;
     eval { require Archive::Tar };
     unless ( $@ ) {
-        if ( $Archive::Tar::VERSION >= 0.99 ) {
+        if ( eval "$Archive::Tar::VERSION" >= 0.99 ) {
             eval { require IO::Zlib };
         } else {
             eval { require Compress::Zlib };
@@ -2121,7 +2077,7 @@ sub get_avail_w32compilers {
 sub get_avail_vms_make {
 
     return map +( $_ => undef ) => grep defined $_ && length( $_ ) 
-        => map vms_whereis( $_ ) => qw( MMK MMS );
+        => map whereis( $_ ) => qw( MMK MMS );
  
     local *QXERR; open *QXERR, ">&STDERR"; close STDERR;
 
@@ -2292,7 +2248,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 958 2006-05-07 15:53:57Z abeltje $
+    $Id: configsmoke.pl 1032 2007-04-01 20:09:02Z abeltje $
 
 =head1 COPYRIGHT
 
