@@ -1,9 +1,9 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 1037 2007-04-02 21:17:19Z abeltje $
+# $Id: Syncer.pm 1072 2007-08-30 10:30:36Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.022';
+$VERSION = '0.023';
 
 use Config;
 use Cwd;
@@ -1159,6 +1159,11 @@ F<MANIFEST.SKIP>!).
 
 sub sync {
     my $self = shift;
+
+    $self->{cdir} eq $self->{ddir} and do {
+        require Carp;
+        Carp::croak( "Sourcetree cannot be copied onto it self!" );
+    };
 
     $self->pre_sync;
     require Test::Smoke::SourceTree;

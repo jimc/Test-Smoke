@@ -1,7 +1,7 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 1039 2007-04-02 21:40:38Z abeltje $
+# $Id: Smoker.pm 1072 2007-08-30 10:30:36Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.032';
 
@@ -456,9 +456,10 @@ sub make_test {
     my @layers = ( ($config_args =~ /-Uuseperlio\b/) || $self->{defaultenv} )
                ? qw( stdio ) : qw( stdio perlio );
 
+    my @locales = split ' ', $self->{locale};
     if ( !($config_args =~ /-Uuseperlio\b/ || $self->{defaultenv}) &&
          $self->{locale} ) {
-        push @layers, 'locale';
+        push @layers, ( 'locale' ) x @locales;
     }
 
     foreach my $perlio ( @layers ) {
@@ -477,7 +478,7 @@ sub make_test {
         } else {
             $ENV{PERL_UNICODE} = ""; # See -C in perlrun
             $ENV{LC_ALL} = $self->{locale};
-            $perlio_logmsg .= ":$self->{locale}";
+            $perlio_logmsg .= ":" . pop @locales;
         }
         $self->ttylog( "TSTENV = $perlio_logmsg\t" );
 

@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: sysinfo.pl 961 2006-05-15 11:12:48Z abeltje $
+# $Id: sysinfo.pl 988 2006-05-28 09:48:13Z abeltje $
 use vars qw( $VERSION );
 $VERSION = 0.001;
 

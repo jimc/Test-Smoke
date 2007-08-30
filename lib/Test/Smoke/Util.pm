@@ -1,7 +1,7 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 1041 2007-04-06 11:59:32Z abeltje $
+# $Id: Util.pm 1042 2007-04-06 21:18:34Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
 $VERSION = '0.54';
 

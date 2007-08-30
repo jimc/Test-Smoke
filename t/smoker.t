@@ -2,7 +2,7 @@
 use strict;
 use Data::Dumper;
 
-# $Id: smoker.t 979 2006-05-26 13:01:10Z abeltje $
+# $Id: smoker.t 988 2006-05-28 09:48:13Z abeltje $
 use File::Spec::Functions qw( :DEFAULT devnull abs2rel rel2abs );
 use Cwd;
 

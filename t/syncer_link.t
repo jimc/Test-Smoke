@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: syncer_link.t 1029 2007-04-01 13:57:13Z abeltje $
+# $Id: syncer_link.t 1042 2007-04-06 21:18:34Z abeltje $
 
 use Config;
 use File::Spec;

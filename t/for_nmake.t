@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: for_nmake.t 1008 2006-11-09 22:40:10Z abeltje $
+# $Id: for_nmake.t 1042 2007-04-06 21:18:34Z abeltje $
 
 use File::Spec;
 

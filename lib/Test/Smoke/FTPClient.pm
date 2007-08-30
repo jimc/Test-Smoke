@@ -7,7 +7,7 @@ use File::Path;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
 use Test::Smoke::Util qw( clean_filename );
 
-# $Id: FTPClient.pm 1037 2007-04-02 21:17:19Z abeltje $
+# $Id: FTPClient.pm 1042 2007-04-06 21:18:34Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.007';
 

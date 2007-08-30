@@ -1,6 +1,6 @@
 =head1 NAME
 
-ReleaseNotes - These are the Release Notes for 1.20
+ReleaseNotes - These are the Release Notes for 1.20.01
 
 =head1 SYNOPSIS
 
@@ -11,9 +11,24 @@ These are the major changes since version 1.19
 Thanks to Bernd Ulmann for giving me access to his VAX and the help of
 the vmsperl community, I have added support for OpenVMS.
 
-Major changes since 1.19
+=head2 Major changes since 1.20.00
 
 =over 4
+
+=item 1
+
+C<Test::Smoke::SysInfo> is a work in progress. Some more tweaking for
+Darwin on Intel was done with the help of David Cantrell.
+
+=back
+
+=head2 Major changes since 1.19
+
+=over 4
+
+=item 0
+
+This release is two years overdue.
 
 =item 1
 
@@ -32,7 +47,7 @@ A lot of filename/directoryname issues with VMS were resolved.
 
 =item 4
 
-A new way to get testresults directly from "make test_harness" was
+A new way to get test results directly from "make test_harness" was
 introduced to help VMS (and perhaps Win32).
 
 =item 5
@@ -54,15 +69,29 @@ The longtime TODO item of patching with forest setup has been
 resolved. For this type of setup, first the intermediate tree is
 patched and then the build tree is resynced from that.
 
+=item 8
+
+I added an option to indicate that tests should only be run once and
+by harness (I<harnessonly>).
+
+=item 9
+
+The I<defaultenv> option is now on by default for MSWin32.
+
+=item 10
+
+In a UTF-8 environment ($LANG) a charset=UTF8 header will be added to the
+e-mail when possible.
+
 =back
 
 =head1 REVISION
 
-$Id: ReleaseNotes 907 2005-09-10 10:46:17Z abeltje $
+$Id: ReleaseNotes 1066 2007-08-14 22:03:30Z abeltje $
 
 =head1 COPYRIGHT
 
-(c) 2002-2004, Abe Timmerman <abeltje@cpan.org> All rights reserved.
+(c) 2002-2007, Abe Timmerman <abeltje@cpan.org> All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

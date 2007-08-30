@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 use strict;
 
-# $Id: patcher.t 983 2006-05-28 09:01:43Z abeltje $
+# $Id: patcher.t 992 2006-06-04 08:52:09Z abeltje $
 
 use File::Spec;
 my $findbin;

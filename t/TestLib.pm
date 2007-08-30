@@ -1,9 +1,9 @@
 package TestLib;
 use strict;
 
-# $Id: TestLib.pm 1053 2007-08-11 11:17:47Z abeltje $
+# $Id: TestLib.pm 992 2006-06-04 08:52:09Z abeltje $
 use vars qw( $VERSION @EXPORT );
-$VERSION = '0.06';
+$VERSION = '0.05';
 
 use Test::Smoke::Util qw( whereis );
 
@@ -35,6 +35,7 @@ What is in here?
 =cut
 
 use Config;
+use Carp;
 use File::Find;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs
                               splitdir splitpath catpath);
@@ -199,7 +200,7 @@ sub do_unzip {
         require Compress::Zlib;
         my $unzipper = Compress::Zlib::gzopen( $uzfile, 'rb' ) or do {
             require Carp;
-            Carp::carp( "Can't open '$uzfile': $Compress::Zlib::gzerrno" );
+            Carp::carp "Can't open '$uzfile': $Compress::Zlib::gzerrno";
             return undef;
         };
 
@@ -208,7 +209,7 @@ sub do_unzip {
 
         unless ( $Compress::Zlib::gzerrno == Compress::Zlib::Z_STREAM_END() ) {
             require Carp;
-            Carp::carp( "Error reading '$uzfile': $Compress::Zlib::gzerrno" );
+            Carp::carp "Error reading '$uzfile': $Compress::Zlib::gzerrno" ;
         }
 
         $unzipper->gzclose;

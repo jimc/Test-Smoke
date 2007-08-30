@@ -16,9 +16,9 @@ use lib $findbin;
 use Test::Smoke::Util qw( do_pod2usage whereis );
 use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 1032 2007-04-01 20:09:02Z abeltje $
+# $Id: configsmoke.pl 1072 2007-08-30 10:30:36Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.064';
+$VERSION = '0.066';
 
 use Getopt::Long;
 my %options = ( 
@@ -963,6 +963,11 @@ SYNCER: {
     /^copy$/ && do {
         $arg = 'cdir';
         $config{ $arg } = prompt( $arg );
+        while ( $config{ $arg } eq $config{ddir} ) {
+            print "Source and destination directory cannot be the same!\n";
+            $config{ $arg } = '';
+            $config{ $arg } = prompt( $arg );
+        }
 
         last SYNCER;
     };
@@ -1899,7 +1904,7 @@ sub find_a_patch {
     my $patch_bin;
     foreach my $patch (qw( gpatch npatch patch )) {
         $patch_bin = whereis( $patch ) or next;
-        my $version = `$patch_bin --version`;
+        my $version = `$patch_bin -version`;
         $? or return $patch_bin;
     }
 }
@@ -2248,7 +2253,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 1032 2007-04-01 20:09:02Z abeltje $
+    $Id: configsmoke.pl 1072 2007-08-30 10:30:36Z abeltje $
 
 =head1 COPYRIGHT
 
