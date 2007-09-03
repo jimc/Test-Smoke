@@ -10,6 +10,37 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1084] By: abeltje                          on 2007-09-03 16:29:05 +0200
+        Log: * [CHANGE]
+	       * prepare for 1.20.04
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1082] By: abeltje                          on 2007-09-02 14:38:38 +0200
+        Log: * [MERGE]
+	     [	1080] By: abeltje	       on 2007-09-01 13:05:44
+	     +0200
+		     Log: * [CHANGE]
+			    * FIX: older (< 5.8) perls don't know C<use
+			      Exporter 'import';>
+	     [	1081] By: abeltje	       on 2007-09-02 14:29:42
+	     +0200
+		     Log: * [CHANGE]
+			    * FIX: multilocale bldenv_legend() thinko
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/Reporter.pm,
+	     /Test-Smoke-1.20.xx/lib/Test/Smoke/SysInfo.pm,
+	     /Test-Smoke-1.20.xx/t/reporter.t
+          !> /Test-Smoke-1.20.xx/t/multilocale.out
+	     =(/Test-Smoke/t/multilocale.out:1081),
+	     /Test-Smoke-1.20.xx/t/pc09.out =(/Test-Smoke/t/pc09.out:1081)
+___________________________________________________________________________
+[  1078] By: abeltje                          on 2007-08-30 15:08:51 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes' 1.20.03
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/Changes
+___________________________________________________________________________
 [  1077] By: abeltje                          on 2007-08-30 15:03:51 +0200
         Log: * [AUTOCOMMIT]
 	       * Regenerate 'Changes' 1.20.03

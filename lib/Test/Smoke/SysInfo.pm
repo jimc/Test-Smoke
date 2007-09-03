@@ -1,12 +1,11 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 1062 2007-08-14 21:45:37Z abeltje $
+# $Id: SysInfo.pm 1082 2007-09-02 12:38:38Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
-$VERSION = '0.037';
+$VERSION = '0.038';
 
-#use base 'Exporter';
-use Exporter 'import';
+use base 'Exporter';
 @EXPORT_OK = qw( &sysinfo &tsuname );
 
 =head1 NAME
