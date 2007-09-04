@@ -10,6 +10,25 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1089] By: abeltje                          on 2007-09-04 12:04:10 +0200
+        Log: * Prepare for 1.20.05
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1088] By: abeltje                          on 2007-09-04 12:03:03 +0200
+        Log: * [MERGE]
+		     Log: * [CHANGE]
+			    * FIX: missed the 2 new .out files needed by
+			      t/reporter.t
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/MANIFEST
+___________________________________________________________________________
+[  1085] By: abeltje                          on 2007-09-03 16:32:44 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes' 1.20.04
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/Changes
+___________________________________________________________________________
 [  1084] By: abeltje                          on 2007-09-03 16:29:05 +0200
         Log: * [CHANGE]
 	       * prepare for 1.20.04
