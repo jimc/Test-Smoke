@@ -5,11 +5,11 @@ use Net::FTP;
 use Cwd;
 use File::Path;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
-use Test::Smoke::Util qw( clean_filename );
+use Test::Smoke::Util qw( clean_filename time_in_hhmm );
 
-# $Id: FTPClient.pm 1042 2007-04-06 21:18:34Z abeltje $
+# $Id: FTPClient.pm 1098 2007-09-10 10:13:05Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.007';
+$VERSION = '0.010';
 
 my %CONFIG = (
     df_fserver  => undef,
@@ -165,8 +165,8 @@ sub mirror {
     my $speed = $totsize / $tottime;
     my $ord = 0;
     while ( $speed > 1024 ) { $speed /= 1024; $ord++ }
-    $self->{v} and printf "Mirror took %u seconds \@ %.3f %s\n",
-                          $ttime, $speed, $sn[ $ord ];
+    $self->{v} and printf "Mirror took %s \@ %.3f %s\n",
+                          time_in_hhmm( $ttime ), $speed, $sn[ $ord ];
     chdir $cwd;
     return $ret;
 }
@@ -234,6 +234,7 @@ sub __do_mirror {
                                $a->{name} cmp $b->{name} } @list ) {
         
         if ( $entry->{type} eq 'd' ) {
+            $entry->{name} =~ m/^\.\.?$/ and next;
             my $new_locald = File::Spec->catdir( $localdir, $entry->{name} );
             unless ( -d $new_locald ) {
                 eval { mkpath( $new_locald, $verbose, $entry->{mode} ) } or
@@ -281,8 +282,8 @@ sub __do_mirror {
                 while ( $speed > 1024 ) { $speed /= 1024; $ord++ }
                 my $dig = $ord ? '3' : '0';
 
-                chmod $entry->{mode}, $dest;
                 utime $entry->{time}, $entry->{time}, $dest;
+                chmod $entry->{mode}, $dest;
                 $verbose and printf "$size (%.${dig}f $sn[$ord]/s)\n",
                                      $speed;
             } else { 

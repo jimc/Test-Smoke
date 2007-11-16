@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 1072 2007-08-30 10:30:36Z abeltje $
+# $Id: Smoker.pm 1120 2007-09-30 10:37:12Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.032';
+$VERSION = '0.036';
 
 use Cwd;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
@@ -34,6 +34,8 @@ my %CONFIG = (
 
     df_makeopt        => "",
     df_testmake       => undef,
+
+    df_skip_tests     => undef,
 );
 
 # Define some constants that we can use for
@@ -446,6 +448,9 @@ sub make_test_prep {
 
 sub make_test {
     my $self = shift;
+
+    $self->set_skip_tests;
+
     my( $config ) = @_;
     my $config_args = "$config";
 
@@ -507,6 +512,8 @@ sub make_test {
         }
         !$had_LC_ALL && exists $ENV{LC_ALL} and delete $ENV{LC_ALL};
     }
+
+    $self->unset_skip_tests;
 
     return 1;
 }
@@ -767,6 +774,108 @@ sub _transform_testnames {
         $inconsistent{ $test_path } ||= $status;
     }
     return %inconsistent;
+}
+
+=item set_skip_tests( [$unset] )
+
+Read from a MANIFEST like file, set in C<< $self->{skip_tests} >>, and
+rename the files in it with the extension F<.tskip>. If C<$unset> is
+set, they will be renamed back.
+
+=item unset_skip_tests
+
+Calls C<< $self->set_skip_tests( 1 ) >>.
+
+=cut
+
+sub set_skip_tests {
+    my( $self, $unset ) = @_;
+
+    $self->{skip_tests} or return;
+    local *SKIPTESTS;
+
+    if ( open SKIPTESTS, "< $self->{skip_tests}" ) {
+        my $action = $unset ? 'Unskip' : 'Skip';
+        $self->{v} and
+            $self->tty( "$action tests from '$self->{skip_tests}'\n" );
+        my @libext;
+        my $raw;
+        while ( $raw = <SKIPTESTS> ) {
+            $raw =~ m/^\s*#/ and next;
+            $raw =~ s/(\S+).*/$1/s;
+            $raw =~ m/\.t$/ or next;
+            if ( $raw =~ m{^(?:lib|ext)/} ) {
+                push @libext, $raw;
+                next;
+            }
+            my $tsrc = File::Spec->catfile( $self->{ddir}, $raw );
+            my $tdst = $tsrc . "skip";
+            $unset and ( $tsrc, $tdst ) = ( $tdst, $tsrc );
+            -f $tsrc or next;
+            my $perms = (stat $tsrc)[2] & 07777;
+            chmod 0755, $tsrc;
+            my $did_mv = rename $tsrc, $tdst;
+            my $error = $did_mv ? "" : " ($!)";
+            $self->{v} and
+                $self->tty( sprintf "\t$raw: %sok\n", $did_mv ?  'not ' : '',
+                                    $error );
+            -f $tdst and chmod $perms, $tdst;
+        }
+        close SKIPTESTS;
+        @libext and $self->change_manifest( \@libext, $unset );
+    } else {
+        require Carp;
+        Carp::carp( "Cannot open($self->{skip_tests}): $!" );
+    }
+}
+
+sub unset_skip_tests { $_[0]->set_skip_tests( 1 ) }
+
+=item $self->change_manifest( \@tests, $unset )
+
+=cut
+
+sub change_manifest {
+    my( $self, $tests, $unset ) = @_;
+
+    my $mani_org = catfile $self->{ddir}, 'MANIFEST';
+    my $mani_new = catfile $self->{ddir}, 'MANIFEST.ORG';
+    if ( $unset ) {
+        if ( -f $mani_new ) {
+            my $perms = (stat $mani_new)[2] & 07777;
+            chmod 0755, $mani_new;
+            unlink $mani_org;
+            rename $mani_new, $mani_org;
+            chmod $perms, $mani_org;
+	}
+    } else {
+        my $perms = (stat $mani_org)[2] & 07777;
+        chmod 0755, $mani_org;
+        rename $mani_org, $mani_new or do {
+            chmod $perms, $mani_org;
+            require Carp;
+	    Carp::carp("No skip of lib or ext tests [rename($mani_new): $!]");
+            return;
+        };
+        local( *MANIO, *MANIN );
+        if ( open MANIO, "< $mani_new" ) {
+            if ( open MANIN, "> $mani_org" ) {
+                my $mline;
+                while ( $mline = <MANIO> ) {
+                    chomp $mline;
+                    ( my $fn = $mline ) =~ s/^(\S+).*/$1/;
+                    if ( ! grep /\Q$fn\E/ => @$tests ) {
+                        print MANIN "$fn\n";
+                    } else {
+                        $self->{v} and $self->tty( "\t$fn\n" );
+                    }
+                }
+                close MANIN;
+            }
+            close MANIO;
+            chmod $perms, $mani_new;
+        }
+    }
 }
 
 =item $self->_run( $command[, $sub[, @args]] )

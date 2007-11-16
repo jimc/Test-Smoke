@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 1042 2007-04-06 21:18:34Z abeltje $
+# $Id: smokeperl.pl 1106 2007-09-23 05:06:10Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -27,7 +27,7 @@ my %options = ( config => 'smokecurrent_config', run => 1, pfile => undef,
                 fetch => 1, patch => 1, mail => undef, archive => undef,
                 continue => 0, ccp5p_onfail => undef, killtime => undef,
                 is56x => undef, defaultenv => undef, smartsmoke => undef,
-                delay_report => undef, v => undef );
+                delay_report => undef, v => undef, cfg => undef );
 
 my $myusage = "Usage: $0 [-c configname]";
 GetOptions( \%options, 
@@ -46,6 +46,7 @@ GetOptions( \%options,
     'snapshot|s=i',
     'killtime=s',
     'pfile=s',
+    'cfg=s',
 
     'v|verbose=i',
     'help|h', 'man',
@@ -88,6 +89,7 @@ It can take these options
   --killtime (+)hh::mm     (Re)set the guard-time for this smoke
 
   --pfile <patchesfile>    Set a patches-to-apply-file
+  --cfg <buildcfg>         Set a Build Configurations File
 
 All other arguments are passed to F<Configure>!
 
@@ -119,7 +121,7 @@ defined $options{fetch} && !$options{fetch} && !defined $options{smartsmoke}
 
 # Make command-line options override configfile
 defined $options{ $_ } and $conf->{ $_ } = $options{ $_ }
-    for qw( is56x defaultenv continue killtime pfile delay_report
+    for qw( is56x defaultenv continue killtime pfile cfg delay_report
             smartsmoke run fetch patch mail ccp5p_onfail archive v );
 
 # Make sure the --pfile command-line override works
@@ -277,7 +279,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 1042 2007-04-06 21:18:34Z abeltje $
+$Id: smokeperl.pl 1106 2007-09-23 05:06:10Z abeltje $
 
 =head1 COPYRIGHT
 

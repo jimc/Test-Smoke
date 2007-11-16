@@ -10,6 +10,189 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1123] By: abeltje                          on 2007-09-30 13:57:15 +0200
+        Log: * Prepare for 1.20.07
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1122] By: abeltje                          on 2007-09-30 13:54:51 +0200
+        Log: * [MERGE]
+	     [	1121] By: abeltje	       on 2007-09-30 13:53:19
+	     +0200
+		     Log: * [CHANGE]
+			    + ADD: skip_tests question
+			    * reorder the mail questions
+			    + ADD: support for &-d (like Configure) to
+			      switch to --usedft
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/configsmoke.pl
+___________________________________________________________________________
+[  1120] By: abeltje                          on 2007-09-30 12:37:12 +0200
+        Log: * [MERGE]
+	     [	1112] By: abeltje	       on 2007-09-24 13:27:30
+	     +0200
+		     Log: * [CHANGE]
+			    + ADD: support for skipping tests per
+			      smoke_config
+			      * set {skip_tests} to a MANIFEST like file
+			      * before 'make test' rename all files in
+				{skip_tests}
+			      * run 'make test'
+			      * rename the testfiles back to their
+				original name
+	     [	1113] By: abeltje	       on 2007-09-24 14:18:00
+	     +0200
+		     Log: * [CHANGE]
+			    + FIX: fiddle with file permission
+			      before/after rename()
+			    + ADD: $! to rename not ok diagnostics
+	     [	1116] By: abeltje	       on 2007-09-29 14:06:28
+	     +0200
+		     Log: * [CHANGE]
+			    + ADD: files to prepare for testing skip_tests
+			      feature
+	     [	1117] By: abeltje	       on 2007-09-29 14:15:30
+	     +0200
+		     Log: * [CHANGE]
+			    + ADD: files to test the new skip_tests()
+			      feature
+	     [	1118] By: abeltje	       on 2007-09-29 15:19:42
+	     +0200
+		     Log: * [CHANGE]
+			    * redesign the skip_tests feature:
+			      * (temporarily) remove lib/ and ext/ tests
+				from MANIFEST
+			      * (temporarily) rename :core (t/*/*.t) tests
+			    + ADD: tests
+	     [	1119] By: abeltje	       on 2007-09-30 12:31:46
+	     +0200
+		     Log: * [CHANGE]
+			    * more verbosity in Smoker.pm
+			    + ADD: a new section to the report
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/MANIFEST,
+	     /Test-Smoke-1.20.xx/lib/Test/Smoke/Reporter.pm,
+	     /Test-Smoke-1.20.xx/lib/Test/Smoke/Smoker.pm,
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/MANIFEST,
+	     /Test-Smoke-1.20.xx/t/reporter.t,
+	     /Test-Smoke-1.20.xx/t/smoker.t
+          !> /Test-Smoke-1.20.xx/t/ftppub/perl-current/ext
+	     =(/Test-Smoke/t/ftppub/perl-current/ext:1116),
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/ext/t
+	     =(/Test-Smoke/t/ftppub/perl-current/ext/t:1117),
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/lib
+	     =(/Test-Smoke/t/ftppub/perl-current/lib:1116),
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/lib/t
+	     =(/Test-Smoke/t/ftppub/perl-current/lib/t:1117),
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/t
+	     =(/Test-Smoke/t/ftppub/perl-current/t:1116),
+	     /Test-Smoke-1.20.xx/t/ftppub/perl-current/t/op
+	     =(/Test-Smoke/t/ftppub/perl-current/t/op:1117)
+___________________________________________________________________________
+[  1115] By: abeltje                          on 2007-09-25 15:07:20 +0200
+        Log: * [MERGE]
+	     [	1114] By: abeltje	       on 2007-09-25 15:02:17
+	     +0200
+		     Log: * [CHANGE] prompted by Merijn
+			    * test the argument handling of tsuname() from
+			      an object to keep data consistent
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/t/sysinfo.t
+___________________________________________________________________________
+[  1110] By: abeltje                          on 2007-09-23 07:21:27 +0200
+        Log: * [MERGE]
+	     [	1109] By: abeltje	       on 2007-09-23 07:20:18
+	     +0200
+		     Log: * [CHANGE]
+			    * FIX: NetBSD moved sysctl to /sbin
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/Util.pm
+___________________________________________________________________________
+[  1108] By: abeltje                          on 2007-09-23 07:13:03 +0200
+        Log: * [MERGE]
+	     [	1107] By: abeltje	       on 2007-09-23 07:11:35
+	     +0200
+		     Log: * [CHANGE]
+			    * FIX: we need to 'use Cwd;' to call cwd()
+			      (#1101)
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/Syncer.pm
+___________________________________________________________________________
+[  1106] By: abeltje                          on 2007-09-23 07:06:10 +0200
+        Log: * [MERGE]
+	     [	1105] By: abeltje	       on 2007-09-23 07:03:12
+	     +0200
+		     Log: * [CHANGE]
+			    + ADD: --cfg=<buildcfg> to the options
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/smokeperl.pl
+___________________________________________________________________________
+[  1104] By: abeltje                          on 2007-09-22 15:37:34 +0200
+        Log: * [MERGE]
+	     [	1103] By: abeltje	       on 2007-09-22 15:36:18
+	     +0200
+		     Log: * [CHANGE] thanks to Merijn for pointing it out
+			    * FIX: plan *before* the first test!
+			      (Test::Builder fixed a bug)
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/t/vms_rl.t
+___________________________________________________________________________
+[  1102] By: abeltje                          on 2007-09-19 14:34:30 +0200
+        Log: * prepare for 1.20.06
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1101] By: abeltje                          on 2007-09-19 14:33:38 +0200
+        Log: * [MERGE]
+	     [	1100] By: abeltje	       on 2007-09-19 13:54:01
+	     +0200
+		     Log: * [CHANGE]
+			    * Help cygwin-rsync: chdir() into {ddir} and
+			      rsync to '.'
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/Syncer.pm
+___________________________________________________________________________
+[  1098] By: abeltje                          on 2007-09-10 12:13:05 +0200
+        Log: * [MERGE]
+	     [	1096] By: abeltje	       on 2007-09-10 11:58:55
+	     +0200
+		     Log: * [CHANGE]
+			    + FIX: set utime() before chmod() (most files
+			      are read only!)
+	     [	1097] By: abeltje	       on 2007-09-10 12:09:48
+	     +0200
+		     Log: * [CHANGE]
+			    * use time_in_hhmm() to show the elapsed time
+			      for syncing
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/FTPClient.pm
+___________________________________________________________________________
+[  1095] By: abeltje                          on 2007-09-10 10:42:32 +0200
+        Log: * [MERGE]
+	     [	1094] By: abeltje	       on 2007-09-10 10:40:29
+	     +0200
+		     Log: * [CHANGE]
+			    + FIX: add ftype to the parameters of
+			      Test::Smoke::FTPClient->new()
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/Syncer.pm
+___________________________________________________________________________
+[  1093] By: abeltje                          on 2007-09-09 15:27:22 +0200
+        Log: [	1092] By: abeltje			   on 2007-09-09
+	     15:25:01 +0200
+		     Log: * [CHANGE]
+			    * FIX: ftp::LIST can return '.' and '..';
+			      prevent an endless loop
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/lib/Test/Smoke/FTPClient.pm,
+	     /Test-Smoke-1.20.xx/t/syncer_ftpclient.t
+___________________________________________________________________________
+[  1090] By: abeltje                          on 2007-09-04 12:05:40 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes' 1.20.05
+        Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx
+           ! /Test-Smoke-1.20.xx/Changes
+___________________________________________________________________________
 [  1089] By: abeltje                          on 2007-09-04 12:04:10 +0200
         Log: * Prepare for 1.20.05
         Url: http://source.test-smoke.org/svn/Test-Smoke-1.20.xx

@@ -1,9 +1,9 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 1072 2007-08-30 10:30:36Z abeltje $
+# $Id: Syncer.pm 1108 2007-09-23 05:13:03Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.023';
+$VERSION = '0.026';
 
 use Config;
 use Cwd;
@@ -65,8 +65,9 @@ my %CONFIG = (
     df_ftphost => 'public.activestate.com',
     df_ftpsdir => '/pub/apc/perl-current',
     df_ftpcdir => '/pub/apc/perl-current-diffs',
+    df_ftype   => undef,
 
-    ftp        => [qw( ftphost ftpusr ftppwd ftpsdir ftpcdir )],
+    ftp        => [qw( ftphost ftpusr ftppwd ftpsdir ftpcdir ftype )],
 
 # misc.
     valid_type => { rsync => 1, snapshot => 1,
@@ -467,6 +468,8 @@ package Test::Smoke::Syncer::Rsync;
 
 @Test::Smoke::Syncer::Rsync::ISA = qw( Test::Smoke::Syncer );
 
+use Cwd;
+
 =item Test::Smoke::Syncer::Rsync->new( %args )
 
 This crates the new object. Keys for C<%args>:
@@ -505,7 +508,12 @@ sub sync {
     $command .= " -v" if $self->{v};
     my $redir = $self->{v} ? "" : " >" . File::Spec->devnull;
 
-    $command .= " $self->{source} $self->{ddir}$redir";
+    my $cwd = cwd();
+    chdir $self->{ddir} or do {
+        require Carp;
+        Carp::croak( "[rsync] Cannot chdir($self->{ddir}): $!" );
+    };
+    $command .= " $self->{source} .$redir";
 
     $self->{v} > 1 and print "[$command]\n";
     if ( system $command ) {
@@ -513,6 +521,8 @@ sub sync {
         require Carp;
         Carp::carp( "Problem during rsync ($err)" );
     }
+
+    chdir $cwd;
 
     my $plevel = $self->check_dot_patch;
     $self->post_sync;
@@ -1287,6 +1297,7 @@ Known args for this class:
     * ftppwd  (smokers@perl.org)
     * ftpsdir (/pub/apc/perl-????)
     * ftpcdir (/pub/apc/perl-????-diffs)
+    * ftype (undef|binary|ascii)
 
     * ddir
     * v
@@ -1319,6 +1330,7 @@ sub sync {
         passive => $self->{ftppassive},
         fuser   => $self->{ftpusr},
         fpwd    => $self->{ftppwd},
+        ftype   => $self->{ftype},
     } );
 
     $fc->connect;

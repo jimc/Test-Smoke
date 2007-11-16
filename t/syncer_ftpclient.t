@@ -2,7 +2,7 @@
 use strict;
 use Data::Dumper;
 
-# $Id: syncer_ftpclient.t 901 2005-09-08 23:01:37Z abeltje $
+# $Id: syncer_ftpclient.t 1093 2007-09-09 13:27:22Z abeltje $
 ##### syncer_ftpclient.t
 #
 # Here we try to test the actual syncing process from ftp
@@ -75,7 +75,7 @@ sub Net::FTP::ls {
         my $fname = $_;
         $^O eq 'VMS' and $fname =~ s/\.(?:DIR)?$//i;
         $fname;
-    } grep ! /^\.{1,2}$/ && ! /.svn\b/  => readdir DLDIR;
+    } grep ! /.svn\b/  => readdir DLDIR;
 }
 sub Net::FTP::dir {
     my $self = shift;

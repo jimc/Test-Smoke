@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 1042 2007-04-06 21:18:34Z abeltje $
+# $Id: Util.pm 1110 2007-09-23 05:21:27Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
-$VERSION = '0.54';
+$VERSION = '0.55';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -781,7 +781,7 @@ Thanks to Jarkko Hietaniemi for donating this!
 
 sub get_ncpu {
     # Only *nixy osses need this, so use ':'
-    local $ENV{PATH} = "$ENV{PATH}:/usr/sbin";
+    local $ENV{PATH} = "$ENV{PATH}:/usr/sbin:/sbin";
 
     my $cpus = "?";
     OS_CHECK: {
