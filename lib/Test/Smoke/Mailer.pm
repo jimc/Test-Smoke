@@ -1,7 +1,7 @@
 package Test::Smoke::Mailer;
 use strict;
 
-# $Id: Mailer.pm 1045 2007-04-06 22:03:42Z abeltje $
+# $Id: Mailer.pm 1044 2007-04-06 22:01:03Z abeltje $
 use vars qw( $VERSION $P5P $NOCC_RE);
 $VERSION = '0.014';
 

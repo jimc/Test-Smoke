@@ -1,4 +1,4 @@
-MANIFEST	$Id: MANIFEST 1120 2007-09-30 10:37:12Z abeltje $
+MANIFEST	$Id: MANIFEST 1159 2008-01-04 19:35:48Z abeltje $
 README
 ReleaseNotes
 Changes
@@ -9,20 +9,12 @@ configsmoke.pl
 mailrpt.pl
 patchtree.pl
 runsmoke.pl
-perl55x.cfg
-perl562.cfg
-perl58x.cfg
-perlcurrent.cfg
-vmsperl.cfg
-w32current.cfg
-smoke55x_dfconfig
-smoke58x_dfconfig
 smokeperl.pl
 smokestatus.pl
 synctree.pl
 sysinfo.pl
 W32Configure.pl
-lib/Mail/Sendmail.pm
+inc/Mail/Sendmail.pm
 lib/Test/Smoke.pm
 lib/Test/Smoke/FAQ
 lib/Test/Smoke/BuildCFG.pm
@@ -36,6 +28,13 @@ lib/Test/Smoke/Syncer.pm
 lib/Test/Smoke/SysInfo.pm
 lib/Test/Smoke/SourceTree.pm
 lib/Test/Smoke/Util.pm
+lib/Test/Smoke/perl58x.cfg
+lib/Test/Smoke/perl510x.cfg
+lib/Test/Smoke/perlcurrent.cfg
+lib/Test/Smoke/vmsperl.cfg
+lib/Test/Smoke/w32current.cfg
+lib/Test/Smoke/smoke58x_dfconfig
+lib/Test/Smoke/smoke510x_dfconfig
 t/TestLib.pm
 t/buildcfg.t
 t/cfgstuff.t
@@ -64,6 +63,7 @@ t/syncer_link.t
 t/syncer_rsync.t
 t/syncer_snap.t
 t/sysinfo.t
+t/sysinfo_proc.t
 t/tree.t
 t/ts_config.t
 t/util_times.t

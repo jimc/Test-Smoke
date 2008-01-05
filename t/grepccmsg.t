@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: grepccmsg.t 1042 2007-04-06 21:18:34Z abeltje $
+# $Id: grepccmsg.t 1041 2007-04-06 11:59:32Z abeltje $
 
 my $findbin;
 use File::Basename;

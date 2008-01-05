@@ -12,13 +12,15 @@ use File::Basename;
 my $findbin;
 BEGIN { $findbin = dirname $0 }
 use lib File::Spec->catdir( $findbin, 'lib' );
+use lib File::Spec->catdir( $findbin, 'lib', 'inc' );
 use lib $findbin;
+use lib File::Spec->catdir( $findbin, 'inc' );
 use Test::Smoke::Util qw( do_pod2usage whereis );
 use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 1122 2007-09-30 11:54:51Z abeltje $
+# $Id: configsmoke.pl 1155 2008-01-03 13:32:28Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.067';
+$VERSION = '0.070';
 
 use Getopt::Long;
 my %options = ( 
@@ -51,17 +53,33 @@ foreach my $opt (qw( config jcl log )) {
     $options{$opt} = "$options{ $key }$suffix{ $opt }";
 }
 
-eval { require $options{config} };
-$options{oldcfg} = 1, print "Using '$options{config}' for defaults.\n" 
-    unless $@;
-if ( $@ || $options{default} ) {
-    my $df_key = $options{default} ? 'default' : 'prefix';
-    my $df_config = "$options{ $df_key }_dfconfig";
+{
     local $@;
-    eval { require $df_config };
-    $options{oldcfg} = 0, print "Using '$df_config' for more defaults.\n"
-        unless $@;
-} 
+    eval { require $options{config} };
+    my $load_error = $@; 
+    unless ( $load_error ) {
+        $options{oldcfg} = 1;
+        print "Using '$options{config}' for defaults.\n";
+        $conf->{perl_version} eq '5.9.x' and $conf->{perl_version} = '5.11.x';
+    }
+
+    if ( $load_error || $options{default} ) {
+        my $df_key = $options{default} ? 'default' : 'prefix';
+        my $df_config = "$options{ $df_key }_dfconfig";
+        my $df_config_inc = $df_config;
+        for my $dir ( @INC ) {
+            my $ts_dir = File::Spec->catdir( $dir, 'Test', 'Smoke' );
+            $df_config_inc = File::Spec->catfile( $ts_dir, $df_config );
+    #        print "Checking for defaults [$df_config_inc]\n";
+            -f $df_config_inc and last;
+        }
+        eval { require $df_config_inc };
+        unless ( $@ ) {
+            $options{oldcfg} = 0;
+            print "Using '$df_config_inc' for more defaults.\n";
+        }
+    }
+}
 
 # -des will only work fully when $options{oldcfg}
 unless ( $options{oldcfg} ) {
@@ -102,7 +120,7 @@ Current options:
 sub is_win32() { $^O eq 'MSWin32' }
 sub is_vms()   { $^O eq 'VMS'     }
 
-my %config = ( perl_version => $conf->{perl_version} || '5.9.x' );
+my %config = ( perl_version => $conf->{perl_version} || '5.11.x' );
 
 my %mailers = get_avail_mailers();
 my @mailers = sort keys %mailers;
@@ -121,7 +139,7 @@ my %vdirs = map {
     my $vdir = $_;
     is_vms and $vdir =~ tr/.//d;
     ( $_ => $vdir )
-} qw( 5.5.x 5.8.x ); # unsupported: 5.6.2
+} qw( 5.5.x 5.8.x 5.10.x ); # unsupported: 5.6.2
 
 my %versions = (
 #    '5.5.x' => { source => 'public.activestate.com::perl-5.005xx',
@@ -170,25 +188,45 @@ my %versions = (
                            : is_vms ? 'vmsperl.cfg' : 'perl58x.cfg' ),
                  is56x  => 0 },
 
-    '5.9.x' => { source => 'public.activestate.com::perl-current',
-                 server => 'public.activestate.com',
-                 sdir   => '/pub/apc/perl-current-snap',
-                 sfile  => 'perl-current-latest.tar.gz',
-                 pdir   => '/pub/apc/perl-current-diffs',
-                 ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
-                                               'perl-current' ),
-                 ftphost => 'public.activestate.com',
-                 ftpusr  => 'anonymous',
-                 ftppwd  => 'smokers@perl.org',
-                 ftpsdir => '/pub/apc/perl-current',
-                 ftpcdir => '/pub/apc/perl-current-diffs',
+    '5.10.x' => { source =>  'public.activestate.com::perl-5.10.x',
+                  server => 'public.activestate.com',
+                  sdir   => '/pub/apc/perl-5.10.x-snap',
+                  sfile  => 'perl-5.10.x-latest.tar.gz',
+                  pdir   => '/pub/apc/perl-5.10.x-diffs',
+                  ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                                "perl-$vdirs{'5.10.x'}" ),
+                  ftphost => 'public.activestate.com',
+                  ftpusr  => 'anonymous',
+                  ftppwd  => 'smokers@perl.org',
+                  ftpsdir => '/pub/apc/perl-5.10.x',
+                  ftpcdir => '/pub/apc/perl-5.10.x-diffs',
+ 
+                  text   => 'Perl 5.10 MAINT',
+                  cfg    => ( is_win32 ? 'w32current.cfg'
+                            : is_vms ? 'vmsperl.cfg' : 'perl510x.cfg' ),
+                  is56x  => 0 },
 
-                 text   => 'Perl 5.10 to-be',
-                 cfg    => ( is_win32 ? 'w32current.cfg'
-                           : is_vms ? 'vmsperl.cfg' : 'perlcurrent.cfg' ),
-                 is56x  => 0 },
+    '5.11.x' => { source => 'public.activestate.com::perl-current',
+                  server => 'public.activestate.com',
+                  sdir   => '/pub/apc/perl-current-snap',
+                  sfile  => 'perl-current-latest.tar.gz',
+                  pdir   => '/pub/apc/perl-current-diffs',
+                  ddir   => File::Spec->catdir( cwd(), File::Spec->updir,
+                                                'perl-current' ),
+                  ftphost => 'public.activestate.com',
+                  ftpusr  => 'anonymous',
+                  ftppwd  => 'smokers@perl.org',
+                  ftpsdir => '/pub/apc/perl-current',
+                  ftpcdir => '/pub/apc/perl-current-diffs',
+ 
+                  text   => 'Perl 5.12 to-be',
+                  cfg    => ( is_win32 ? 'w32current.cfg'
+                            : is_vms ? 'vmsperl.cfg' : 'perlcurrent.cfg' ),
+                  is56x  => 0 },
 );
-my @pversions = sort keys %versions;
+my @pversions = sort {
+    _perl_numeric_version( $a ) <=> _perl_numeric_version( $b )
+} keys %versions;
 my $smoke_version = join "\n", map {
     "\t$_ - $versions{ $_ }->{text}"
 } @pversions;
@@ -455,6 +493,19 @@ EOT
         msg => 'Use harness only (skip TEST)?',
         alt => [qw( y N )],
         dft => ( $^O =~ /VMS/i ? 'y' : 'n' ),
+    },
+    hasharness3 => {
+        msg => "",
+        alt => [ ],
+        dft => 0,
+    },
+    harness3opts => {
+        msg => <<EOT,
+Extra options for Test::Harness 3 (HARNESS_OPTIONS)
+\tUse 'j5' for parallel testing.
+EOT
+        alt => [ ],
+        dft => '',
     },
 
     # mail stuff
@@ -770,15 +821,23 @@ There are several build-cfg files provided with the distribution:
 
 =over 4
 
-=item F<perlcurrent.cfg> for 5.9.x+ on unixy systems
+=item F<perlcurrent.cfg> for 5.11.x+ on unixy systems
+
+=item F<perl510x.cfg> for 5.10.x (MAINT) on unixy systems
 
 =item F<perl58x.cfg> for 5.8.x (MAINT) on unixy systems
+
+=begin nomoresupport
 
 =item F<perl562.cfg> for 5.6.2 (MAINT) on unixy systems
 
 =item F<perl55x.cfg> for 5.005_04 (MAINT) on unixy systems
 
+=end nomoresupport
+
 =item F<w32current.cfg> for 5.8.x+ on MSWin32
+
+=item F<vmsperl.cfg> for 5.8.x+ on OpenVMS
 
 =back
 
@@ -1285,6 +1344,26 @@ test_harness>.
 $arg = 'harnessonly';
 $config{ $arg } = prompt_yn( $arg );
 
+=item hasharness3
+
+C<hasharness3> is automagically set for perl version >= 5.11
+
+=cut
+
+$config{hasharness3} = _perl_numeric_version( $config{perl_version} ) > 5.01001;
+
+=item harness3opts
+
+C<harness3opts> are passed to C<HARNESS_OPTIONS> for the C<make
+test_harness> step.
+
+=cut
+
+if ( ($config{harnessonly} || is_win32) && $config{hasharness3} ) {
+    $arg = 'harness3opts';
+    $config{ $arg } = prompt( $arg );
+}
+
 =item umask
 
 C<umask> will be set in the shell-script that starts the smoke.
@@ -1363,6 +1442,8 @@ If you want this then set the directory where you want the stored
 =cut
 
 $arg = 'adir';
+( my $pver_nodot = $config{perl_version} ) =~ tr/.//d;
+$opt{ $arg }->{dft} = File::Spec->catdir( 'logs', $pver_nodot );
 $config{ $arg } = prompt_dir( $arg );
 $config{lfile} = File::Spec->rel2abs( $options{log}, cwd );
 
@@ -1579,7 +1660,7 @@ sub sort_configkeys {
         qw( adir lfile ),
 
         # make fine-tuning
-        qw( makeopt testmake harnessonly ),
+        qw( makeopt testmake harnessonly hasharness3 harness3opts ),
 
         # ENV stuff
         qw( perl5lib delay_report ),
@@ -2145,15 +2226,20 @@ sub default_buildcfg {
     -f $file_name and return 1;
 
     $pversion =~ tr/.//d;
-    $pversion eq '59x' and $pversion = 'current';
+    $pversion eq '511x' and $pversion = 'current';
     my $basename = is_win32
         ? "w32current.cfg"
         : is_vms ? "vmsperl.cfg" : "perl${pversion}.cfg";
 
-    my $dftbcfg = File::Spec->catfile( $findbin, $basename );
-    -f $dftbcfg 
+    my $dftbcfg;
+    for my $dir ( @INC ) {
+        my $ts_dir = File::Spec->catdir( $dir, 'Test', 'Smoke' );
+        $dftbcfg = File::Spec->catfile( $ts_dir, $basename );
+        -f $dftbcfg and last;
+    }
+    -f $dftbcfg
         or die "You seem to have an incomplete Test::Smoke installation" . 
-               "($dftbcfg is missing)!\n";
+               "($basename is missing)!\n";
     copy $dftbcfg, $file_name
         and print "\nCreated buildconfig '$file_name'";
 }
@@ -2178,8 +2264,7 @@ sub check_buildcfg {
     close BCFG;
     my $oldcfg = join "", grep !/^#/ => @bcfg;
 
-    my ($rev, @vparts ) = $config{perl_version} =~ /^(\d)(?:\.(\d+))+/;
-    my $pversion = sprintf "%d.%03d%02d", $rev, @vparts, 0;
+    my $pversion = _perl_numeric_version( $config{perl_version} );
 
     my $uname_s = Test::Smoke::SysInfo::tsuname( 's' );
     my( $os, $osver ) = split /\s+-\s+/, $uname_s;
@@ -2273,6 +2358,18 @@ sub finish_cfgcheck {
     print "Wrote '$fname'$msg\n";
 }
 
+=item _perl_numeric_version( $dotted )
+
+Normalize the dotted version to a numeric version.
+
+=cut
+
+sub _perl_numeric_version {
+    my $dotted = shift;
+    my ($rev, @vparts ) = $dotted =~ /^(\d)(?:\.(\d+))+/;
+    return sprintf "%d.%03d%02d", $rev, @vparts, 0;
+}
+
 =back
 
 =head1 TODO
@@ -2283,7 +2380,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 1122 2007-09-30 11:54:51Z abeltje $
+    $Id: configsmoke.pl 1155 2008-01-03 13:32:28Z abeltje $
 
 =head1 COPYRIGHT
 

@@ -1,7 +1,7 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 1108 2007-09-23 05:13:03Z abeltje $
+# $Id: Syncer.pm 1107 2007-09-23 05:11:35Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.026';
 

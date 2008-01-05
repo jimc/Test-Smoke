@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 1106 2007-09-23 05:06:10Z abeltje $
+# $Id: smokeperl.pl 1155 2008-01-03 13:32:28Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -10,9 +10,13 @@ use Cwd;
 use File::Spec;
 use File::Path;
 use File::Copy;
-use FindBin;
-use lib File::Spec->catdir( $FindBin::Bin, 'lib' );
-use lib $FindBin::Bin;
+my $findbin;
+use File::Basename;
+BEGIN { $findbin = dirname $0; }
+use lib File::Spec->catdir( $findbin, 'lib' );
+use lib File::Spec->catdir( $findbin, 'lib', 'inc' );
+use lib $findbin;
+use lib File::Spec->catdir( $findbin, 'inc' );
 use Config;
 use Test::Smoke::Syncer;
 use Test::Smoke::Patcher;
@@ -23,11 +27,24 @@ use Test::Smoke::Util qw( get_patch calc_timeout do_pod2usage );
 
 use Getopt::Long;
 Getopt::Long::Configure( 'pass_through' );
-my %options = ( config => 'smokecurrent_config', run => 1, pfile => undef,
-                fetch => 1, patch => 1, mail => undef, archive => undef,
-                continue => 0, ccp5p_onfail => undef, killtime => undef,
-                is56x => undef, defaultenv => undef, smartsmoke => undef,
-                delay_report => undef, v => undef, cfg => undef );
+my %options = (
+    config       => 'smokecurrent_config',
+    run          => 1,
+    pfile        => undef,
+    fetch        => 1,
+    patch        => 1,
+    mail         => undef,
+    archive      => undef,
+    continue     => 0,
+    ccp5p_onfail => undef,
+    killtime     => undef,
+    is56x        => undef,
+    defaultenv   => undef,
+    smartsmoke   => undef,
+    delay_report => undef,
+    v            => undef,
+    cfg          => undef
+);
 
 my $myusage = "Usage: $0 [-c configname]";
 GetOptions( \%options, 
@@ -43,6 +60,7 @@ GetOptions( \%options,
     'defaultenv!',
     'continue!',
     'smartsmoke!',
+    'patchlevel=i',
     'snapshot|s=i',
     'killtime=s',
     'pfile=s',
@@ -85,6 +103,7 @@ It can take these options
   --is56x                  This is a perl-5.6.x smoke
   --defaultenv             Run a smoke in the default environment
   --[no]smartsmoke         Don't smoke unless patchlevel changed
+  --patchlevel <plevel>    Set old patchlevel for --smartsmoke --nofetch
   --snapshot <patchlevel>  Set a new patchlevel for snapshot smokes
   --killtime (+)hh::mm     (Re)set the guard-time for this smoke
 
@@ -100,10 +119,10 @@ front-ends internally and does some sanity checking.
 
 =cut
 
-# Try cwd() first, then $FindBin::Bin
+# Try cwd() first, then $findbin
 my $config_file = File::Spec->catfile( cwd(), $options{config} );
 unless ( read_config( $config_file ) ) {
-    $config_file = File::Spec->catfile( $FindBin::Bin, $options{config} );
+    $config_file = File::Spec->catfile( $findbin, $options{config} );
     read_config( $config_file );
 }
 defined Test::Smoke->config_error and 
@@ -147,8 +166,10 @@ chdir $cwd;
 archiverpt();
 
 sub synctree {
-    my $was_patchlevel = get_patch( $conf->{ddir} ) || -1;
-    my $now_patchlevel = $was_patchlevel;
+    my $now_patchlevel = get_patch( $conf->{ddir} ) || -1;
+    my $was_patchlevel = $options{smartsmoke} && $options{patchlevel}
+        ? $options{patchlevel}
+        : $now_patchlevel;
     FETCHTREE: {
         unless ( $options{fetch} && $options{run} ) {
             $conf->{v} and print "Skipping synctree\n";
@@ -240,14 +261,27 @@ sub archiverpt {
     my $patch_level = get_patch( $conf->{ddir} );
     $patch_level =~ tr/ //sd;
 
-    my $archived_rpt = "rpt${patch_level}.rpt";
+    SKIP_RPT: {
+        my $archived_rpt = "rpt${patch_level}.rpt";
+        # Do not archive if it is already done
+        last SKIP_RPT
+            if -f File::Spec->catfile( $conf->{adir}, $archived_rpt );
 
-    # Do not archive if it is already done
-    return if -f File::Spec->catfile( $conf->{adir}, $archived_rpt );
+        copy( File::Spec->catfile( $conf->{ddir}, 'mktest.rpt' ),
+              File::Spec->catfile( $conf->{adir}, $archived_rpt ) ) or
+            die "Cannot copy to '$archived_rpt': $!";
+    }
 
-    copy( File::Spec->catfile( $conf->{ddir}, 'mktest.rpt' ),
-          File::Spec->catfile( $conf->{adir}, $archived_rpt ) ) or
-        die "Cannot copy to '$archived_rpt': $!";
+    SKIP_OUT: {
+        my $archived_out = "out${patch_level}.out";
+        # Do not archive if it is already done
+        last SKIP_OUT
+            if -f File::Spec->catfile( $conf->{adir}, $archived_out );
+
+        copy( File::Spec->catfile( $conf->{ddir}, 'mktest.out' ),
+              File::Spec->catfile( $conf->{adir}, $archived_out ) ) or
+            die "Cannot copy to '$archived_out': $!";
+    }
 
     SKIP_LOG: {
         my $archived_log = "log${patch_level}.log";
@@ -279,7 +313,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 1106 2007-09-23 05:06:10Z abeltje $
+$Id: smokeperl.pl 1155 2008-01-03 13:32:28Z abeltje $
 
 =head1 COPYRIGHT
 

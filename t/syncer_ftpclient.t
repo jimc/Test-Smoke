@@ -2,7 +2,7 @@
 use strict;
 use Data::Dumper;
 
-# $Id: syncer_ftpclient.t 1093 2007-09-09 13:27:22Z abeltje $
+# $Id: syncer_ftpclient.t 1092 2007-09-09 13:25:01Z abeltje $
 ##### syncer_ftpclient.t
 #
 # Here we try to test the actual syncing process from ftp

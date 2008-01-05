@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: mailrpt.pl 858 2005-05-01 22:19:51Z abeltje $
+# $Id: mailrpt.pl 1155 2008-01-03 13:32:28Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.016';
 
@@ -12,7 +12,9 @@ my $findbin;
 use File::Basename;
 BEGIN { $findbin = dirname $0; }
 use lib File::Spec->catdir( $findbin, 'lib' );
+use lib File::Spec->catdir( $findbin, 'lib', 'inc' );
 use lib $findbin;
+use lib File::Spec->catdir( $findbin, 'inc' );
 use Test::Smoke::Reporter;
 use Test::Smoke::Mailer;
 use Test::Smoke;

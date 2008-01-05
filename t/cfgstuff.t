@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: cfgstuff.t 809 2004-12-03 11:14:47Z abeltje $
+# $Id: cfgstuff.t 1155 2008-01-03 13:32:28Z abeltje $
 
 use File::Spec;
 
@@ -17,8 +17,8 @@ my $cfg_name = 'test.cfg';
 is( get_cfg_filename(), undef, "Return undef for no args" );
 is( get_cfg_filename( 'willnotexists' ), undef,
     "Return undef for unknown" );
-is( get_cfg_filename( '../perlcurrent.cfg' ), '../perlcurrent.cfg',
-    "Confirm existance" );
+my $acfg = '../lib/Test/Smoke/perlcurrent.cfg';
+is( get_cfg_filename( $acfg ), $acfg, "Confirm existance ($acfg)" );
 
 SKIP: {
     write_cfg_file( $cfg_name ) or skip "Can't create '$cfg_name'", 2;

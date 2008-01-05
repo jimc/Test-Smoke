@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: skip_filter.t 942 2006-04-21 16:28:22Z abeltje $
+# $Id: skip_filter.t 940 2006-04-21 16:22:08Z abeltje $
 
 use File::Spec;
 
