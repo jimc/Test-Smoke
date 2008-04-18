@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Test-Smoke
-version:             1.29_60
+version:             1.31
 abstract:            The Perl core test smoke suite
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.36
