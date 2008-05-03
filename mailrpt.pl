@@ -2,15 +2,15 @@
 use strict;
 $| = 1;
 
-# $Id: mailrpt.pl 1155 2008-01-03 13:32:28Z abeltje $
+# $Id: mailrpt.pl 1176 2008-05-03 00:26:15Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.016';
+$VERSION = '0.017';
 
 use Cwd;
 use File::Spec;
 my $findbin;
 use File::Basename;
-BEGIN { $findbin = dirname $0; }
+BEGIN { $findbin = File::Spec->rel2abs( dirname $0 ); }
 use lib File::Spec->catdir( $findbin, 'lib' );
 use lib File::Spec->catdir( $findbin, 'lib', 'inc' );
 use lib $findbin;

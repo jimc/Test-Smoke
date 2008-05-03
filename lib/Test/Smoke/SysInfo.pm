@@ -1,9 +1,9 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 1155 2008-01-03 13:32:28Z abeltje $
+# $Id: SysInfo.pm 1176 2008-05-03 00:26:15Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
-$VERSION = '0.039';
+$VERSION = '0.040';
 
 use base 'Exporter';
 @EXPORT_OK = qw( &sysinfo &tsuname );
@@ -422,7 +422,7 @@ sub Darwin {
 
     my $ncpu = $system_profiler{'Number Of CPUs'};
     $system_profiler{'Total Number Of Cores'} and
-        $ncpu .= " ($system_profiler{'Total Number Of Cores'} cores";
+        $ncpu .= " [$system_profiler{'Total Number Of Cores'} cores]";
     return {
         _cpu_type => ($system_profiler{'CPU Type'} || __get_cpu_type()),
         _cpu      => ("$model ($system_profiler{'CPU Speed'})" || __get_cpu),
@@ -473,7 +473,7 @@ sub __from_proc_cpuinfo {
 
 =head2 Linux( )
 
-Use the C</proc/cpuinfo> preudofile to get the system information.
+Use the C</proc/cpuinfo> pseudofile to get the system information.
 
 =cut
 
@@ -503,7 +503,7 @@ sub Linux {
         for my $cores ( grep /cpu cores\s*:\d+/ => @cpu_info ) {
             $ncores += $cores =~ /(\d+)/ ? $1 : 0;
         }
-        $ncores and $ncpu .= " ($ncores cores)";
+        $ncores and $ncpu .= " [$ncores cores]";
     } else {
         $cpu = __get_cpu();
     }
