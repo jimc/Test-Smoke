@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 1176 2008-05-03 00:26:15Z abeltje $
+# $Id: Smoke.pm 1188 2008-06-19 21:18:19Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.32';
+$VERSION  = '1.33';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -201,7 +201,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 1176 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 1188 $ =~ /(\d+)/;
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
@@ -216,7 +216,7 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 1176 2008-05-03 00:26:15Z abeltje $
+$Id: Smoke.pm 1188 2008-06-19 21:18:19Z abeltje $
 
 =head1 COPYRIGHT
 

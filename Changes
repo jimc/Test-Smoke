@@ -10,6 +10,31 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1188] By: abeltje                          on 2008-06-19 23:18:19 +0200
+        Log: * prepare for 1.33
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1187] By: abeltje                          on 2008-06-19 23:17:20 +0200
+        Log: * [MERGE] from Test-Smoke (trunk)
+	     [	1185] By: abeltje	       on 2008-06-19 22:33:17
+	     +0200
+		     Log: * [CHANGE] by Bram
+			    * fix cleanup bug that removed way too many
+			      files
+	      [  1186] By: abeltje		on 2008-06-19 22:39:27
+	      +0200
+		     Log: * [CHANGE] by H.Merijn Brand
+			    + add HP-UX 11.31 specific information
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/FTPClient.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/SysInfo.pm
+___________________________________________________________________________
+[  1178] By: abeltje                          on 2008-05-03 02:31:00 +0200
+        Log: * Autocommit of Changes for 1.32
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
 [  1176] By: abeltje                          on 2008-05-03 02:26:15 +0200
         Log: * [MERGE] from trunk
 	     [	1167] By: abeltje	       on 2008-01-08 23:39:35
@@ -2723,13 +2748,13 @@ ___________________________________________________________________________
 [   578] By: abeltje                          on 2004-01-16 17:44:36 +0100
         Log: * [FIX] bug found by Merijn Brand
 	       In this, the c's are in the wrong place:
-	       ?\194?\160 Matrix:
-	       ?\194?\160    22090     Configuration (common) -Dcc=gcc
-	       ?\194?\160 -----------
+	         Matrix:
+	            22090     Configuration (common) -Dcc=gcc
+	         -----------
 	       ---------------------------------------------------------
-	       ?\194?\160 F F F F F F
-	       ?\194?\160 - - c - - c -Duselongdouble
-	       ?\194?\160 F F F F F F -Duse64bitint
+	         F F F F F F
+	         - - c - - c -Duselongdouble
+	         F F F F F F -Duse64bitint
         Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
            + /Test-Smoke/t/ftppub/bugtst01.out
            ! /Test-Smoke/MANIFEST, /Test-Smoke/lib/Test/Smoke/Reporter.pm,

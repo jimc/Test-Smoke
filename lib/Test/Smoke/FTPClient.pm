@@ -7,9 +7,9 @@ use File::Path;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
 use Test::Smoke::Util qw( clean_filename time_in_hhmm );
 
-# $Id: FTPClient.pm 1097 2007-09-10 10:09:48Z abeltje $
+# $Id: FTPClient.pm 1187 2008-06-19 21:17:20Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.010';
+$VERSION = '0.011';
 
 my %CONFIG = (
     df_fserver  => undef,
@@ -294,6 +294,7 @@ sub __do_mirror {
         }
     }
     if ( $cleanup ) {
+        chdir $localdir;
         $verbose > 1 and print "Cleanup '$localdir'\n";
         my %ok_file = map {
             ( clean_filename( $_->{name} ) => $_->{type} )
