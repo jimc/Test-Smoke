@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Test-Smoke
-version:             1.35
+version:             1.36
 abstract:            The Perl core test smoke suite
 license:             ~
 author:              

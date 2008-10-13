@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 1199 2008-08-14 14:16:16Z abeltje $
+# $Id: Smoke.pm 1206 2008-10-13 18:58:28Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.35';
+$VERSION  = '1.36';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -135,6 +135,14 @@ sub run_smoke {
 
     my $patch = Test::Smoke::Util::get_patch( $conf->{ddir} );
 
+    { # I cannot find a better place to stick this (thanks Bram!)
+      # change 33961 introduced Test::Harness 3 for 5.10.x
+      # that needs different parsing, so set the config to do that 
+        if ( $conf->{perl_version} eq '5.10.x' && $patch >= 33961 ) {
+            $conf->{hasharness3} = 1;
+        }
+    }
+
     my $logfile = File::Spec->catfile( $conf->{ddir}, 'mktest.out' );
     my $BuildCFG = $continue 
         ? Test::Smoke::BuildCFG->continue( $logfile, $conf->{cfg}, 
@@ -201,7 +209,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 1199 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 1206 $ =~ /(\d+)/;
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
@@ -216,7 +224,7 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 1199 2008-08-14 14:16:16Z abeltje $
+$Id: Smoke.pm 1206 2008-10-13 18:58:28Z abeltje $
 
 =head1 COPYRIGHT
 
