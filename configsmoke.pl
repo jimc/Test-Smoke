@@ -18,9 +18,9 @@ use lib File::Spec->catdir( $findbin, 'inc' );
 use Test::Smoke::Util qw( do_pod2usage whereis );
 use Test::Smoke::SysInfo;
 
-# $Id: configsmoke.pl 1155 2008-01-03 13:32:28Z abeltje $
+# $Id: configsmoke.pl 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION $conf );
-$VERSION = '0.070';
+$VERSION = '0.071';
 
 use Getopt::Long;
 my %options = ( 
@@ -170,7 +170,7 @@ my %versions = (
 #                 cfg    => 'perl562.cfg',
 #                 is56x  => 1 },
 
-    '5.8.x' => { source =>  'public.activestate.com::perl-5.8.x',
+    '5.8.x' => { source =>  'perl5.git.perl.org::perl-5.8.x',
                  server => 'public.activestate.com',
                  sdir   => '/pub/apc/perl-5.8.x-snap',
                  sfile  => 'perl-5.8.x-latest.tar.gz',
@@ -188,7 +188,7 @@ my %versions = (
                            : is_vms ? 'vmsperl.cfg' : 'perl58x.cfg' ),
                  is56x  => 0 },
 
-    '5.10.x' => { source =>  'public.activestate.com::perl-5.10.x',
+    '5.10.x' => { source =>  'perl5.git.perl.org::perl-5.10.x',
                   server => 'public.activestate.com',
                   sdir   => '/pub/apc/perl-5.10.x-snap',
                   sfile  => 'perl-5.10.x-latest.tar.gz',
@@ -206,7 +206,7 @@ my %versions = (
                             : is_vms ? 'vmsperl.cfg' : 'perl510x.cfg' ),
                   is56x  => 0 },
 
-    '5.11.x' => { source => 'public.activestate.com::perl-current',
+    '5.11.x' => { source => 'perl5.git.perl.org::perl-current',
                   server => 'public.activestate.com',
                   sdir   => '/pub/apc/perl-current-snap',
                   sfile  => 'perl-current-latest.tar.gz',
@@ -2380,7 +2380,7 @@ Schedule, logfile optional
 
 In case I forget to update the C<$VERSION>:
 
-    $Id: configsmoke.pl 1155 2008-01-03 13:32:28Z abeltje $
+    $Id: configsmoke.pl 1217 2008-12-30 08:51:27Z abeltje $
 
 =head1 COPYRIGHT
 

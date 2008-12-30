@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 1109 2007-09-23 05:20:18Z abeltje $
+# $Id: Util.pm 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
-$VERSION = '0.55';
+$VERSION = '0.56';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -688,11 +688,18 @@ sub get_patch {
     local *DOTPATCH;
     my $patch_level = '?????';
     if ( open DOTPATCH, "< $dot_patch" ) {
-        chomp( $patch_level = <DOTPATCH> );
+        chomp( $patch_level = <DOTPATCH> || '' );
         close DOTPATCH;
-        return $patch_level if $patch_level =~ /-RC\d+$/;
-        $patch_level =~ tr/0-9//cd;
-        return $1 if $patch_level =~/^([0-9]+)$/;
+
+        if ( $patch_level ) {
+            my @dot_patch = split ' ', $patch_level;
+            my @return = ( $dot_patch[2] || $dot_patch[0] );
+            $dot_patch[1] and push @return, $dot_patch[1];
+            return \@return;
+        }
+        else {
+            return [ '' ];
+        }
     }
 
     # There does not seem to be a '.patch', try 'patchlevel.h'
@@ -714,7 +721,7 @@ sub get_patch {
             }
         }
     }
-    return $patch_level;
+    return [ $patch_level ];
 }
 
 =item version_from_patchlevel_h( $ddir )
@@ -941,8 +948,11 @@ sub parse_report_Config {
     my( $report ) = @_;
 
     my $version  = $report =~ /^Automated.*for (.+) patch/ ? $1 : '';
-    my $plevel   = $report =~ /^Automated.*patch (\d+(?:\.\d+\.\d+-RC\d+)?)/
+    my $plevel   = $report =~ /^Automated.+?(\S+)$/m
         ? $1 : '';
+    if ( !$plevel ) {
+        $plevel = $report =~ /^Auto.*patch\s+\S+\s+(\S+)/ ? $1 : '';
+    }
     my $osname   = $report =~ /\bon\s+(.*) - / ? $1 : '';
     my $osvers   = $report =~ /\bon\s+.* - (.*)/? $1 : '';
     $osvers =~ s/\s+\(.*//;

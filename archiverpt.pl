@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: archiverpt.pl 1155 2008-01-03 13:32:28Z abeltje $
+# $Id: archiverpt.pl 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.005';
 
@@ -115,7 +115,7 @@ $opt{adir} && -d $opt{adir} or do {
     mkpath( $opt{adir}, 0, 0775 ) or die "Cannot create '$opt{adir}': $!";
 };
 
-my $patch_level = get_patch( $opt{ddir} );
+my $patch_level = get_patch( $opt{ddir} )->[0];
 $patch_level =~ tr/ //sd;
 
 SKIP_RPT: {

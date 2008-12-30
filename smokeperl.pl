@@ -2,7 +2,7 @@
 use strict;
 $|=1;
 
-# $Id: smokeperl.pl 1176 2008-05-03 00:26:15Z abeltje $
+# $Id: smokeperl.pl 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION );
 $VERSION = Test::Smoke->VERSION;
 
@@ -166,7 +166,7 @@ unless ( $conf->{delay_report} ) {
 archiverpt();
 
 sub synctree {
-    my $now_patchlevel = get_patch( $conf->{ddir} ) || -1;
+    my $now_patchlevel = get_patch( $conf->{ddir} )->[0] || -1;
     my $was_patchlevel = $options{smartsmoke} && $options{patchlevel}
         ? $options{patchlevel}
         : $now_patchlevel;
@@ -260,7 +260,7 @@ sub archiverpt {
             die "Cannot create '$conf->{adir}': $!";
     };
 
-    my $patch_level = get_patch( $conf->{ddir} );
+    my $patch_level = get_patch( $conf->{ddir} )->[0];
     $patch_level =~ tr/ //sd;
 
     SKIP_RPT: {
@@ -315,7 +315,7 @@ L<README>, L<FAQ>, L<configsmoke.pl>, L<mktest.pl>, L<mkovz.pl>
 
 =head1 REVISION
 
-$Id: smokeperl.pl 1176 2008-05-03 00:26:15Z abeltje $
+$Id: smokeperl.pl 1217 2008-12-30 08:51:27Z abeltje $
 
 =head1 COPYRIGHT
 

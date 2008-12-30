@@ -10,6 +10,68 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1217] By: abeltje                          on 2008-12-30 09:51:27 +0100
+        Log: Merge branch 'maintsmoke' into msmoke
+		 * [MERGE] from trunk
+		 [  1204] By: abeltje		   on 2008-10-02 23:23:05
+		 +0200
+		     Log: * [CHANGE] by Bram
+			    + Make sure that the right harness-parsing
+			      routine is configured
+		 [  1211] By: abeltje		   on 2008-11-01 00:57:43
+		 +0100
+		     Log: * [CHANGE] Thanks TonyC for reporting
+			    * Fix
+			      Test::Smoke::Smoker::_normalize_testname()
+			      + ../t is optimized away in some cases...
+		 [  1212] By: abeltje		   on 2008-12-23 00:34:41
+		 +0100
+		     Log: * [CHANGE]
+			    * implement the new .patch format from git
+		 [  1213] By: abeltje		   on 2008-12-23 01:46:19
+		 +0100
+		     Log: [CHANGE]
+			    * Adjust the rsync addresses
+		 [  1215] By: abeltje		   on 2008-12-23 01:57:04
+		 +0100
+		     Log: [CHANGE]
+			    + Up the version
+		 [  1216] By: abeltje		   on 2008-12-24 13:51:23
+		 +0100
+		     Log: [CHANGE]
+			    * fix the Test::Smoke::REVISION from the
+			      git-repo
+			    * Fix the mail subject; use the timestamp as
+			      revision
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/archiverpt.pl,
+	     /branches/Test-Smoke-1.30.xx/configsmoke.pl,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Reporter.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Syncer.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Util.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm,
+	     /branches/Test-Smoke-1.30.xx/smokeperl.pl,
+	     /branches/Test-Smoke-1.30.xx/smokestatus.pl,
+	     /branches/Test-Smoke-1.30.xx/t/get_patch.t,
+	     /branches/Test-Smoke-1.30.xx/t/reporter.t
+___________________________________________________________________________
+[  1207] By: abeltje                          on 2008-10-13 21:00:08 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1206] By: abeltje                          on 2008-10-13 20:58:28 +0200
+        Log: * [MERGE] from trunk
+	     [	1204] By: abeltje		on 2008-10-02 23:23:05
+	     +0200
+		     Log: * [CHANGE] by Bram
+			    + Make sure that the right harness-parsing
+			      routine is configured for 5.10.x with
+			      patchlevel >= 33961
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
 [  1200] By: abeltje                          on 2008-08-14 16:18:18 +0200
         Log: * [AUTOCOMMIT]
 	       * Regenerate 'Changes'

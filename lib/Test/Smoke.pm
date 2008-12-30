@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 1206 2008-10-13 18:58:28Z abeltje $
+# $Id: Smoke.pm 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.36';
+$VERSION  = '1.37';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -137,8 +137,9 @@ sub run_smoke {
 
     { # I cannot find a better place to stick this (thanks Bram!)
       # change 33961 introduced Test::Harness 3 for 5.10.x
-      # that needs different parsing, so set the config to do that 
-        if ( $conf->{perl_version} eq '5.10.x' && $patch >= 33961 ) {
+      # that needs different parsing, so set the config to do that
+      # 20081220; new patchlevels due to git; cannot test it like an int
+        if ( $conf->{perl_version} eq '5.10.x' ) {
             $conf->{hasharness3} = 1;
         }
     }
@@ -173,9 +174,9 @@ sub run_smoke {
     chdir $conf->{ddir} or die "Cannot chdir($conf->{ddir}): $!";
     unless ( $continue ) {
         $smoker->make_distclean( );
-        $smoker->ttylog( "Smoking patch $patch\n" ); 
+        $smoker->ttylog( "Smoking patch $patch->[0] $patch->[-1]\n" ); 
         do_manifest_check( $conf->{ddir}, $smoker );
-        set_smoke_patchlevel( $conf->{ddir}, $patch );
+        set_smoke_patchlevel( $conf->{ddir}, $patch->[0] );
     }
 
     foreach my $this_cfg ( $BuildCFG->configurations ) {
@@ -190,7 +191,7 @@ sub run_smoke {
         $smoker->smoke( $this_cfg, $Policy );
     }
 
-    $smoker->ttylog( "Finished smoking $patch\n" );
+    $smoker->ttylog( "Finished smoking $patch->[0] $patch->[-1]\n" );
     $smoker->mark_out;
 
     close LOG or do {
@@ -209,12 +210,16 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 1206 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 1217 $ =~ /(\d+)/;
+    if ( ! $rev ) {
+       chomp( $rev = `git describe --all --long` );
+    }
     my $dotpatch = catfile $FindBin::Bin, '.patch';
     local *DOTPATCH;
     open DOTPATCH, "< $dotpatch" or return $rev;
     chomp( my $plevel = <DOTPATCH> );
     close DOTPATCH;
+    ! defined $plevel or $plevel = $rev;
     return $plevel > $rev ? $plevel : $rev;
 }
 
@@ -224,7 +229,7 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 1206 2008-10-13 18:58:28Z abeltje $
+$Id: Smoke.pm 1217 2008-12-30 08:51:27Z abeltje $
 
 =head1 COPYRIGHT
 

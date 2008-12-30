@@ -2,7 +2,7 @@
 use strict;
 $| = 1;
 
-# $Id: smokestatus.pl 809 2004-12-03 11:14:47Z abeltje $
+# $Id: smokestatus.pl 1217 2008-12-30 08:51:27Z abeltje $
 use vars qw( $VERSION );
 $VERSION = '0.014';
 
@@ -161,7 +161,7 @@ foreach my $config ( @configs ) {
 
 sub guess_status {
     my( $ddir, $adir, $config ) = @_;
-    ( my $patch = get_patch( $ddir ) || "" ) =~ s/\?//g;
+    ( my $patch = get_patch( $ddir )->[0] || "" ) =~ s/\?//g;
     if ( $patch && $adir ) {
         my $a_rpt = catfile( $adir, "rpt${patch}.rpt" );
         my $mtime = -e $a_rpt ? (stat $a_rpt)[9] : undef;
