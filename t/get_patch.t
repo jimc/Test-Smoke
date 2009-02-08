@@ -1,7 +1,7 @@
 #! perl -w
 use strict;
 
-# $Id: get_patch.t 1217 2008-12-30 08:51:27Z abeltje $
+# $Id: get_patch.t 1235 2009-02-08 11:32:39Z abeltje $
 
 use File::Spec;
 use File::Copy;
@@ -111,7 +111,8 @@ SKIP: {
     my $pl = 'blead 2008-12-20.10:38:02 ' .
              '2af192eebde5f7a93e229dfc3196f62ee4cbcd2e ' .
              'GitLive-blead-45-g2af192ee';
-    my (undef, $date, $patch) = split ' ',  $pl;
+    my (undef, $date, $patch, $descr) = split ' ',  $pl;
+    $descr =~ s/^GitLive-//;
     local *PL;
     open( PL, '> .patch') or skip "Couldn't create .patch: $!", 1;
     print PL $pl;
@@ -119,7 +120,7 @@ SKIP: {
 
     my $get_patch = get_patch();
     is $get_patch->[0], $patch, "Found patchlevel: $patch";
-    is $get_patch->[-1], $date, "Found patchdate: $date";
+    is $get_patch->[-1], $descr, "Found short description: $descr";
 
     1 while unlink '.patch';
 }

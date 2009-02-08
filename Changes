@@ -10,6 +10,57 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1235] By: abeltje                          on 2009-02-08 12:32:39 +0100
+        Log: * [MERGE] more develpment stuff from the trunk
+
+	     commit 6d23dcb404104f8a9992a091fc60123527d9d3d8
+	     Date:   Sun Jan 25 14:32:25 2009 +0000
+		 * [CHANGE] use `git describe` info for subject in reports
+		  * bump version.
+
+	     commit a44c5ed554f1e2589996e732470292402311767e
+	     Date:   Sun Feb 8 10:23:01 2009 +0000
+		 * [CHANGE] by Jan Dubois (RT 39314)
+		   * Get system information from the Registry without
+		     needing write access
+
+	     commit cfbc92618f896ee1b4d5cc652501ee1e098f3a30
+	     Date:   Sun Feb 8 10:23:13 2009 +0000
+		 * [FIX] suggested by Tony Cook (RT 40490)
+		   * File::Spec->rel2abs() on windows strips relative
+		     elements (like ../) fro
+
+	     commit d4c2600ba3db118581fd4d80fbe66d71b1bc5923
+	     Date:   Sun Feb 8 10:23:16 2009 +0000
+		 * [FIX] suggested by Tony Cook
+		   + We should quote commands that contain a space.
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Reporter.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Smoker.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Syncer.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/SysInfo.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Util.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm,
+	     /branches/Test-Smoke-1.30.xx/t/get_patch.t,
+	     /branches/Test-Smoke-1.30.xx/t/reporter.t
+___________________________________________________________________________
+[  1230] By: abeltje                          on 2009-02-02 22:57:35 +0100
+        Log: * [MERGE] from trunk:
+	       b277ca131309543a6b6c46a1bfe4fded11dfed24
+	       * [CHANGE] by Merijn
+		 + remove -j[0-9]+ from the make command if it has 'clean'
+		   in it.
+		 + bump version
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Smoker.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1218] By: abeltje                          on 2008-12-30 10:15:32 +0100
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
 [  1217] By: abeltje                          on 2008-12-30 09:51:27 +0100
         Log: Merge branch 'maintsmoke' into msmoke
 		 * [MERGE] from trunk

@@ -1,9 +1,9 @@
 package Test::Smoke::Reporter;
 use strict;
 
-# $Id: Reporter.pm 1217 2008-12-30 08:51:27Z abeltje $
+# $Id: Reporter.pm 1235 2009-02-08 11:32:39Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.034';
+$VERSION = '0.035';
 
 use Cwd;
 use File::Spec::Functions;
@@ -225,10 +225,10 @@ sub _parse {
             Smoking\ patch\s*
             ((?:[0-9a-f]+\s+\S+)|(?:\d+\S*))
         /x ) {
-            my ($pl, $date) = split ' ', $patch;
+            my ($pl, $descr) = split ' ', $patch;
             $rpt{patchlevel} = $patch;
             $rpt{patch} = $pl || $patch;
-            $rpt{patchdate} = $date || $pl;
+            $rpt{patchdescr} = $descr || $pl;
             next;
         }
 
@@ -679,8 +679,8 @@ sub smoke_matrix {
     my $rpt  = $self->{_rpt};
 
     # Maximum of 6 letters => 11 positions
-    my $pad = " " x int( (11 - length( $rpt->{patchdate} ))/2 );
-    my $patch = $pad . $rpt->{patchdate};
+    my $pad = " " x int( (11 - length( $rpt->{patchdescr} ))/2 );
+    my $patch = $pad . $rpt->{patchdescr};
     my $report = sprintf "%-11s  Configuration (common) %s\n", 
                          $patch, $rpt->{common_args};
     $report .= ("-" x 11) . " " . ("-" x 57) . "\n";

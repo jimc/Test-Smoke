@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 1217 2008-12-30 08:51:27Z abeltje $
+# $Id: Util.pm 1235 2009-02-08 11:32:39Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
-$VERSION = '0.56';
+$VERSION = '0.57';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -694,7 +694,10 @@ sub get_patch {
         if ( $patch_level ) {
             my @dot_patch = split ' ', $patch_level;
             my @return = ( $dot_patch[2] || $dot_patch[0] );
-            $dot_patch[1] and push @return, $dot_patch[1];
+            if ( $dot_patch[3] ) {
+                ( my $short_describe = $dot_patch[3] ) =~ s/^GitLive-//;
+                push @return, $short_describe;
+            }
             return \@return;
         }
         else {
@@ -1039,7 +1042,9 @@ sub whereis {
     foreach my $dir ( @path ) {
         foreach my $ext ( @pext ) {
             my $fname = File::Spec->catfile( $dir, "$prog$ext" );
-            return $fname if -x $fname;
+            if ( -x $fname ) {
+                return $fname =~ /\s/ ? qq/"$fname"/ : $fname;
+            }
         }
     }
     return '';

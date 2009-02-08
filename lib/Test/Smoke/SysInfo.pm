@@ -1,9 +1,9 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 1187 2008-06-19 21:17:20Z abeltje $
+# $Id: SysInfo.pm 1235 2009-02-08 11:32:39Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
-$VERSION = '0.041';
+$VERSION = '0.042';
 
 use base 'Exporter';
 @EXPORT_OK = qw( &sysinfo &tsuname );
@@ -660,19 +660,22 @@ sub Windows {
     eval { require Win32::TieRegistry };
     unless ( $@ ) {
         Win32::TieRegistry->import();
+	my $Registry = $Win32::TieRegistry::Registry->Open(
+          "",
+          { Access => 0x2000000 }
+        );
         my $basekey = join "\\",
             qw( LMachine HARDWARE DESCRIPTION System CentralProcessor );
         my $pnskey = "$basekey\\0\\ProcessorNameString";
-        my $cpustr = $Win32::TieRegistry::Registry->{ $pnskey };
+        my $cpustr = $Registry->{ $pnskey };
         my $idkey = "$basekey\\0\\Identifier";
-        $cpustr ||= $Win32::TieRegistry::Registry->{ $idkey };
+        $cpustr ||= $Registry->{ $idkey };
         $cpustr =~ tr/ / /sd;
         my $mhzkey = "$basekey\\0\\~MHz";
-        $cpustr .= sprintf "(~%d MHz)",
-            hex $Win32::TieRegistry::Registry->{ $mhzkey };
+        $cpustr .= sprintf "(~%d MHz)", hex $Registry->{ $mhzkey };
         $cpu = $cpustr;
-        $ncpu = keys %{ $Win32::TieRegistry::Registry->{ $basekey } };
-        ($cpu_type) = $Win32::TieRegistry::Registry->{ $idkey } =~ /^(\S+)/;
+        $ncpu = keys %{ $Registry->{ $basekey } };
+        ($cpu_type) = $Registry->{ $idkey } =~ /^(\S+)/;
     }
 
     return {

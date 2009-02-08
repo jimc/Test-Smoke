@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 1198 2008-08-14 14:00:49Z abeltje $
+# $Id: Smoker.pm 1235 2009-02-08 11:32:39Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.041';
+$VERSION = '0.044';
 
 use Cwd;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
@@ -660,6 +660,7 @@ sub _run_harness_target {
             push @failed, " " x 51 . "$fail\n";
         }
     }
+    my @dump = <$tst>; # Read trailing output from pipe
 
     close $tst or do {
         my $error = $! || ( $? >> 8);
@@ -717,6 +718,7 @@ sub _run_harness3_target {
             next;
         }
     }
+    my @dump = <$tst>; # Read trailing output from pipe
 
     close $tst or do {
         my $error = $! || ( $? >> 8);
@@ -908,9 +910,9 @@ sub _normalize_testname {
             ? catfile( updir(), $test_name )
             : catfile( updir(), 't', $test_name );
     }
-    my $test_base = catdir( $self->{ddir}, 't' );
+    my $test_base = catdir( $self->{ddir}, 'pod' );
     $test_name = rel2abs( $test_name, $test_base );
-    
+
     my $test_path = abs2rel( $test_name, $test_base );
     $test_path =~ tr!\\!/! if $self->{is_win32};
 
@@ -1050,6 +1052,7 @@ sub _make {
     my $self = shift;
     my $cmd = shift;
     $self->{makeopt} and $cmd = "$self->{makeopt} $cmd";
+    $cmd =~ m/clean/ and $cmd =~ s/-j[0-9]+\s+//;
 
     $self->{is_win32} || $self->{is_vms} or return $self->_run( "make $cmd" );
 

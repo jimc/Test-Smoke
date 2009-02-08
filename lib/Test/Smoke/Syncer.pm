@@ -1,9 +1,9 @@
 package Test::Smoke::Syncer;
 use strict;
 
-# $Id: Syncer.pm 1217 2008-12-30 08:51:27Z abeltje $
+# $Id: Syncer.pm 1235 2009-02-08 11:32:39Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.026';
+$VERSION = '0.027';
 
 use Config;
 use Cwd;
@@ -319,7 +319,7 @@ sub check_dot_patch {
         if ( $patch_level ) {
             my @dot_patch = split ' ', $patch_level;
             $self->{patchlevel} = $dot_patch[2] || $dot_patch[0];
-            $self->{patchdate} = $dot_patch[1];
+            $self->{patchdescr} = $dot_patch[3] || $dot_patch[0];
             return $self->{patchlevel};
         }
     }
