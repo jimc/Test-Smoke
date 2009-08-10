@@ -10,6 +10,30 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1242] By: abeltje                          on 2009-08-10 11:04:33 +0200
+        Log: * [CHANGE]
+	       + up the version to 1.40
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1241] By: abeltje                          on 2009-08-10 11:02:46 +0200
+        Log: * [MERGE]
+	       commit 38a1a1d1261a640696a4a783865013e13d2c0c5e
+	       Author: abeltje
+	       <abeltje@f9e6db9c-56bf-0310-a82a-abbfb51efdf0>
+	       Date:   Mon Aug 10 08:44:12 2009 +0000
+	       * [FIX]
+		 + Also consider PERL5OPT for the generated startup
+		   wrapper scripts.
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/configsmoke.pl
+___________________________________________________________________________
+[  1236] By: abeltje                          on 2009-02-08 12:35:49 +0100
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
 [  1235] By: abeltje                          on 2009-02-08 12:32:39 +0100
         Log: * [MERGE] more develpment stuff from the trunk
 
