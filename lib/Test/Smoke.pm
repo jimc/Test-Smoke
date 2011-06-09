@@ -1,9 +1,9 @@
 package Test::Smoke;
 use strict;
 
-# $Id: Smoke.pm 1242 2009-08-10 09:04:33Z abeltje $
+# $Id: Smoke.pm 1267 2010-01-20 21:29:58Z abeltje $
 use vars qw( $VERSION $REVISION $conf @EXPORT );
-$VERSION  = '1.40';
+$VERSION  = '1.42';
 $REVISION = __get_ts_patchlevel();
 
 use base 'Exporter';
@@ -108,7 +108,9 @@ sub set_smoke_patchlevel {
     my( $ddir, $patch, $verbose ) = @_;
     $ddir && $patch or return;
 
-    my @smokereg = grep /^SMOKE\d+$/ => get_local_patches( $ddir, $verbose );
+    my @smokereg = grep
+        /^SMOKE[a-fA-F0-9]+$/
+    , get_local_patches( $ddir, $verbose );
     @smokereg or set_local_patch( $ddir, "SMOKE$patch" );
 }
 
@@ -210,7 +212,7 @@ use FindBin;
 use File::Spec::Functions;
 
 sub __get_ts_patchlevel {
-    my( $rev ) = q$Rev: 1242 $ =~ /(\d+)/;
+    my( $rev ) = q$Rev: 1267 $ =~ /(\d+)/;
     if ( ! $rev ) {
        chomp( $rev = `git describe --all --long` );
     }
@@ -229,7 +231,7 @@ sub __get_ts_patchlevel {
 
 =head1 REVISION
 
-$Id: Smoke.pm 1242 2009-08-10 09:04:33Z abeltje $
+$Id: Smoke.pm 1267 2010-01-20 21:29:58Z abeltje $
 
 =head1 COPYRIGHT
 

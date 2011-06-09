@@ -1,9 +1,9 @@
 package Test::Smoke::Smoker;
 use strict;
 
-# $Id: Smoker.pm 1235 2009-02-08 11:32:39Z abeltje $
+# $Id: Smoker.pm 1267 2010-01-20 21:29:58Z abeltje $
 use vars qw( $VERSION );
-$VERSION = '0.044';
+$VERSION = '0.045';
 
 use Cwd;
 use File::Spec::Functions qw( :DEFAULT abs2rel rel2abs );
@@ -51,11 +51,21 @@ sub HARNESS_RE1 () {
 }
 sub HARNESS_RE2() { '^\s+(\d+(?:[-\s]+\d+)*-?)$' }
 
-sub HARNESS3_RE() {
+
+sub HARNESS3_RE_EXTRA() {
+     '^\s+(\d[0-9, -]*)'
+}
+
+sub HARNESS3_RE_FAILED() {
      '^(?:
           (?:\ \ Failed\ tests?(?:\ number\(s\))?:\ \ )
-          |
-          \s+
+       )
+       (\d[0-9, -]*)'
+}
+
+sub HARNESS3_RE_TODO() {
+     '^(?:
+          (?:\ \ TODO\ passed(?:\ number\(s\))?:\ \ \ )
        )
        (\d[0-9, -]*)'
 }
@@ -641,13 +651,20 @@ sub _run_harness_target {
 
     my $tst = $self->_make_fork( $target, $extra );
 
-    my $line;
+    my ($line, $last);
     while ( $line = <$tst> ) {
         $self->{v} > 1 and $self->tty( $line );
 
-        $line =~ /All tests successful/ and push( @failed, $line ), last;
+        # This line with timings only has to be logged to .out.
+        $line =~ / \b (?:Files | u) = .+ Tests = [0-9]+ /xi
+            and $self->log($line);
 
-        $line =~ /Failed Test\s+Stat/ and $seenheader = 1, next;
+        $last and next;
+        $line =~ /All tests successful/
+            and push( @failed, $line ), $last++, next;
+
+        $line =~ /Failed Test\s+Stat/
+            and $seenheader = 1, next;
         $seenheader or next;
 
         my( $name, $fail ) = $line =~ m/$harness_re1/;
@@ -683,41 +700,84 @@ for the make program.
 sub _run_harness3_target {
     my( $self, $target, $extra ) = @_;
 
-    my $harness3_re = HARNESS3_RE();
+    my $harness3_failed = HARNESS3_RE_FAILED();
+    my $harness3_todo = HARNESS3_RE_TODO();
+    my $harness3_extra = HARNESS3_RE_EXTRA();
     my $seenheader = 0;
     my @failed = ( );
 
     my $tst = $self->_make_fork( $target, $extra );
 
     my $line;
+    my $file;
+    my $found = 0;
     while ( $line = <$tst> ) {
         $self->{v} > 1 and $self->tty( $line );
 
-        $line =~ /All tests successful/ and push( @failed, $line ), last;
+        # This line with timings only has to be logged to .out.
+        $line =~ / \b (?:Files | u) = .+ Tests = [0-9]+ /xi
+            and $self->log($line);
+
+        $line =~ /All tests successful/
+            and push( @failed, $line ), next;
 
         $line =~ /Test Summary Report/ and $seenheader = 1, next;
         $seenheader or next;
-    
+
         my( $tname ) = $line =~ /^\s*(.+(?:\.t)?)\s+\(Wstat/;
         if ( $tname ) {
+            if ($file and not $found) {
+                push @failed, "${file}??????\n";
+            }
             my $ntest = $self->_normalize_testname( $tname );
             my $dots = '.' x (60 - length $ntest);
-            push @failed, "$ntest${dots}FAILED\n";
+            $file = $ntest . $dots;
+            $found = 0;
             next;
         }
-    
-        my( $failed ) = $line =~ /$harness3_re/x;
+
+        my( $failed ) = $line =~ /$harness3_failed/x;
         if ( $failed ) {
+            push @failed, "${file}FAILED\n";
             push @failed, "    $failed\n";
+            $found = 1;
+            next;
+        }
+
+        my( $todo ) = $line =~ /$harness3_todo/x;
+        if ( $todo ) {
+            push @failed, "${file}PASSED\n";
+            push @failed, "    $todo\n";
+            $found = 1;
+            next;
+        }
+
+        my ( $extra ) = $line =~ /$harness3_extra/x;
+        if ( $extra) {
+            push @failed, "    $extra\n";
             next;
         }
     
         my( $parse_error ) = $line =~ /^  Parse errors: (.+)/;
         if ( $parse_error ) {
+            push @failed, "${file}FAILED\n";
             push @failed, "    $parse_error\n";
+            $found = 1;
+            next;
+        }
+
+        my( $exit_status ) = $line =~ /^  (Non-zero exit status: .+)/;
+        if ( $exit_status ) {
+            push @failed, "${file}FAILED\n";
+            push @failed, "    $exit_status\n";
+            $found = 1;
             next;
         }
     }
+    if ($file and not $found) {
+        push @failed, "${file}??????\n";
+    }
+
     my @dump = <$tst>; # Read trailing output from pipe
 
     close $tst or do {
@@ -804,7 +864,7 @@ sub _parse_harness_output {
     my( $self, $notok, $all_ok, @lines ) = @_;
 
     grep m/^Test Summary Report/ => @lines
-        and return $self->_parse_harness3_output( $notok, $all_ok, @lines );
+        and return $self->_parse_harness3_output( $notok, $_[2], @lines );
 
     my $harness_re1 = HARNESS_RE1();
     my $harness_re2 = HARNESS_RE2();
@@ -839,24 +899,52 @@ to change.
 sub _parse_harness3_output {
     my( $self, $notok, $all_ok, @lines ) = @_;
 
-    my $harness3_re = HARNESS3_RE();
+    my $harness3_failed = HARNESS3_RE_FAILED();
+    my $harness3_todo = HARNESS3_RE_TODO();
+    my $harness3_extra = HARNESS3_RE_EXTRA();
     my $seenheader = 0;
-    my $output = join "", grep defined $_ => map {
+    my $ntest = "";
+    my $file = "";
+    my $found = 0;
+
+    my @out = map {
         my $line = $_;
 
         my( $tname ) = $line =~ /^\s*(.+(:?\.t)?)\s+\(Wstat/;
-        my( $failed ) = $line =~ /$harness3_re/x;
+        my( $failed ) = $line =~ /$harness3_failed/x;
+        my( $todo ) = $line =~ /$harness3_todo/x;
+        my( $extra ) = $line =~ /$harness3_extra/x;
         my( $parse_error ) = $line =~ /^  Parse errors: (.+)/;
+        my( $exit_status ) = $line =~ /^  (Non-zero exit status: .+)/;
 
         if ( $tname ) {
-            my $ntest = $self->_normalize_testname( $tname );
-            delete $notok->{ $ntest };
+            my $r;
+            if ($file and not $found) {
+                $r = "${file}??????\n";
+            }
+
+            $ntest = $self->_normalize_testname( $tname );
             my $dots = '.' x (60 - length $ntest);
-            "    $ntest${dots}FAILED\n";
+            $file = "    $ntest${dots}";
+            $found = 0;
+            $r;
         } elsif ( $failed ) {
-            "        $failed\n";
+            delete $notok->{ $ntest };
+            $found = 1;
+            ($file . "FAILED\n", "        $failed\n");
+        } elsif ( $todo ) {
+            $found = 1;
+            ($file . "PASSED\n", "        $todo\n");
+        } elsif ($extra) {
+            "        $extra\n"
         } elsif ( $parse_error ) {
-            "        $parse_error\n";
+            delete $notok->{ $ntest };
+            $found = 1;
+            ($file . "FAILED\n", "        $parse_error\n");
+        } elsif ( $exit_status ) {
+            delete $notok->{ $ntest };
+            $found = 1;
+            ($file . "FAILED\n", "        $exit_status\n");
         } else {
             undef;
         }
@@ -866,6 +954,10 @@ sub _parse_harness3_output {
         $self->{v} and $self->tty( $_ );
         $seenheader ? $_ : '';
     } @lines;
+    if ($file and not $found) {
+        push @out, "${file}??????\n";
+    }
+    my $output = join "", grep defined $_ => @out;
 
     $_[2] = $all_ok;
     return $output;
@@ -946,8 +1038,10 @@ sub set_skip_tests {
         while ( $raw = <SKIPTESTS> ) {
             $raw =~ m/^\s*#/ and next;
             $raw =~ s/(\S+).*/$1/s;
-            $raw =~ m/\.t$/ or next;
-            if ( $raw =~ m{^(?:lib|ext)/} ) {
+            if ($raw !~ m/\.t$/ and $raw !~ m/test\.pl$/) {
+                next;
+            }
+            if ( $raw =~ m{^(?:lib|ext|cpan|dist)/} ) {
                 push @libext, $raw;
                 next;
             }
@@ -960,7 +1054,7 @@ sub set_skip_tests {
             my $did_mv = rename $tsrc, $tdst;
             my $error = $did_mv ? "" : " ($!)";
             $self->{v} and
-                $self->tty( sprintf "\t$raw: %sok\n", $did_mv ?  'not ' : '',
+                $self->tty( sprintf "\t%s: %sok%s\n", $raw, $did_mv ?  '' : 'not ',
                                     $error );
             -f $tdst and chmod $perms, $tdst;
         }

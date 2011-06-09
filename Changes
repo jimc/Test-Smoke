@@ -10,6 +10,161 @@ The filelists have a short symbolic indicator:
 
 Enjoy!
 ___________________________________________________________________________
+[  1267] By: abeltje                          on 2010-01-20 22:29:58 +0100
+        Log: * [MERGE] from ts-current
+	     [	1254] By: bram				   on 2009-11-16
+	     19:03:04 +0100
+		     Log: Fixes:
+
+			  - String after 'Finished Smoking' can also
+			    contain [a-zA-Z]
+			    (git id)
+			  - Fix write_to_file (created the file 1 instead
+			    of the actual
+			    name)
+			  - Fix error reporting in set_skip_tests: if a
+			    file was
+			    succesfully renamed it reported 'not ok'
+			    instead of 'ok' +
+			    error message was not shown
+			  - Fix set_smoke_patchlevel: the smoke id can
+			    contain [a-zA-Z]
+	     [	1255] By: bram		       on 2009-11-20 00:25:01
+	     +0100
+	       Log: Add tests for earlier commit.
+
+		    In the reporter test 3 different patchlevels:
+		    - all numeric (perforce patch number)
+		    - hex numbers: starting with a number (git commit id)
+		    - hex numbers: starting with a letter (git commit id)
+	     [	1256] By: bram		       on 2009-11-21 14:03:46
+	     +0100
+	       Log: [FIX]
+			Tests that are skipped in dist/ and cpan/ have to
+			be removed from MANIFEST
+	     [	1257] By: bram		       on 2009-11-21 14:17:20
+	     +0100
+	       Log: Forgot test for previous fix
+	     [	1258] By: bram		       on 2010-01-10 19:33:44
+	     +0100
+	       Log: Add 'Passed Todo tests' section in the report
+	     [	1259] By: bram		       on 2010-01-11 21:49:31
+	     +0100
+	       Log: - Include 'Non-zero exit status' in the output file
+		    - Include 'Non-zero exit status' in the report
+		    - If the harness output is not parsed for a test file
+		      then add	'test_file...??????'  in the failed list
+	     [	1261] By: abeltje	       on 2010-01-12 21:58:28
+	     +0100
+	       Log: * [CHANGE]
+		      * Merge my changes with Bram's
+	     [	1263] By: bram		       on 2010-01-12 23:13:19
+	     +0100
+	       Log: Fix failing tests.
+		    The output now includes 'Non-zero exit status'
+	     [	1264] By: abeltje	       on 2010-01-12 23:36:27
+	     +0100
+	       Log: * [FIX] thanks to Bram
+		     * the new regex for finding the smoke-git-id
+		       shouldn't test for leading TAB, these are stripped
+		       by Test::Smoke::Util::get_local_patches().
+	     [	1265] By: bram		       on 2010-01-12 23:39:48
+	     +0100
+	       Log: $last and next is not needed. (breaks the parsing of
+	       passed todo tests)
+	     [	1266] By: bram		       on 2010-01-13 11:43:18
+	     +0100
+	       Log: Set $! to 0 at the start of the test
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Reporter.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Smoker.pm,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm,
+	     /branches/Test-Smoke-1.30.xx/mkdist.sh,
+	     /branches/Test-Smoke-1.30.xx/private/perl/t/smoke/die.t,
+	     /branches/Test-Smoke-1.30.xx/private/perl/t/smoke/many.t,
+	     /branches/Test-Smoke-1.30.xx/private/perl/t/smoke/minitest.t,
+	     /branches/Test-Smoke-1.30.xx/private/perl/t/smoke/test.t,
+	     /branches/Test-Smoke-1.30.xx/private/smoker_fail.t,
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/bugtst01.out,
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/bugtst02.out,
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/bugtst03.out,
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/MANIFEST,
+	     /branches/Test-Smoke-1.30.xx/t/reporter.t,
+	     /branches/Test-Smoke-1.30.xx/t/smoker.t
+          !< /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/cpan/t
+	     =(/Test-Smoke/t/ftppub/perl-current/cpan/t:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/cpan/t/ski
+	     p.t =(/Test-Smoke/t/ftppub/perl-current/cpan/t/skip.t:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/cpan/t/tes
+	     t.t =(/Test-Smoke/t/ftppub/perl-current/cpan/t/test.t:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/dist/t
+	     =(/Test-Smoke/t/ftppub/perl-current/dist/t:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/dist/t/ski
+	     p.t =(/Test-Smoke/t/ftppub/perl-current/dist/t/skip.t:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/dist/t/tes
+	     t.t =(/Test-Smoke/t/ftppub/perl-current/dist/t/test.t:1257)
+          !> /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/cpan
+	     =(/Test-Smoke/t/ftppub/perl-current/cpan:1257),
+	     /branches/Test-Smoke-1.30.xx/t/ftppub/perl-current/dist
+	     =(/Test-Smoke/t/ftppub/perl-current/dist:1257),
+	     /branches/Test-Smoke-1.30.xx/t/smoke.t
+	     =(/Test-Smoke/t/smoke.t:1255)
+___________________________________________________________________________
+[  1252] By: abeltje                          on 2009-10-21 19:12:05 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1251] By: abeltje                          on 2009-10-21 19:10:12 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1250] By: abeltje                          on 2009-10-21 19:05:33 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1249] By: abeltje                          on 2009-10-21 19:01:28 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1248] By: abeltje                          on 2009-10-21 19:00:17 +0200
+        Log: * [CHANGE]
+	       Up the version
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/lib/Test/Smoke.pm
+___________________________________________________________________________
+[  1247] By: abeltje                          on 2009-10-21 18:57:37 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
+[  1246] By: abeltje                          on 2009-10-21 18:54:39 +0200
+        Log: * [MERGE] from trunk
+	     [	1245] By: abeltje	       on 2009-10-20 22:04:34
+	     +0200
+		Log: * [CHANGE] request by Merijn
+		       Add a noisy C warning to the
+		       Test::Smoke::Util::skip_filter
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx,
+	     /branches/Test-Smoke-1.30.xx/lib/Test/Smoke/Util.pm,
+	     /branches/Test-Smoke-1.30.xx/t/skip_filter.t
+___________________________________________________________________________
+[  1243] By: abeltje                          on 2009-08-10 11:06:17 +0200
+        Log: * [AUTOCOMMIT]
+	       * Regenerate 'Changes'
+        Url: http://source.test-smoke.org/svn/branches/Test-Smoke-1.30.xx
+           ! /branches/Test-Smoke-1.30.xx/Changes
+___________________________________________________________________________
 [  1242] By: abeltje                          on 2009-08-10 11:04:33 +0200
         Log: * [CHANGE]
 	       + up the version to 1.40

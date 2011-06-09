@@ -1,9 +1,9 @@
 package Test::Smoke::Util;
 use strict;
 
-# $Id: Util.pm 1235 2009-02-08 11:32:39Z abeltje $
+# $Id: Util.pm 1246 2009-10-21 16:54:39Z abeltje $
 use vars qw( $VERSION @EXPORT @EXPORT_OK $NOCASE );
-$VERSION = '0.57';
+$VERSION = '0.58';
 
 use base 'Exporter';
 @EXPORT = qw( 
@@ -1295,7 +1295,8 @@ sub skip_filter {
     m,^\s*pl2bat\.bat [\w\\]+, ||
     m,^Making , ||
     m,^Skip , ||
-    m,^Creating library file: libExtTest\.dll\.a,
+    m,^Creating library file: libExtTest\.dll\.a, ||
+    m,^cc: warning 983: ,
 }
 
 1;
