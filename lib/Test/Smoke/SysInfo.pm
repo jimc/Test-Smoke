@@ -1,7 +1,7 @@
 package Test::Smoke::SysInfo;
 use strict;
 
-# $Id: SysInfo.pm 1235 2009-02-08 11:32:39Z abeltje $
+# $Id: SysInfo.pm 1284 2010-11-01 18:12:17Z abeltje $
 use vars qw( $VERSION @EXPORT_OK );
 $VERSION = '0.042';
 
@@ -670,7 +670,7 @@ sub Windows {
         my $cpustr = $Registry->{ $pnskey };
         my $idkey = "$basekey\\0\\Identifier";
         $cpustr ||= $Registry->{ $idkey };
-        $cpustr =~ tr/ / /sd;
+        $cpustr =~ tr/ / /s;
         my $mhzkey = "$basekey\\0\\~MHz";
         $cpustr .= sprintf "(~%d MHz)", hex $Registry->{ $mhzkey };
         $cpu = $cpustr;
